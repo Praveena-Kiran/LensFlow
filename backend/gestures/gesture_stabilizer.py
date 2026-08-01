@@ -1,6 +1,6 @@
 class GestureStabilizer:
 
-    def __init__(self, required_frames=15):
+    def __init__(self, required_frames=5):
         self.required_frames = required_frames
         self.last_gesture = None
         self.frame_count = 0

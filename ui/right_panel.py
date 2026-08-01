@@ -50,35 +50,37 @@ class CameraViewfinder(QFrame):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         
-        # Draw viewfinder corners
+        # Draw viewfinder corners in bright Cyan/Violet
         w, h = self.width(), self.height()
-        pen = QPen(QColor("#4B5563"), 2)
+        pen = QPen(QColor("#06B6D4"), 2)
         painter.setPen(pen)
         
-        # Length of corner lines
-        length = 15
+        length = 18
         
         # Top-Left
-        painter.drawLine(10, 10, 10 + length, 10)
-        painter.drawLine(10, 10, 10, 10 + length)
+        painter.drawLine(12, 12, 12 + length, 12)
+        painter.drawLine(12, 12, 12, 12 + length)
         
         # Top-Right
-        painter.drawLine(w - 10, 10, w - 10 - length, 10)
-        painter.drawLine(w - 10, 10, w - 10, 10 + length)
+        painter.drawLine(w - 12, 12, w - 12 - length, 12)
+        painter.drawLine(w - 12, 12, w - 12, 12 + length)
         
         # Bottom-Left
-        painter.drawLine(10, h - 10, 10 + length, h - 10)
-        painter.drawLine(10, h - 10, 10, h - 10 - length)
+        painter.drawLine(12, h - 12, 12 + length, h - 12)
+        painter.drawLine(12, h - 12, 12, h - 12 - length)
         
         # Bottom-Right
-        painter.drawLine(w - 10, h - 10, w - 10 - length, h - 10)
-        painter.drawLine(w - 10, h - 10, w - 10, h - 10 - length)
+        painter.drawLine(w - 12, h - 12, w - 12 - length, h - 12)
+        painter.drawLine(w - 12, h - 12, w - 12, h - 12 - length)
         
-        # Draw Blinking Offline Dot
+        # HUD Status Badge
         if self.badge_visible:
-            painter.setBrush(QColor("#EF4444"))
+            painter.setBrush(QColor("#10B981"))
             painter.setPen(Qt.NoPen)
-            painter.drawEllipse(w - 25, 20, 8, 8)
+            painter.drawEllipse(w - 28, 18, 8, 8)
+            
+            painter.setPen(QColor("#34D399"))
+            painter.drawText(w - 75, 26, "REC LIVE")
 
     def update_frame(self, frame):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

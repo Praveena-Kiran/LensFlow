@@ -404,14 +404,15 @@ class SectionHeader(QLabel):
 class StatusBadge(QLabel):
     """
     Small colored badge for status indicators.
-    Variants: 'success', 'active', 'warning', 'danger', 'muted'
+    Variants: 'success', 'active', 'warning', 'danger', 'muted', 'cyan'
     """
     COLORS = {
-        "success": ("#22C55E", "#FFFFFF"),
+        "success": ("#10B981", "#FFFFFF"),
         "active":  ("#7C3AED", "#FFFFFF"),
+        "cyan":    ("#06B6D4", "#090D16"),
         "warning": ("#F59E0B", "#000000"),
-        "danger":  ("#EF4444", "#FFFFFF"),
-        "muted":   ("#3F3F46", "#A1A1AA"),
+        "danger":  ("#F43F5E", "#FFFFFF"),
+        "muted":   ("#1E2640", "#94A3B8"),
     }
 
     def __init__(self, text, variant="success", parent=None):
@@ -422,9 +423,64 @@ class StatusBadge(QLabel):
             background-color: {bg};
             color: {fg};
             border-radius: {RADIUS_SM}px;
-            padding: 3px 10px;
+            padding: 4px 12px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
         """)
         self.setAlignment(Qt.AlignCenter)
+
+
+class PulseStatusBadge(QFrame):
+    """
+    Futuristic pill badge showing live system status (ACTIVE / STANDBY)
+    with a glowing pulse indicator dot.
+    """
+    def __init__(self, is_active=True, parent=None):
+        super().__init__(parent)
+        self.is_active = is_active
+        self.setFixedHeight(34)
+        
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 4, 14, 4)
+        layout.setSpacing(8)
+        
+        self.dot = QLabel("●")
+        self.dot.setFont(get_font(10, bold=True))
+        
+        self.label = QLabel("SYSTEM ACTIVE" if is_active else "STANDBY MODE")
+        self.label.setFont(get_font(9, bold=True))
+        
+        layout.addWidget(self.dot)
+        layout.addWidget(self.label)
+        
+        self.update_state(is_active)
+        
+    def update_state(self, is_active):
+        self.is_active = is_active
+        t = get_theme()
+        if is_active:
+            dot_color = t.SUCCESS if hasattr(t, 'SUCCESS') else "#10B981"
+            bg_color = "rgba(16, 185, 129, 0.15)"
+            border_color = "rgba(16, 185, 129, 0.4)"
+            text_color = "#34D399"
+            self.label.setText("SYSTEM ACTIVE")
+        else:
+            dot_color = "#F59E0B"
+            bg_color = "rgba(245, 158, 11, 0.15)"
+            border_color = "rgba(245, 158, 11, 0.4)"
+            text_color = "#FBBF24"
+            self.label.setText("STANDBY MODE")
+            
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {bg_color};
+                border: 1px solid {border_color};
+                border-radius: 17px;
+            }}
+        """)
+        self.dot.setStyleSheet(f"color: {dot_color}; border: none; background: transparent;")
+        self.label.setStyleSheet(f"color: {text_color}; border: none; background: transparent; letter-spacing: 0.8px;")
+
 
 
 # ─────────────────────────────────────────────

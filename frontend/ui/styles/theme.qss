@@ -1,0 +1,91 @@
+/* LensFlow Premium Dark Theme QSS Stylesheet */
+
+/* Global Reset & Base Styling */
+QWidget {
+    background-color: transparent;
+    color: #FFFFFF;
+    font-family: "Inter", "SF Pro Display", "-apple-system", "Segoe UI", sans-serif;
+    font-size: 13px;
+    selection-background-color: #3B82F6;
+    selection-color: #FFFFFF;
+    outline: none;
+}
+
+QMainWindow, QDialog {
+    background-color: #0B0B0F;
+}
+
+/* Tooltip */
+QToolTip {
+    background-color: #1C1C22;
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+}
+
+/* Scrollbars */
+QScrollBar:vertical {
+    background: transparent;
+    width: 8px;
+    margin: 0px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical {
+    background: rgba(255, 255, 255, 0.15);
+    min-height: 24px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 8px;
+    margin: 0px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:horizontal {
+    background: rgba(255, 255, 255, 0.15);
+    min-width: 24px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal,
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: none;
+    width: 0px;
+}
+
+/* Line Edit / Input Default */
+QLineEdit {
+    background-color: #14141A;
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+QLineEdit:focus {
+    border: 1px solid #3B82F6;
+    background-color: #1C1C22;
+}
+
+QLineEdit::placeholder {
+    color: #6B7280;
+}

@@ -37,23 +37,6 @@ class GestureRecognizer:
             and self.finger_extended(20, 18, landmarks)
         )
 
-    def is_fist(self, landmarks):
-
-        return (
-            not self.finger_extended(8, 6, landmarks)
-            and not self.finger_extended(12, 10, landmarks)
-            and not self.finger_extended(16, 14, landmarks)
-            and not self.finger_extended(20, 18, landmarks)
-        )
-
-    def is_peace(self, landmarks):
-
-        return (
-            self.finger_extended(8, 6, landmarks)
-            and self.finger_extended(12, 10, landmarks)
-            and not self.finger_extended(16, 14, landmarks)
-            and not self.finger_extended(20, 18, landmarks)
-        )
 
     def is_thumbs_up(self, landmarks):
 
@@ -76,6 +59,28 @@ class GestureRecognizer:
             and not pinky
         )
 
+
+    def is_peace(self, landmarks):
+
+        return (
+            self.finger_extended(8, 6, landmarks)
+            and self.finger_extended(12, 10, landmarks)
+            and not self.finger_extended(16, 14, landmarks)
+            and not self.finger_extended(20, 18, landmarks)
+        )
+
+
+    def is_fist(self, landmarks):
+
+        return (
+            not self.finger_extended(8, 6, landmarks)
+            and not self.finger_extended(12, 10, landmarks)
+            and not self.finger_extended(16, 14, landmarks)
+            and not self.finger_extended(20, 18, landmarks)
+            and not self.thumb_extended(landmarks)
+        )
+
+
     # ----------------------------
     # Main detector
     # ----------------------------
@@ -89,13 +94,14 @@ class GestureRecognizer:
         if self.is_open_palm(landmarks):
             return "✋ Open Palm"
 
+        if self.is_thumbs_up(landmarks):
+            return "👍 Thumbs Up"
+
         if self.is_peace(landmarks):
             return "✌️ Peace"
 
         if self.is_fist(landmarks):
             return "✊ Fist"
 
-        if self.is_thumbs_up(landmarks):
-            return "👍 Thumbs Up"
-
         return None
+        

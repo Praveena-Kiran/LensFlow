@@ -1,3 +1,4 @@
+
 import subprocess
 import platform
 import time
@@ -30,14 +31,12 @@ class ActionManager:
             return
 
         # Ignore gestures while inactive
-        if not self.active:
+        if not self.active and not action.startswith("presentation"):
             return
 
         if action == "RUN_CURRENT_STUDIO":
             self.flow_manager.run_current_studio()
             return
-
-        print(f"Executing action: {action}")
 
         current_time = time.time()
 
@@ -46,6 +45,8 @@ class ActionManager:
             current_time - self.last_action_time < self.cooldown
         ):
             return
+
+        print(f"Executing action: {action}")
 
         self.last_action = action
         self.last_action_time = current_time

@@ -1,5 +1,6 @@
 {
-    "👍 Thumbs Up": "RUN_CURRENT_STUDIO",
-    "✋ Open Palm": "ACTIVATE",
-    "✊ Fist": "DEACTIVATE"
+    "✋ Open Palm": "presentation_start",
+    "✊ Fist": "presentation_end",
+    "👍 Thumbs Up": "presentation_next",
+    "👎 Thumbs Down": "presentation_previous"
 }

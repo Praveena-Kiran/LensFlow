@@ -1,33 +1,34 @@
 class MidnightTheme:
     NAME = "Midnight"
 
-    # Background layers — ordered from deepest to most elevated
-    BG_PRIMARY = "#0F1117"       # Deepest: main window background
-    BG_SIDEBAR = "#0D0F14"      # Sidebar: slightly darker than primary
-    BG_SURFACE = "#1A1D27"      # Elevated surface (nested cards, sections)
-    BG_CARD = "#1E2130"         # Card containers
-    BG_CARD_HOVER = "#262A3A"   # Card hover state
-    BG_INPUT = "#141720"        # Input fields, text areas
+    # Softer elevated slate-indigo background hierarchy with rich contrast
+    BG_PRIMARY = "#0E121E"       # Soft deep slate background
+    BG_SIDEBAR = "#090C16"       # Darker sidebar frame
+    BG_SURFACE = "#161D2E"       # Elevated section surface
+    BG_CARD = "#1C2438"          # Card containers with soft glass tint
+    BG_CARD_HOVER = "#25304B"    # Interactive hover glow
+    BG_INPUT = "#121826"         # Sleek inputs
 
-    # Accent system
-    ACCENT = "#7C3AED"
-    ACCENT_HOVER = "#9333EA"
-    ACCENT_SUBTLE = "rgba(124, 58, 237, 0.12)"  # For soft accent backgrounds
+    # Accent system (Vibrant Violet & Cyber Cyan)
+    ACCENT = "#8B5CF6"
+    ACCENT_HOVER = "#A78BFA"
+    ACCENT_CYAN = "#06B6D4"
+    ACCENT_SUBTLE = "rgba(139, 92, 246, 0.15)"  # Soft accent glow
 
     # Semantic colors
-    SUCCESS = "#22C55E"
-    DANGER = "#EF4444"
-    WARNING = "#F59E0B"
+    SUCCESS = "#10B981"         # Neon Emerald
+    DANGER = "#F43F5E"          # Rose Red
+    WARNING = "#F59E0B"         # Amber
 
-    # Text hierarchy
+    # Text hierarchy — High contrast accessible readable text
     TEXT_HEADING = "#FFFFFF"     # Pure white for headings
-    TEXT_PRIMARY = "#E2E8F0"    # Primary body text
-    TEXT_MUTED = "#64748B"      # Secondary / caption text
+    TEXT_PRIMARY = "#E2E8F0"     # Crisp body text
+    TEXT_MUTED = "#94A3B8"       # Clear slate caption text
 
     # Borders
-    BORDER_COLOR = "#2A2E3D"    # Subtle border
-    BORDER_HOVER = "#3D4255"    # Hover state border
+    BORDER_COLOR = "#2D3956"     # Crisp border definition
+    BORDER_HOVER = "#6366F1"     # Active glowing border
 
     # Gradients
-    GRADIENT_START = "#7C3AED"
-    GRADIENT_END = "#3B82F6"
+    GRADIENT_START = "#7C3AED"   # Electric Violet
+    GRADIENT_END = "#06B6D4"     # Cyber Cyan

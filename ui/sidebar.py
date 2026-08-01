@@ -52,10 +52,10 @@ class SidebarButton(QWidget):
 
     def update_style(self):
         if self.active:
-            bg = "#1F2937"
+            bg = "qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(124, 58, 237, 0.25), stop:1 rgba(6, 182, 212, 0.1))"
             border = f"1px solid {ACCENT}"
-            text_color = TEXT_PRIMARY
-            icon_style = f"color: {TEXT_PRIMARY};"
+            text_color = "#FFFFFF"
+            icon_style = f"color: {ACCENT}; font-size: 14px;"
         else:
             bg = "transparent"
             border = "none"
@@ -63,12 +63,12 @@ class SidebarButton(QWidget):
             icon_style = f"color: {TEXT_MUTED};"
             
         if self.coming_soon:
-            text_color = "#4B5563"
-            icon_style = "color: #4B5563;"
+            text_color = "#475569"
+            icon_style = "color: #475569;"
             
         self.setStyleSheet(f"""
             QWidget {{
-                background-color: {bg};
+                background: {bg};
                 border-radius: 10px;
                 border: {border};
             }}
@@ -99,11 +99,12 @@ class SidebarButton(QWidget):
         if not self.active and not self.coming_soon:
             self.setStyleSheet(f"""
                 QWidget {{
-                    background-color: #1F2937;
+                    background-color: #121829;
                     border-radius: 10px;
+                    border: 1px solid #1E293B;
                 }}
                 QLabel {{
-                    color: {TEXT_PRIMARY};
+                    color: #F8FAFC;
                 }}
             """)
         super().enterEvent(event)

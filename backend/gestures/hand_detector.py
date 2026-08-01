@@ -1,17 +1,14 @@
 from mediapipe import framework
 import os
-from mediapipe import framework
-from automation import action_manager
-from automation import action_manager
+from backend.automation import action_manager
 import json
-from automation.action_manager import ActionManager
-from automation.action_manager import ActionManager
+from backend.automation.action_manager import ActionManager
 import cv2
 import mediapipe as mp
-from gestures.gesture_recognizer import GestureRecognizer
-from gestures.gesture_stabilizer import GestureStabilizer
-from profile_manager import ProfileManager
-from config.settings import *
+from backend.gestures.gesture_recognizer import GestureRecognizer
+from backend.gestures.gesture_stabilizer import GestureStabilizer
+from backend.profile_manager import ProfileManager
+from backend.config.settings import *
 mp_hands = mp.solutions.hands
 
 hands = mp_hands.Hands(
@@ -78,7 +75,8 @@ def start_hand_detection():
 
                 display_text = "Detecting..."
 
-                if confirmed_gesture:
+                if confirmed_gesture and confirmed_gesture != current_gesture:
+
                     current_gesture = confirmed_gesture
 
                     action = gesture_map.get(confirmed_gesture)

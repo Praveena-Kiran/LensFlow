@@ -14,7 +14,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath
 from ui.theme import (
     HoverCard, ModernButton, BG_PRIMARY, BG_CARD, BORDER_COLOR, 
-    ACCENT, SUCCESS, TEXT_PRIMARY, TEXT_MUTED, get_font, WARM_AMBER, WARM_ROSE
+    ACCENT, ACCENT_HOVER, SUCCESS, TEXT_PRIMARY, TEXT_MUTED, get_font, WARM_AMBER, WARM_ROSE
 )
 from ui.right_panel import RightPanel
 from backend.studios.studio_manager import StudioManager
@@ -22,6 +22,7 @@ from backend.automation.flow_manager import FlowManager
 from ui.dialogs.create_studio_dialog import CreateStudioDialog
 from ui.dialogs.studio_settings_dialog import StudioSettingsDialog
 from ui.camera_thread import CameraThread
+from ui.theme_manager import get_theme
 
 
 # --- APP PILL ---
@@ -233,68 +234,396 @@ class StudioCard(QFrame):
 
 class TopBar(QWidget):
     """
-    Sleek minimal top bar containing logo, search placeholder, and user profile avatar.
+    Futuristic top bar containing LensFlow logo, accessibility tagline,
+    system state indicator (ACTIVE/STANDBY), and user profile.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedHeight(60)
+        self.setFixedHeight(68)
         
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(30, 0, 30, 0)
+        layout.setContentsMargins(30, 8, 30, 8)
         layout.setSpacing(20)
         
-        # Logo
+        # Branding Header
+        brand_box = QVBoxLayout()
+        brand_box.setSpacing(2)
+        
+        logo_lay = QHBoxLayout()
+        logo_lay.setSpacing(8)
+        
+        emblem = QLabel("🌀")
+        emblem.setFont(get_font(14))
+        
         logo = QLabel("LensFlow")
-        logo.setFont(get_font(12, bold=True))
-        logo.setStyleSheet("color: white;")
-        layout.addWidget(logo)
+        logo.setFont(get_font(15, bold=True))
+        logo.setStyleSheet("color: #FFFFFF; letter-spacing: 0.5px;")
         
-        # Search Bar
-        self.search_bar = QLineEdit()
-        self.search_bar.setPlaceholderText("Search anything... (Ctrl + K)")
-        self.search_bar.setFixedWidth(260)
-        self.search_bar.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: #1F2937;
-                border: 1px solid {BORDER_COLOR};
-                border-radius: 8px;
-                padding: 6px 12px 6px 30px;
-                color: {TEXT_PRIMARY};
-            }}
-        """)
+        badge_ai = QLabel("AI ACCESSIBILITY")
+        badge_ai.setFont(get_font(7, bold=True))
+        badge_ai.setStyleSheet("background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #7C3AED, stop:1 #06B6D4); color: white; border-radius: 4px; padding: 2px 7px;")
         
-        # Overlay search icon emoji in search bar
-        self.search_icon = QLabel("🔍", self.search_bar)
-        self.search_icon.setFont(get_font(9))
-        self.search_icon.setStyleSheet("color: #9CA3AF; background: transparent;")
-        self.search_icon.move(10, 8)
+        logo_lay.addWidget(emblem)
+        logo_lay.addWidget(logo)
+        logo_lay.addWidget(badge_ai)
+        logo_lay.addStretch()
         
-        layout.addWidget(self.search_bar)
+        tagline = QLabel("Gesture-powered interaction for a more accessible digital world")
+        tagline.setFont(get_font(8, bold=False))
+        tagline.setStyleSheet("color: #94A3B8;")
+        
+        brand_box.addLayout(logo_lay)
+        brand_box.addWidget(tagline)
+        layout.addLayout(brand_box)
+        
         layout.addStretch()
         
-        # Notification Bell
-        self.bell = QLabel("🔔")
-        self.bell.setFont(get_font(12))
-        self.bell.setCursor(Qt.PointingHandCursor)
-        layout.addWidget(self.bell)
+        # Live System State Indicator Badge
+        from ui.theme import PulseStatusBadge
+        self.system_status = PulseStatusBadge(is_active=True)
+        layout.addWidget(self.system_status)
         
-        # User Avatar
+        # User Avatar Profile
         self.avatar = QFrame()
-        self.avatar.setFixedSize(32, 32)
+        self.avatar.setFixedSize(36, 36)
         self.avatar.setStyleSheet("""
-            background-color: #7C3AED;
-            border-radius: 16px;
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #8B5CF6, stop:1 #06B6D4);
+            border-radius: 18px;
         """)
         avatar_lay = QHBoxLayout(self.avatar)
         avatar_lay.setContentsMargins(0, 0, 0, 0)
         
         avatar_txt = QLabel("P")
-        avatar_txt.setFont(get_font(9, bold=True))
+        avatar_txt.setFont(get_font(10, bold=True))
         avatar_txt.setAlignment(Qt.AlignCenter)
-        avatar_txt.setStyleSheet("color: white; border: none;")
+        avatar_txt.setStyleSheet("color: white; border: none; background: transparent;")
         avatar_lay.addWidget(avatar_txt)
         
         layout.addWidget(self.avatar)
+
+
+# --- GRAND HERO CENTRAL INTERACTION SPOTLIGHT ---
+
+class HeroInteractionCard(QFrame):
+    """
+    Human-centered central AI Interaction Spotlight.
+    Features a giant glowing gesture orb surrounded by dynamic feedback elements,
+    showing live detected gesture, active system action, and AI understanding status.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet(f"""
+            QFrame {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #1A2234, stop:1 #111726);
+                border-radius: 20px;
+                border: 1px solid #2D3956;
+            }}
+        """)
+        
+        # Soft Drop Shadow
+        self.shadow = QGraphicsDropShadowEffect(self)
+        self.shadow.setBlurRadius(30)
+        self.shadow.setColor(QColor(139, 92, 246, 35))
+        self.shadow.setOffset(0, 6)
+        self.setGraphicsEffect(self.shadow)
+        
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignCenter)
+        layout.setContentsMargins(28, 24, 28, 24)
+        layout.setSpacing(18)
+        
+        # Top Live Pulse Badge
+        top_bar = QHBoxLayout()
+        top_bar.addStretch()
+        
+        self.pulse_tag = QLabel("🟢 AI UNDERSTANDING MODE ON")
+        self.pulse_tag.setFont(get_font(8, bold=True))
+        self.pulse_tag.setStyleSheet("""
+            background: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-radius: 12px;
+            padding: 4px 14px;
+            letter-spacing: 0.8px;
+        """)
+        top_bar.addWidget(self.pulse_tag)
+        top_bar.addStretch()
+        layout.addLayout(top_bar)
+        
+        # Central Spotlight Orb Container
+        self.orb_frame = QFrame()
+        self.orb_frame.setFixedSize(120, 120)
+        self.orb_frame.setStyleSheet("""
+            QFrame {
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 #8B5CF6, stop:0.8 #4C1D95, stop:1 #1E1B4B);
+                border-radius: 60px;
+                border: 3px solid #A78BFA;
+            }
+        """)
+        orb_lay = QVBoxLayout(self.orb_frame)
+        orb_lay.setContentsMargins(0, 0, 0, 0)
+        
+        self.hero_emoji = QLabel("✋")
+        self.hero_emoji.setFont(get_font(48))
+        self.hero_emoji.setAlignment(Qt.AlignCenter)
+        self.hero_emoji.setStyleSheet("background: transparent; border: none;")
+        orb_lay.addWidget(self.hero_emoji)
+        
+        # Center align the orb in layout
+        orb_center_lay = QHBoxLayout()
+        orb_center_lay.addStretch()
+        orb_center_lay.addWidget(self.orb_frame)
+        orb_center_lay.addStretch()
+        layout.addLayout(orb_center_lay)
+        
+        # Detected Gesture Text Info
+        self.label_detected_prefix = QLabel("DETECTED GESTURE")
+        self.label_detected_prefix.setFont(get_font(8, bold=True))
+        self.label_detected_prefix.setStyleSheet("color: #A78BFA; letter-spacing: 1px;")
+        self.label_detected_prefix.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.label_detected_prefix)
+        
+        self.label_gesture_name = QLabel("Open Palm")
+        self.label_gesture_name.setFont(get_font(22, bold=True))
+        self.label_gesture_name.setStyleSheet("color: #FFFFFF;")
+        self.label_gesture_name.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.label_gesture_name)
+        
+        # Action Line
+        self.action_container = QHBoxLayout()
+        self.action_container.addStretch()
+        
+        self.action_icon = QLabel("⚡")
+        self.action_icon.setFont(get_font(11))
+        
+        self.label_action_text = QLabel("Current Action: Launching Google Chrome")
+        self.label_action_text.setFont(get_font(12, bold=True))
+        self.label_action_text.setStyleSheet("color: #06B6D4;")
+        
+        self.action_container.addWidget(self.action_icon)
+        self.action_container.addWidget(self.label_action_text)
+        self.action_container.addStretch()
+        layout.addLayout(self.action_container)
+        
+        # System Response & Confidence Row
+        footer_lay = QHBoxLayout()
+        footer_lay.setSpacing(20)
+        footer_lay.addStretch()
+        
+        self.status_pill = QLabel("🟢 System Activated & Listening")
+        self.status_pill.setFont(get_font(9, bold=True))
+        self.status_pill.setStyleSheet("""
+            background: rgba(16, 185, 129, 0.2);
+            color: #34D399;
+            border-radius: 8px;
+            padding: 4px 12px;
+        """)
+        
+        self.conf_pill = QLabel("Confidence: 98.6%")
+        self.conf_pill.setFont(get_font(9, bold=True))
+        self.conf_pill.setStyleSheet("""
+            background: rgba(139, 92, 246, 0.2);
+            color: #C084FC;
+            border-radius: 8px;
+            padding: 4px 12px;
+        """)
+        
+        footer_lay.addWidget(self.status_pill)
+        footer_lay.addWidget(self.conf_pill)
+        footer_lay.addStretch()
+        layout.addLayout(footer_lay)
+        
+    def update_interaction(self, gesture_name, action_name, status_text="Action completed successfully", confidence=98.5):
+        """
+        Dynamically updates the central hero display when a gesture is recognized.
+        """
+        # Parse emoji icon if present
+        icon = "✋"
+        name = gesture_name
+        if "Open Palm" in gesture_name or "✋" in gesture_name:
+            icon = "✋"
+            name = "Open Palm"
+        elif "Fist" in gesture_name or "✊" in gesture_name:
+            icon = "✊"
+            name = "Fist"
+        elif "Peace" in gesture_name or "✌️" in gesture_name:
+            icon = "✌️"
+            name = "Peace Sign"
+        elif "Thumbs Up" in gesture_name or "👍" in gesture_name:
+            icon = "👍"
+            name = "Thumbs Up"
+        elif "OK" in gesture_name or "👌" in gesture_name:
+            icon = "👌"
+            name = "OK Gesture"
+        elif "Pinch" in gesture_name or "🤏" in gesture_name:
+            icon = "🤏"
+            name = "Pinch Gesture"
+            
+        self.hero_emoji.setText(icon)
+        self.label_gesture_name.setText(name)
+        self.label_action_text.setText(f"Current Action: {action_name}")
+        self.status_pill.setText(f"🟢 {status_text}")
+        self.conf_pill.setText(f"Confidence: {confidence:.1f}%")
+        
+        # Trigger pulse border highlight
+        self.setStyleSheet(f"""
+            QFrame {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #232D44, stop:1 #131A2B);
+                border-radius: 20px;
+                border: 2px solid #06B6D4;
+            }}
+        """)
+
+
+# --- GESTURE SHOWCASE GALLERY CARD ---
+
+class GestureGalleryCard(QFrame):
+    """
+    Card displaying a single gesture showcase item for recruiters and users.
+    """
+    def __init__(self, icon, name, action, status="MAPPED", is_primary=False, parent=None):
+        super().__init__(parent)
+        t = get_theme()
+        
+        border_col = ACCENT if is_primary else BORDER_COLOR
+        bg_col = "#1B2236" if is_primary else BG_CARD
+        
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {bg_col};
+                border-radius: 14px;
+                border: 1px solid {border_col};
+            }}
+            QFrame:hover {{
+                border-color: #06B6D4;
+                background-color: #20273D;
+            }}
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
+        
+        # Header Row
+        head_lay = QHBoxLayout()
+        
+        icon_lbl = QLabel(icon)
+        icon_lbl.setFont(get_font(18))
+        
+        badge = QLabel(status)
+        badge.setFont(get_font(7, bold=True))
+        if status == "ACTIVE":
+            badge.setStyleSheet("background: rgba(16, 185, 129, 0.2); color: #34D399; border-radius: 4px; padding: 2px 6px;")
+        elif status == "STANDBY":
+            badge.setStyleSheet("background: rgba(245, 158, 11, 0.2); color: #FBBF24; border-radius: 4px; padding: 2px 6px;")
+        else:
+            badge.setStyleSheet(f"background: rgba(124, 58, 237, 0.2); color: {ACCENT_HOVER}; border-radius: 4px; padding: 2px 6px;")
+            
+        head_lay.addWidget(icon_lbl)
+        head_lay.addStretch()
+        head_lay.addWidget(badge)
+        layout.addLayout(head_lay)
+        
+        # Name
+        name_lbl = QLabel(name)
+        name_lbl.setFont(get_font(11, bold=True))
+        name_lbl.setStyleSheet("color: #F8FAFC;")
+        layout.addWidget(name_lbl)
+        
+        # Action Arrow mapping
+        action_lay = QHBoxLayout()
+        action_lay.setSpacing(6)
+        
+        arrow = QLabel("→")
+        arrow.setFont(get_font(10, bold=True))
+        arrow.setStyleSheet(f"color: {ACCENT};")
+        
+        action_lbl = QLabel(action)
+        action_lbl.setFont(get_font(9))
+        action_lbl.setStyleSheet("color: #06B6D4;")
+        action_lbl.setWordWrap(True)
+        
+        action_lay.addWidget(arrow)
+        action_lay.addWidget(action_lbl, 1)
+        layout.addLayout(action_lay)
+
+
+# --- PRODUCT ACTIVITY FEED TIMELINE ---
+
+class ProductActivityFeed(QFrame):
+    """
+    Clean product activity timeline feed replacing plain developer logs.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {BG_CARD};
+                border-radius: 14px;
+                border: 1px solid {BORDER_COLOR};
+            }}
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setSpacing(12)
+        
+        header = QHBoxLayout()
+        title = QLabel("PRODUCT ACTIVITY FEED")
+        title.setFont(get_font(8, bold=True))
+        title.setStyleSheet("color: #818CF8; letter-spacing: 1px;")
+        
+        subtitle = QLabel("Real-time timeline")
+        subtitle.setFont(get_font(8))
+        subtitle.setStyleSheet(f"color: {TEXT_MUTED};")
+        
+        header.addWidget(title)
+        header.addStretch()
+        header.addWidget(subtitle)
+        layout.addLayout(header)
+        
+        # Activity List
+        self.feed_layout = QVBoxLayout()
+        self.feed_layout.setSpacing(8)
+        
+        items = [
+            ("10:42:18", "👍 Thumbs Up detected", "Coding Flow executed successfully", "SUCCESS"),
+            ("10:42:16", "✌️ Peace Sign detected", "Chrome web browser launched", "SUCCESS"),
+            ("10:42:15", "✋ Open Palm detected", "LensFlow AI tracking activated", "ACTIVE"),
+        ]
+        
+        for time_str, event, result, status in items:
+            row = QFrame()
+            row.setStyleSheet("background: #111625; border-radius: 8px; border: 1px solid #1E2640;")
+            r_lay = QHBoxLayout(row)
+            r_lay.setContentsMargins(12, 8, 12, 8)
+            r_lay.setSpacing(12)
+            
+            t_lbl = QLabel(time_str)
+            t_lbl.setFont(get_font(8, bold=True))
+            t_lbl.setStyleSheet("color: #818CF8;")
+            t_lbl.setFixedWidth(65)
+            
+            e_lbl = QLabel(event)
+            e_lbl.setFont(get_font(9, bold=True))
+            e_lbl.setStyleSheet("color: #F8FAFC;")
+            
+            res_lbl = QLabel(result)
+            res_lbl.setFont(get_font(8))
+            res_lbl.setStyleSheet(f"color: {TEXT_MUTED};")
+            
+            st_badge = QLabel("Completed")
+            st_badge.setFont(get_font(7, bold=True))
+            st_badge.setStyleSheet("background: rgba(16, 185, 129, 0.2); color: #34D399; border-radius: 4px; padding: 2px 6px;")
+            
+            r_lay.addWidget(t_lbl)
+            r_lay.addWidget(e_lbl)
+            r_lay.addWidget(res_lbl, 1)
+            r_lay.addWidget(st_badge)
+            
+            self.feed_layout.addWidget(row)
+            
+        layout.addLayout(self.feed_layout)
 
 
 # --- PAGES ---
@@ -315,17 +644,20 @@ class DashboardHome(QWidget):
         self.top_bar = TopBar()
         self.layout.addWidget(self.top_bar)
         
-        # Workspace content area
+        # Workspace content area wrapped in scroll area for full responsiveness
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(30, 20, 30, 30)
         content_layout.setSpacing(24)
         
-        # Greeting Header
+        # 1. Greeting Header
         header_layout = QVBoxLayout()
         header_layout.setSpacing(4)
         
-        # Dynamically set greeting based on local time
         now = datetime.datetime.now()
         if now.hour < 12:
             greet_text = "Good Morning, Praveena 👋"
@@ -336,22 +668,56 @@ class DashboardHome(QWidget):
             
         self.greeting = QLabel(greet_text)
         self.greeting.setFont(get_font(20, bold=True))
-        self.greeting.setStyleSheet("color: white;")
+        self.greeting.setStyleSheet("color: #F8FAFC;")
         
-        self.subgreeting = QLabel("Choose a Studio and continue where you left off.")
-        self.subgreeting.setFont(get_font(12))
-        self.subgreeting.setStyleSheet(f"color: {TEXT_MUTED};")
+        self.subgreeting = QLabel("Welcome to LensFlow — AI-Powered Accessibility & Gesture Control Platform.")
+        self.subgreeting.setFont(get_font(11))
+        self.subgreeting.setStyleSheet("color: #818CF8;")
         
         header_layout.addWidget(self.greeting)
         header_layout.addWidget(self.subgreeting)
         content_layout.addLayout(header_layout)
         
+        # 2. Main Hero Interaction Area
+        self.hero_deck = HeroInteractionCard()
+        content_layout.addWidget(self.hero_deck)
+        
+        # 3. Gesture Showcase Row (4 Quick Showcase Cards)
+        g_showcase_header = QLabel("GESTURE CONTROL SHOWCASE")
+        g_showcase_header.setFont(get_font(8, bold=True))
+        g_showcase_header.setStyleSheet("color: #818CF8; letter-spacing: 1px;")
+        content_layout.addWidget(g_showcase_header)
+        
+        showcase_lay = QHBoxLayout()
+        showcase_lay.setSpacing(14)
+        
+        cards_data = [
+            ("✋", "Open Palm", "Activate Tracking System", "ACTIVE", True),
+            ("✊", "Fist", "Deactivate / Standby Mode", "STANDBY", False),
+            ("✌️", "Peace Sign", "Launch Chrome Web Browser", "MAPPED", False),
+            ("👍", "Thumbs Up", "Run Developer Automation", "MAPPED", False),
+        ]
+        
+        for icon, name, action, status, is_prim in cards_data:
+            c_widget = GestureGalleryCard(icon, name, action, status=status, is_primary=is_prim)
+            showcase_lay.addWidget(c_widget, 1)
+            
+        content_layout.addLayout(showcase_lay)
+        
+        # 4. Workspace Studios Grid Header
+        studios_header = QLabel("WORKSPACES & STUDIOS")
+        studios_header.setFont(get_font(8, bold=True))
+        studios_header.setStyleSheet("color: #818CF8; letter-spacing: 1px;")
+        content_layout.addWidget(studios_header)
+        
         # Responsive 3-Column Grid of Studio Cards
         self.grid = QGridLayout()
         self.grid.setSpacing(16)
         self.load_studios()
-        content_layout.addLayout(self.grid, 1)
-        self.layout.addWidget(content_widget, 1)
+        content_layout.addLayout(self.grid)
+        
+        scroll_area.setWidget(content_widget)
+        self.layout.addWidget(scroll_area, 1)
 
 
     def load_studios(self):
@@ -714,20 +1080,23 @@ class LivePage(QWidget):
         
         g_lbl = QLabel("ACTIVE GESTURE MAPS")
         g_lbl.setFont(get_font(8, bold=True))
-        g_lbl.setStyleSheet(f"color: {TEXT_MUTED}; letter-spacing: 0.5px;")
+        g_lbl.setStyleSheet("color: #818CF8; letter-spacing: 0.5px;")
         gestures_lay.addWidget(g_lbl)
         
-        gestures_lay.addWidget(QLabel("👍 Thumbs Up  →  Launch Chrome & Open GitHub"))
-        gestures_lay.addWidget(QLabel("✊ Fist       →  Deactivate System Control"))
-        gestures_lay.addWidget(QLabel("✋ Open Palm  →  Activate System Tracking"))
+        gestures_lay.addWidget(QLabel("✋ Open Palm  →  Activate System Tracking (Status: ACTIVE)"))
+        gestures_lay.addWidget(QLabel("✊ Fist       →  Deactivate System Control (Status: STANDBY)"))
+        gestures_lay.addWidget(QLabel("👍 Thumbs Up  →  Launch Chrome & Developer Tools"))
+        gestures_lay.addWidget(QLabel("✌️ Peace Sign →  Navigate to Web Dashboard"))
         
         left_layout.addWidget(gestures_card)
         
-        self.btn_toggle = ModernButton("Start Live Camera Pipeline", primary=True)
+        # Product Activity Feed Timeline
+        self.activity_feed = ProductActivityFeed()
+        left_layout.addWidget(self.activity_feed)
+        
+        self.btn_toggle = ModernButton("Start Live Camera Pipeline", gradient=True)
         left_layout.addWidget(self.btn_toggle)
         self.btn_toggle.clicked.connect(self.start_camera)
-
-        left_layout.addStretch()
 
         # Right Panel: Telemetry module
         self.right_panel = RightPanel()
@@ -756,58 +1125,121 @@ class LivePage(QWidget):
 
 
 class GesturesPage(QWidget):
+    """
+    Visually appealing Gesture Showcase Gallery for recruiters and users.
+    Displays clear gesture-to-action mappings with status badges.
+    """
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(30, 24, 30, 24)
-        layout.setSpacing(16)
+        layout.setSpacing(20)
         
-        title = QLabel("✋ Gestures Library")
-        title.setFont(get_font(18, bold=True))
-        layout.addWidget(title)
+        # Header
+        header = QVBoxLayout()
+        header.setSpacing(4)
+        
+        title = QLabel("✋ Gesture Showcase Gallery")
+        title.setFont(get_font(20, bold=True))
+        title.setStyleSheet("color: #F8FAFC;")
+        
+        subtitle = QLabel("Visual demonstration of LensFlow hand tracking triggers and assigned actions.")
+        subtitle.setFont(get_font(11))
+        subtitle.setStyleSheet("color: #818CF8;")
+        
+        header.addWidget(title)
+        header.addWidget(subtitle)
+        layout.addLayout(header)
         
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("background: transparent; border: none;")
+        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
         
         scroll_content = QWidget()
-        scroll_layout = QVBoxLayout(scroll_content)
-        scroll_layout.setSpacing(10)
+        scroll_layout = QGridLayout(scroll_content)
+        scroll_layout.setSpacing(16)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         
         gestures = [
-            ("✋ Open Palm", "ACTIVATE - Wake up LensFlow telemetry", True),
-            ("✊ Fist", "DEACTIVATE - Put LensFlow standby", True),
-            ("👍 Thumbs Up", "coding_flow - Start productivity layout", True),
-            ("✌️ Peace Sign", "Launch Chrome Web browser", True),
-            ("👌 OK", "Open Spotify Desktop", False),
-            ("🤏 Pinch", "Mouse Left Click control", False),
-            ("☝️ Index Finger", "Enter Mouse Scroll mode", False)
+            ("✋", "Open Palm", "Activate System Tracking & Listening", "ACTIVE", "Wakes up AI pipeline and listens for incoming commands."),
+            ("✊", "Fist", "Deactivate System & Enter Standby", "STANDBY", "Pauses computer control for privacy & safety."),
+            ("✌️", "Peace Sign", "Launch Chrome Web Browser", "MAPPED", "Triggers web browser launch with quick URLs."),
+            ("👍", "Thumbs Up", "Execute Productivity Automation", "MAPPED", "Launches VS Code, Terminal & GitHub tabs."),
+            ("👌", "OK Gesture", "Open Spotify & Control Media", "READY", "Starts background music playback and media keys."),
+            ("🤏", "Pinch", "Perform Left Mouse Click", "READY", "Precise touchless cursor interaction mode."),
+            ("☝️", "Index Finger", "Toggle Precise Cursor Scroll", "READY", "Smooth scroll control across long web pages.")
         ]
         
-        for name, flow, active in gestures:
+        for idx, (icon, name, action, status, desc) in enumerate(gestures):
             card = QFrame()
-            card.setStyleSheet(f"background-color: {BG_CARD}; border: 1px solid {BORDER_COLOR}; border-radius: 10px;")
-            card_lay = QHBoxLayout(card)
-            card_lay.setContentsMargins(15, 12, 15, 12)
+            is_active = (status == "ACTIVE")
+            border_col = "#7C3AED" if is_active else "#262E48"
+            bg_col = "#1B2236" if is_active else BG_CARD
             
-            g_lbl = QLabel(name)
-            g_lbl.setFont(get_font(11, bold=True))
-            g_lbl.setStyleSheet("color: white;")
+            card.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {bg_col};
+                    border: 1px solid {border_col};
+                    border-radius: 14px;
+                }}
+                QFrame:hover {{
+                    border-color: #06B6D4;
+                    background-color: #20273D;
+                }}
+            """)
             
-            flow_lbl = QLabel(f"Mapped to: {flow}" if active else "Not Mapped")
-            flow_lbl.setFont(get_font(9))
-            flow_lbl.setStyleSheet(f"color: {ACCENT if active else TEXT_MUTED};")
+            c_lay = QVBoxLayout(card)
+            c_lay.setContentsMargins(18, 16, 18, 16)
+            c_lay.setSpacing(10)
             
-            btn_edit = ModernButton("Map", primary=False)
-            btn_edit.setFixedWidth(80)
-            btn_edit.setFixedHeight(30)
+            # Row 1: Icon & Status Pill
+            top_lay = QHBoxLayout()
+            icon_lbl = QLabel(icon)
+            icon_lbl.setFont(get_font(22))
             
-            card_lay.addWidget(g_lbl)
-            card_lay.addWidget(flow_lbl, 1, Qt.AlignCenter)
-            card_lay.addWidget(btn_edit)
+            badge = QLabel(status)
+            badge.setFont(get_font(7, bold=True))
+            if status == "ACTIVE":
+                badge.setStyleSheet("background: rgba(16, 185, 129, 0.2); color: #34D399; border-radius: 4px; padding: 3px 8px;")
+            elif status == "STANDBY":
+                badge.setStyleSheet("background: rgba(245, 158, 11, 0.2); color: #FBBF24; border-radius: 4px; padding: 3px 8px;")
+            else:
+                badge.setStyleSheet(f"background: rgba(124, 58, 237, 0.2); color: #A78BFA; border-radius: 4px; padding: 3px 8px;")
+                
+            top_lay.addWidget(icon_lbl)
+            top_lay.addStretch()
+            top_lay.addWidget(badge)
+            c_lay.addLayout(top_lay)
             
-            scroll_layout.addWidget(card)
+            # Gesture Title
+            g_title = QLabel(name)
+            g_title.setFont(get_font(12, bold=True))
+            g_title.setStyleSheet("color: #F8FAFC;")
+            c_lay.addWidget(g_title)
+            
+            # Action Mapping
+            act_lay = QHBoxLayout()
+            act_lay.setSpacing(6)
+            arr = QLabel("→")
+            arr.setFont(get_font(10, bold=True))
+            arr.setStyleSheet("color: #8B5CF6;")
+            act_lbl = QLabel(action)
+            act_lbl.setFont(get_font(10, bold=True))
+            act_lbl.setStyleSheet("color: #06B6D4;")
+            act_lay.addWidget(arr)
+            act_lay.addWidget(act_lbl, 1)
+            c_lay.addLayout(act_lay)
+            
+            # Description
+            d_lbl = QLabel(desc)
+            d_lbl.setFont(get_font(8))
+            d_lbl.setStyleSheet("color: #818CF8;")
+            d_lbl.setWordWrap(True)
+            c_lay.addWidget(d_lbl)
+            
+            row = idx // 2
+            col = idx % 2
+            scroll_layout.addWidget(card, row, col)
             
         scroll.setWidget(scroll_content)
         layout.addWidget(scroll, 1)

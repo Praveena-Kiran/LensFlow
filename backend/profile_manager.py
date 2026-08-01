@@ -24,7 +24,7 @@ class ProfileManager:
         with open(path, encoding="utf-8") as f:
             self.current_profile = json.load(f)
 
-        print(f"✅ Loaded profile: {self.current_profile['name']}")
+        print(f"[OK] Loaded profile: {self.current_profile['name']}")
 
     def get_gesture_map(self):
 

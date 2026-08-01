@@ -1,4 +1,4 @@
-from gestures.hand_detector import start_hand_detection
+from backend.gestures.hand_detector import start_hand_detection
 
 def main():
     print("=" * 40)

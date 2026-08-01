@@ -2,7 +2,7 @@ import cv2
 import mediapipe as mp
 
 from backend.config.settings import *
-from backend.gestures.gesture_recognizer import GestureRecognizer
+from backend.gestures.google_gesture_recognizer import GoogleGestureRecognizer
 from backend.gestures.gesture_stabilizer import GestureStabilizer
 from backend.automation.action_manager import ActionManager
 from backend.profile_manager import ProfileManager
@@ -12,7 +12,7 @@ class CameraEngine:
     def __init__(self):
 
         self.camera = None
-        self.recognizer = GestureRecognizer()
+        self.recognizer = GoogleGestureRecognizer()
         self.stabilizer = GestureStabilizer()
         self.action_manager = ActionManager()
 
@@ -56,6 +56,7 @@ class CameraEngine:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         results = self.hands.process(rgb)
+        gesture = self.recognizer.detect(frame)
 
         if results.multi_hand_landmarks:
 
@@ -66,7 +67,7 @@ class CameraEngine:
                     hand,
                     self.mp_hands.HAND_CONNECTIONS
                 )
-                gesture = self.recognizer.detect(hand)
+                
                 print("Detected:", gesture)
 
                 confirmed = self.stabilizer.update(gesture)

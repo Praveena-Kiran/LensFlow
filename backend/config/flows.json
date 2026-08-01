@@ -25,6 +25,48 @@
                     "e"
                 ]
             }
+
+
+        ]
+    },
+
+    "presentation_start": {
+        "name": "Start Presentation",
+        "actions": [
+            {
+                "type": "powerpoint",
+                "command": "start_presentation"
+            }
+        ]
+    },
+
+    "presentation_end": {
+        "name": "End Presentation",
+        "actions": [
+            {
+                "type": "powerpoint",
+                "command": "end_presentation"
+            }
+        ]
+    },
+
+    "presentation_next": {
+        "name": "Next Slide",
+        "actions": [
+            {
+                "type": "powerpoint",
+                "command": "next_slide"
+            }
+        ]
+    },
+
+    "presentation_previous": {
+        "name": "Previous Slide",
+        "actions": [
+            {
+                "type": "powerpoint",
+                "command": "previous_slide"
+            }
         ]
     }
 }

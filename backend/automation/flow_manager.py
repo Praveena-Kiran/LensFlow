@@ -11,6 +11,7 @@ from .actions.launch_action import LaunchAction
 from .actions.wait_action import WaitAction
 from .actions.website_action import WebsiteAction
 from .actions.hotkey_action import HotkeyAction
+from .actions.powerpoint_action import PowerPointAction
 
 class FlowManager:
 
@@ -25,7 +26,8 @@ class FlowManager:
     "launch": LaunchAction(),
     "wait": WaitAction(),
     "website": WebsiteAction(),
-    "hotkey": HotkeyAction()
+    "hotkey": HotkeyAction(),
+    "powerpoint": PowerPointAction()
 }   
 
         with open(
@@ -122,4 +124,7 @@ class FlowManager:
 
         self.execute_flow(self.current_studio["flow"])    
 
-    
+if __name__ == "__main__":
+    fm = FlowManager()
+    fm.execute_flow("presentation_flow")
+
