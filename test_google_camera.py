@@ -1,5 +1,4 @@
 import cv2
-
 from backend.gestures.google_gesture_recognizer import GoogleGestureRecognizer
 
 recognizer = GoogleGestureRecognizer()
@@ -18,6 +17,8 @@ while True:
     gesture = recognizer.detect(frame)
 
     if gesture:
+        print(gesture)
+
         cv2.putText(
             frame,
             gesture,
@@ -27,8 +28,6 @@ while True:
             (0, 255, 0),
             2
         )
-
-        print(gesture)
 
     cv2.imshow("Google Gesture Test", frame)
 

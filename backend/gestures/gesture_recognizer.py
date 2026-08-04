@@ -22,6 +22,7 @@ class GestureRecognizer:
             abs(thumb_tip.x - thumb_mcp.x) >
             abs(thumb_ip.x - thumb_mcp.x)
         )
+            
 
     # ----------------------------
     # Gestures
@@ -48,11 +49,18 @@ class GestureRecognizer:
         pinky = self.finger_extended(20, 18, landmarks)
 
         thumb_tip = landmarks[4]
+        thumb_mcp = landmarks[2]
+        index_mcp = landmarks[5]
         wrist = landmarks[0]
 
+        print("Thumb Tip :", thumb_tip.x, thumb_tip.y)
+        print("Thumb MCP :", thumb_mcp.x, thumb_mcp.y)
+        print("Index MCP :", index_mcp.x, index_mcp.y)
+        print("Wrist     :", wrist.x, wrist.y)
+        print("----------------")
         return (
             thumb
-            and thumb_tip.y < wrist.y
+            and thumb_tip.y < index_mcp.y - 0.06
             and not index
             and not middle
             and not ring

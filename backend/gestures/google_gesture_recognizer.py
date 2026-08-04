@@ -1,33 +1,45 @@
-from backend import gesture_ai
 import os
+print("Current working directory:", os.getcwd())
 import cv2
 import mediapipe as mp
 
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
+
 
 
 class GoogleGestureRecognizer:
 
     def __init__(self):
 
-        model_path = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "models",
-            "gesture_recognizer.task"
-        )
+        print("GoogleGestureRecognizer created!")
 
-        BaseOptions = python.BaseOptions
-        GestureRecognizer = vision.GestureRecognizer
-        GestureRecognizerOptions = vision.GestureRecognizerOptions
-        VisionRunningMode = vision.RunningMode
+        import traceback
+        traceback.print_stack(limit=5)
+
+        model_path = r"C:\\Users\\Praveena\\OneDrive\\Desktop\\LensFlow\\LensFlow\\backend\\models\\gesture_recognizer.task"
+
+        print("MODEL =", model_path)
+        print("repr  =", repr(model_path))
+
+        print("MODEL PATH =", model_path)
+        print("EXISTS =", os.path.exists(model_path))
+
+        BaseOptions = mp.tasks.BaseOptions 
+        GestureRecognizer = mp.tasks.vision.GestureRecognizer 
+        GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions 
+        VisionRunningMode = mp.tasks.vision.RunningMode
+
+        with open(model_path, "rb") as f:
+            model_buffer = f.read()
 
         options = GestureRecognizerOptions(
-            base_options=BaseOptions(model_asset_path=model_path),
+            base_options=BaseOptions(
+                model_asset_buffer=model_buffer
+            ),
             running_mode=VisionRunningMode.IMAGE
         )
-
+        
+        print("MODEL PATH =", model_path)
+        print("ABSOLUTE =", os.path.isabs(model_path))
         self.recognizer = GestureRecognizer.create_from_options(options)
 
     def detect(self, frame):
@@ -55,5 +67,7 @@ class GoogleGestureRecognizer:
             }
 
             return mapping.get(gesture)
+
+            
 
         return None

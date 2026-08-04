@@ -11,7 +11,7 @@ class ActionManager:
         self.current_studio = None
         self.last_action = ""
         self.last_action_time = 0
-        self.cooldown = 2 
+        self.cooldown = 0.8
         self.flow_manager = FlowManager()   # seconds
 
     def execute(self, gesture, action):
