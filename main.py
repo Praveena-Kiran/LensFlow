@@ -4,6 +4,9 @@ Frameless main window with custom title bar, sidebar navigation,
 and the Home page as the default view.
 """
 
+from mediapipe.python.solutions import selfie_segmentation
+from mediapipe.python.solutions import selfie_segmentation
+from mediapipe.python.solutions import selfie_segmentation
 import sys
 import os
 
@@ -17,7 +20,16 @@ from frontend.components.title_bar import TitleBar
 from frontend.components.sidebar import AppSidebar
 from frontend.pages.home import HomePage
 from frontend.components.title_bar import TitleBar
-
+from frontend.pages.presentation_page import PresentationPage
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QStackedWidget,
+)
+from frontend.pages.presentation_page import PresentationPage
 class MainWindow(QMainWindow):
     """LensFlow frameless main window."""
 
@@ -59,10 +71,22 @@ class MainWindow(QMainWindow):
         self.sidebar = AppSidebar()
         body.addWidget(self.sidebar)
 
+        self.stack = QStackedWidget()
+
         self.home_page = HomePage()
-        body.addWidget(self.home_page, 1)
+        self.presentation_page = PresentationPage()
+
+        self.stack.addWidget(self.home_page)
+        self.stack.addWidget(self.presentation_page)
+
+        body.addWidget(self.stack, 1)
+
         self.home_page.studio_selected.connect(
             self.open_live_workspace
+        )
+
+        self.presentation_page.back_requested.connect(
+            lambda: self.stack.setCurrentWidget(self.home_page)
         )
 
 
@@ -81,7 +105,11 @@ class MainWindow(QMainWindow):
         self.move(x, y)
 
     def open_live_workspace(self, studio_name):
-        print(f"Opening {studio_name}")
+        print("CLICKED:", studio_name)
+
+        if studio_name == "Presentation Studio":
+            print("SWITCHING TO PRESENTATION")
+            self.stack.setCurrentWidget(self.presentation_page)
 
 
 def _load_stylesheet(app: QApplication):

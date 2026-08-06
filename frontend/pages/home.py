@@ -4,8 +4,8 @@ Composes the Hero section, Studio cards row, and right panel
 into a responsive scrollable Home screen.
 """
 
-from cv2 import wechat_qrcode
-from mediapipe.python.solutions import selfie_segmentation
+
+from frontend.pages.presentation_page import PresentationPage
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
@@ -82,7 +82,7 @@ class HomePage(QWidget):
 
         main.addStretch()
 
-        outer.addWidget(self.scroll, 6)
+        outer.addWidget(self.scroll, 1)
 
         # Right Panel
         self.right_panel = RightPanel()
@@ -90,8 +90,10 @@ class HomePage(QWidget):
         self.right_panel.setMinimumWidth(280)
         self.right_panel.setMaximumWidth(320)
 
-        outer.addWidget(self.right_panel, 1)
+        outer.addWidget(self.right_panel)
         self._update_right_panel()
+        self.presentation_page = PresentationPage()
+
        
 
     def _build_studios_header(self, parent):
@@ -139,36 +141,46 @@ class HomePage(QWidget):
         )
 
         studios = [
-            {
-                "title": "Coding Studio",
-                "time_ago": "2 hours ago",
-                "description": "VS Code, Terminal, GitHub and documentation ready to go.",
-                "apps": ["VS Code", "Terminal", "GitHub", "Docs"],
-                "last_used": "Today • 2:41 PM",
-                "icon_symbol": "</>",
-                "accent": "#3B82F6",
-            },
+    {
+        "title": "Presentation Studio",
+        "time_ago": "Today",
+        "description": "Control PowerPoint presentations using gestures and voice.",
+        "apps": ["PowerPoint", "Camera", "Microphone"],
+        "last_used": "Today • 2:41 PM",
+        "icon_symbol": "Pr",
+        "accent": "#3B82F6",
+    },
 
-            {
-                "title": "Study Studio",
-                "time_ago": "Yesterday",
-                "description": "Notion, browser research, notes and flashcards.",
-                "apps": ["Notion", "Browser", "Notes"],
-                "last_used": "Yesterday • 6:30 PM",
-                "icon_symbol": "St",
-                "accent": "#8B5CF6",
-            },
+    {
+        "title": "Coding Studio",
+        "time_ago": "Yesterday",
+        "description": "Launch your development workspace and AI coding tools.",
+        "apps": ["VS Code", "Terminal", "Git"],
+        "last_used": "Yesterday • 6:30 PM",
+        "icon_symbol": "</>",
+        "accent": "#10B981",
+    },
 
-            {
-                "title": "Design Studio",
-                "time_ago": "3 days ago",
-                "description": "Figma, color tools, assets and inspiration board.",
-                "apps": ["Figma", "Colors", "Assets"],
-                "last_used": "3 days ago • 11:20 AM",
-                "icon_symbol": "Ds",
-                "accent": "#EC4899",
-            },
-        ]
+    {
+        "title": "Gesture Studio",
+        "time_ago": "3 days ago",
+        "description": "Train, test and customize gesture recognition models.",
+        "apps": ["MediaPipe", "Camera", "Models"],
+        "last_used": "3 days ago • 11:20 AM",
+        "icon_symbol": "✋",
+        "accent": "#F59E0B",
+    },
+
+    {
+        "title": "Automation Studio",
+        "time_ago": "Never",
+        "description": "Create automation flows triggered by gestures.",
+        "apps": ["Flows", "Apps", "Actions"],
+        "last_used": "Not yet",
+        "icon_symbol": "⚡",
+        "accent": "#8B5CF6",
+    },
+]
 
 
         for studio in studios:
@@ -193,11 +205,10 @@ class HomePage(QWidget):
 
 
     def _update_right_panel(self):
-       # if self.width() < 1200:
-          #  self.right_panel.hide()
-        #else:
-           # self.right_panel.show()
-        pass
+        if self.width() < 1100:
+            self.right_panel.hide()
+        else:
+            self.right_panel.show()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

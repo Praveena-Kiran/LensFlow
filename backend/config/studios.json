@@ -1,33 +1,38 @@
 [
-    {
-        "id": "coding",
-        "name": "Coding",
-        "icon": "💻",
-        "description": "Everything is ready. Pick up where you left off.",
-        "flow": "coding_flow",
-        "color": "#7C3AED",
-        "theme": "Light",
-        "accent": "purple",
-        "gesture_profile": "coding",
-        "gesture_enabled": false,
-        "last_used": "18 mins ago"
-    },
-    {
-        "id": "creative",
-        "name": "Creative",
-        "icon": "🎨",
-        "description": "Your creative tools are waiting.",
-        "flow": "creative_flow",
-        "color": "#EC4899",
-        "gesture_enabled": true,
-        "last_used": "Yesterday"
-    },
-    {
-        "id": "music",
-        "name": "Music",
-        "description": "Music Production Workshop",
-        "icon": "",
-        "flow": "music_flow",
-        "last_used": "Never"
-    }
+  {
+    "title": "Presentation Studio",
+    "time_ago": "Today",
+    "description": "Control PowerPoint presentations using gestures and voice.",
+    "apps": ["PowerPoint", "Camera", "Microphone"],
+    "last_used": "Today • 2:41 PM",
+    "icon_symbol": "Pr",
+    "accent": "#3B82F6"
+  },
+  {
+    "title": "Coding Studio",
+    "time_ago": "Yesterday",
+    "description": "Launch your development workspace and AI coding tools.",
+    "apps": ["VS Code", "Terminal", "Git"],
+    "last_used": "Yesterday • 6:30 PM",
+    "icon_symbol": "</>",
+    "accent": "#10B981"
+  },
+  {
+    "title": "Gesture Studio",
+    "time_ago": "3 days ago",
+    "description": "Train, test and customize gesture recognition models.",
+    "apps": ["MediaPipe", "Camera", "Models"],
+    "last_used": "3 days ago • 11:20 AM",
+    "icon_symbol": "✋",
+    "accent": "#F59E0B"
+  },
+  {
+    "title": "Automation Studio",
+    "time_ago": "Never",
+    "description": "Create automation flows triggered by gestures.",
+    "apps": ["Flows", "Apps", "Actions"],
+    "last_used": "Not yet",
+    "icon_symbol": "⚡",
+    "accent": "#8B5CF6"
+  }
 ]

@@ -78,6 +78,7 @@ class StudioCard(QFrame):
             QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed
         )
+
         
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
