@@ -138,7 +138,7 @@ class RightPanel(QFrame):
 
     toggled = Signal(bool)  # Emits current collapsed state (True = collapsed)
 
-    EXPANDED_WIDTH = 270
+    EXPANDED_WIDTH = 320
     COLLAPSED_WIDTH = 44
 
     def __init__(self, is_collapsed: bool = False, parent: Optional[QWidget] = None):
@@ -277,7 +277,7 @@ class RightPanel(QFrame):
         self._root_layout.addWidget(self.content_widget, 1)
 
         # ── Width Animation Setup ───────────────────────────────────────
-        self._anim = QPropertyAnimation(self, b"maximumWidth", self)
+        self._anim = QPropertyAnimation(self, b"size", self)
         self._anim.setDuration(250)
         self._anim.setEasingCurve(QEasingCurve.Type.OutCubic)
 

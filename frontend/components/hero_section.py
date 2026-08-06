@@ -92,14 +92,18 @@ class HeroSection(QWidget):
         top.addWidget(self.badge, 0, Qt.AlignmentFlag.AlignTop)
 
         layout.addLayout(top)
-        layout.addSpacing(16)
+        layout.addSpacing(8)
 
         # ── Centred Interactive Glowing Orb ─────────────────────────────
         self.orb = GlowOrb(diameter=120)
+        self.orb.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed
+        )
         self.orb.setToolTip("Click to test gesture ripple effect / Hover to expand")
         layout.addWidget(self.orb, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        layout.addSpacing(4)
+        layout.addSpacing(2)
 
         # ── Start Listening Action Button ───────────────────────────────
         self.btn_listen = QPushButton("\u266A   Start Listening")

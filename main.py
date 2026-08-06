@@ -16,7 +16,7 @@ from PySide6.QtGui import QFont
 from frontend.components.title_bar import TitleBar
 from frontend.components.sidebar import AppSidebar
 from frontend.pages.home import HomePage
-
+from frontend.components.title_bar import TitleBar
 
 class MainWindow(QMainWindow):
     """LensFlow frameless main window."""
@@ -24,13 +24,18 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("LensFlow")
-        self.setMinimumSize(1400, 900)
-        self.resize(1400, 900)
-
+    
         # Frameless window
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window
         )
+        screen = QApplication.primaryScreen().availableGeometry()
+        width = int(screen.width() * 0.85)
+        height = int(screen.height() * 0.85)
+
+        self.setMinimumSize(1100, 700)
+        self.resize(width, height)
+        self._center_on_screen()
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setStyleSheet("background-color: #0B0B0F;")
 
@@ -43,7 +48,7 @@ class MainWindow(QMainWindow):
         root_layout.setSpacing(0)
 
         # ── Title Bar ───────────────────────────────────────────────────
-        self.title_bar = TitleBar()
+        self.title_bar = TitleBar(self)
         root_layout.addWidget(self.title_bar)
 
         # ── Body: Sidebar + Page Content ────────────────────────────────
@@ -56,16 +61,27 @@ class MainWindow(QMainWindow):
 
         self.home_page = HomePage()
         body.addWidget(self.home_page, 1)
+        self.home_page.studio_selected.connect(
+            self.open_live_workspace
+        )
+
 
         root_layout.addLayout(body, 1)
+        self.showNormal()
 
+
+    def launch_studio(self, studio_name):
+        print(f"Launching Studio: {studio_name}")
+    
+    
     def _center_on_screen(self):
-        screen = QApplication.primaryScreen()
-        if screen:
-            geo = screen.availableGeometry()
-            x = (geo.width() - self.width()) // 2 + geo.x()
-            y = (geo.height() - self.height()) // 2 + geo.y()
-            self.move(x, y)
+        screen = QApplication.primaryScreen().availableGeometry()
+        x = screen.x() + (screen.width() - self.width()) // 2
+        y = screen.y() + (screen.height() - self.height()) // 2
+        self.move(x, y)
+
+    def open_live_workspace(self, studio_name):
+        print(f"Opening {studio_name}")
 
 
 def _load_stylesheet(app: QApplication):

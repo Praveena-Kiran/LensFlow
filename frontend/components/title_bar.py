@@ -12,12 +12,14 @@ from PySide6.QtWidgets import (
 )
 
 
+
+
 class WindowControlButton(QPushButton):
     """Minimal window control button (Minimize, Maximize, Close)."""
 
     def __init__(self, symbol: str, tooltip: str = "", is_close: bool = False, parent=None):
         super().__init__(symbol, parent)
-        self.setFixedSize(46, 36)
+        self.setFixedSize(50, 40)
         self.setToolTip(tooltip)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.is_close = is_close
@@ -32,7 +34,7 @@ class WindowControlButton(QPushButton):
 
         self.setStyleSheet(f"""
             QPushButton {{
-                background-color: transparent;
+                background-color: #222222;
                 color: #9CA3AF;
                 border: none;
                 font-size: 13px;
@@ -64,7 +66,7 @@ class TitleBar(QWidget):
         """)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(16, 0, 0, 0)
+        layout.setContentsMargins(16, 0, 16, 0)
         layout.setSpacing(0)
 
         # ── LF Monogram Logo Badge ───────────────────────────────────────

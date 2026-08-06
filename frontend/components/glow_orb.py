@@ -38,7 +38,7 @@ class GlowOrb(QWidget):
         self._hover_scale = 1.0
         self._ripple_factor = 0.0  # 0.0 (no ripple) to 1.0 (fully expanded ripple)
 
-        total = diameter + 120
+        total = diameter + 40
         self.setFixedSize(total, total)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 

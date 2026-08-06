@@ -4,6 +4,7 @@ Compact card displaying studio icon badge, title, time-ago, description,
 app chips, last-used timestamp, and accent-coloured Launch button.
 """
 
+from mediapipe.python.solutions import selfie_segmentation
 from typing import Optional
 from PySide6.QtCore import Qt, QRectF, Signal
 from PySide6.QtGui import (
@@ -72,8 +73,14 @@ class StudioCard(QFrame):
         self._accent = accent
         self.setObjectName("StudioCard")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setFixedHeight(225)
+        self.setFixedSize(300, 225)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed
+        )
+        
+
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Drop shadow
@@ -84,10 +91,9 @@ class StudioCard(QFrame):
         self.setGraphicsEffect(shadow)
 
         self._apply_style()
-
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(0)
+        layout.setSpacing(12)
 
         # ── Row 1: Icon + Title + Time Ago ──────────────────────────────
         top = QHBoxLayout()
@@ -105,12 +111,16 @@ class StudioCard(QFrame):
 
         desc = QLabel(description)
         desc.setWordWrap(True)
+        desc.setWordWrap(True)
+        desc.setMaximumHeight(36)
+        desc.setFixedWidth(230)
         desc.setStyleSheet("color: #9CA3AF; font-size: 12px; font-weight: 400; line-height: 1.4;")
         title_col.addWidget(desc)
 
         top.addLayout(title_col, 1)
 
         time_lbl = QLabel(time_ago)
+        time_lbl.setFixedWidth(60)
         time_lbl.setStyleSheet("color: #6B7280; font-size: 11px; font-weight: 400;")
         top.addWidget(time_lbl, 0, Qt.AlignmentFlag.AlignTop)
 
