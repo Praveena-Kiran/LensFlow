@@ -1,12 +1,7 @@
-from mediapipe.tasks.cc.vision.gesture_recognizer.proto import gesture_classifier_graph_options_pb2
-from mediapipe.framework import status_handler_pb2
 import json
 import os
 import subprocess
 import platform
-import time
-import webbrowser
-import pyautogui
 from .actions.launch_action import LaunchAction
 from .actions.wait_action import WaitAction
 from .actions.website_action import WebsiteAction

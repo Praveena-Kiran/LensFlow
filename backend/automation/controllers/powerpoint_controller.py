@@ -34,7 +34,12 @@ class PowerPointController:
 
     def start_presentation(self):
         if self.connect():
+
+            print("Presentation:", self.presentation.Name)
+            print("SlideShowWindows:", self.app.SlideShowWindows.Count)
+
             self.presentation.SlideShowSettings.Run()
+
             print("▶ Presentation Started")
 
     def end_presentation(self):
