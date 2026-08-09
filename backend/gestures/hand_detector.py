@@ -57,13 +57,13 @@ def start_hand_detection():
 
 
         # MediaPipe Gesture Recognizer
-        gesture = recognizer.detect(frame)
+        gesture, confidence = recognizer.detect(frame)
 
       #  print("Detected:", gesture)
 
 
         # Stabilize gesture
-        confirmed_gesture = stabilizer.update(gesture)
+        confirmed_gesture = stabilizer.update(gesture, confidence)
 
 
         if confirmed_gesture:

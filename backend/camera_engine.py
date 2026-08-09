@@ -17,7 +17,7 @@ class CameraEngine:
         self.action_manager = ActionManager()
 
         self.profile_manager = ProfileManager()
-        self.profile_manager.load("coding")
+        self.profile_manager.load("")
 
         self.gesture_map = self.profile_manager.get_gesture_map()
 
