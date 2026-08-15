@@ -1,10 +1,10 @@
 {
     "name": "Presentation",
-
     "gesture_map": {
-        "👍 Thumbs Up": "next_slide",
-        "✌️ Peace": "previous_slide",
         "✋ Open Palm": "ACTIVATE",
-        "✊ Fist": "DEACTIVATE"
+        "✊ Fist": "presentation_end",
+        "✌️ Peace": "presentation_start",
+        "👍 Thumbs Up": "presentation_next",
+        "👎 Thumbs Down": "presentation_previous"
     }
 }

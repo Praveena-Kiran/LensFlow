@@ -25,6 +25,12 @@ class ProfileManager:
             self.current_profile = json.load(f)
 
         print(f"[OK] Loaded profile: {self.current_profile['name']}")
+    
+    def get_profile_name(self):
+        if not self.current_profile:
+            return None
+
+        return self.current_profile["name"]
 
     def get_gesture_map(self):
 

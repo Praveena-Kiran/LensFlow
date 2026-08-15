@@ -7,6 +7,7 @@ and the Home page as the default view.
 from mediapipe.python.solutions import selfie_segmentation
 from mediapipe.python.solutions import selfie_segmentation
 from mediapipe.python.solutions import selfie_segmentation
+from mediapipe.python.solutions import selfie_segmentation
 import sys
 import os
 
@@ -30,6 +31,9 @@ from PySide6.QtWidgets import (
     QStackedWidget,
 )
 from frontend.pages.presentation_page import PresentationPage
+from PySide6.QtCore import QThread
+from backend.gestures.gesture_worker import GestureWorker
+from backend.automation.action_manager import ActionManager
 class MainWindow(QMainWindow):
     """LensFlow frameless main window."""
 
@@ -75,6 +79,9 @@ class MainWindow(QMainWindow):
 
         self.home_page = HomePage()
         self.presentation_page = PresentationPage()
+        self.gesture_thread = None
+        self.gesture_worker = None
+        self.action_manager = ActionManager()
 
         self.stack.addWidget(self.home_page)
         self.stack.addWidget(self.presentation_page)
@@ -109,7 +116,57 @@ class MainWindow(QMainWindow):
 
         if studio_name == "Presentation Studio":
             print("SWITCHING TO PRESENTATION")
-            self.stack.setCurrentWidget(self.presentation_page)
+
+            self.stack.setCurrentWidget(
+                self.presentation_page
+            )
+
+            self.start_gesture_worker(
+                "presentation"
+            )
+
+    
+    def start_gesture_worker(self, profile_name):
+        print(f"🎯 Starting gesture profile: {profile_name}")
+
+        self.gesture_thread = QThread()
+        self.gesture_worker = GestureWorker(profile_name)
+
+        self.gesture_worker.moveToThread(self.gesture_thread)
+
+        self.gesture_thread.started.connect(
+            self.gesture_worker.run
+        )
+
+        self.gesture_worker.error.connect(
+            lambda message: print(f"❌ Gesture Error: {message}")
+        )
+
+        self.gesture_worker.gesture_detected.connect(
+            lambda gesture, confidence:
+                print(
+                    f"Detected: {gesture} | "
+                    f"Confidence: {confidence:.2f}"
+                )
+        )
+
+        self.gesture_worker.action_detected.connect(
+            self.handle_gesture_action
+        )
+
+        self.gesture_worker.status_changed.connect(
+            lambda status:
+                print(f"Gesture Status: {status}")
+        )
+
+        self.gesture_thread.start()
+    
+    def handle_gesture_action(self, action):
+        print(f"🎯 Gesture action: {action}")
+        self.action_manager.execute(
+            "",
+            action
+        )
 
 
 def _load_stylesheet(app: QApplication):
