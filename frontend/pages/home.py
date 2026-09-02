@@ -1,11 +1,15 @@
-"""LensFlow - Home Page
+"""
+LensFlow - Home Page
 
-Composes the Hero section, Studio cards row, and right panel
-into a responsive scrollable Home screen.
+Dashboard containing:
+- Hero section
+- Studio cards
+- Create Studio
+- Persistent custom studios
 """
 
-
-from frontend.pages.presentation_page import PresentationPage
+import json
+import os
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
@@ -24,114 +28,245 @@ from frontend.components.studio_card import StudioCard
 from frontend.components.right_panel import RightPanel
 from frontend.layouts.flow_layout import FlowLayout
 
+
 class HomePage(QWidget):
-    """Home page assembling hero, studios grid, and the right focus panel."""
 
     studio_selected = Signal(str)
+    create_studio_requested = Signal()
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        parent: Optional[QWidget] = None
+    ):
         super().__init__(parent)
 
         self.setObjectName("HomePage")
-        self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setStyleSheet(
-            "QWidget#HomePage { background-color: #0B0B0F; }"
+
+        self.setAttribute(
+            Qt.WA_StyledBackground,
+            True
         )
 
+        self.setStyleSheet("""
+            QWidget#HomePage {
+                background-color: #0B0B0F;
+            }
+        """)
+
+        # =====================================================
+        # OUTER LAYOUT
+        # =====================================================
+
         outer = QHBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
+
+        outer.setContentsMargins(
+            0,
+            0,
+            0,
+            0
+        )
+
         outer.setSpacing(0)
 
-        # Scroll Area
+        # =====================================================
+        # SCROLL AREA
+        # =====================================================
+
         self.scroll = QScrollArea()
+
         self.scroll.setWidgetResizable(True)
-        self.scroll.setFrameShape(QFrame.NoFrame)
+
+        self.scroll.setFrameShape(
+            QFrame.Shape.NoFrame
+        )
+
         self.scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarAlwaysOff
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
 
         self.content = QWidget()
-        self.content.setStyleSheet("background: transparent;")
-        self.scroll.setWidget(self.content)
 
-        main = QVBoxLayout(self.content)
-        main.setContentsMargins(40, 32, 40, 40)
+        self.content.setStyleSheet(
+            "background: transparent;"
+        )
+
+        self.scroll.setWidget(
+            self.content
+        )
+
+        main = QVBoxLayout(
+            self.content
+        )
+
+        main.setContentsMargins(
+            40,
+            32,
+            40,
+            40
+        )
+
         main.setSpacing(0)
-        main.setAlignment(Qt.AlignTop)
 
-        # Hero
+        main.setAlignment(
+            Qt.AlignmentFlag.AlignTop
+        )
+
+        # =====================================================
+        # HERO
+        # =====================================================
+
         self.hero = HeroSection()
+
         hero_container = QWidget()
-        hero_layout = QVBoxLayout(hero_container)
-        hero_layout.setContentsMargins(0, 0, 0, 0)
+
+        hero_layout = QVBoxLayout(
+            hero_container
+        )
+
+        hero_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0
+        )
+
         hero_layout.setSpacing(0)
-        hero_layout.setAlignment(Qt.AlignTop)
 
-        hero_layout.addWidget(self.hero, 0, Qt.AlignTop)
+        hero_layout.addWidget(
+            self.hero
+        )
 
-        main.addWidget(hero_container, 0, Qt.AlignTop)
+        main.addWidget(
+            hero_container
+        )
+
         main.addSpacing(8)
 
-        # Header
-        self._build_studios_header(main)
+        # =====================================================
+        # STUDIO HEADER
+        # =====================================================
+
+        self._build_studios_header(
+            main
+        )
 
         main.addSpacing(16)
 
-        # Cards
-        self._build_studios_row(main)
+        # =====================================================
+        # STUDIO CARDS
+        # =====================================================
+
+        self._build_studios_row(
+            main
+        )
 
         main.addStretch()
 
-        outer.addWidget(self.scroll, 1)
+        outer.addWidget(
+            self.scroll,
+            1
+        )
 
-        # Right Panel
+        # =====================================================
+        # RIGHT PANEL
+        # =====================================================
+
         self.right_panel = RightPanel()
-        self.right_panel.setObjectName("RightPanel")
-        self.right_panel.setMinimumWidth(280)
-        self.right_panel.setMaximumWidth(320)
 
-        outer.addWidget(self.right_panel)
+        self.right_panel.setObjectName(
+            "RightPanel"
+        )
+
+        self.right_panel.setMinimumWidth(
+            280
+        )
+
+        self.right_panel.setMaximumWidth(
+            320
+        )
+
+        outer.addWidget(
+            self.right_panel
+        )
+
         self._update_right_panel()
-        self.presentation_page = PresentationPage()
 
-       
+    # =========================================================
+    # HEADER
+    # =========================================================
 
-    def _build_studios_header(self, parent):
+    def _build_studios_header(
+        self,
+        parent
+    ):
+
         row = QHBoxLayout()
 
-        title = QLabel("Your Studios")
+        title = QLabel(
+            "Your Studios"
+        )
+
         title.setStyleSheet("""
             color: white;
-            font-size:18px;
-            font-weight:600;
+            font-size: 18px;
+            font-weight: 600;
         """)
 
-        row.addWidget(title)
+        row.addWidget(
+            title
+        )
+
         row.addStretch()
 
-        create = QPushButton("+ Create Studio")
-        create.setFixedHeight(30)
-        create.setCursor(Qt.PointingHandCursor)
+        create = QPushButton(
+            "+ Create Studio"
+        )
+
+        create.setFixedHeight(
+            30
+        )
+
+        create.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
         create.setStyleSheet("""
-            QPushButton{
-                background:transparent;
-                color:#60A5FA;
-                border:none;
-                font-size:13px;
-                font-weight:600;
+            QPushButton {
+                background: transparent;
+                color: #60A5FA;
+                border: none;
+                font-size: 13px;
+                font-weight: 600;
             }
 
-            QPushButton:hover{
-                color:#93C5FD;
+            QPushButton:hover {
+                color: #93C5FD;
             }
         """)
 
-        row.addWidget(create)
+        create.clicked.connect(
+            self.create_studio_requested.emit
+        )
 
-        parent.addLayout(row)
+        row.addWidget(
+            create
+        )
 
-    def _build_studios_row(self, parent):
+        parent.addLayout(
+            row
+        )
+
+    # =========================================================
+    # STUDIO CARDS
+    # =========================================================
+
+    def _build_studios_row(
+        self,
+        parent
+    ):
+
         self.cards_container = QWidget()
+
         self.cards_container.setStyleSheet(
             "background: transparent;"
         )
@@ -139,57 +274,6 @@ class HomePage(QWidget):
         self.cards_layout = FlowLayout(
             spacing=16
         )
-
-        studios = [
-    {
-        "title": "Presentation Studio",
-        "time_ago": "Today",
-        "description": "Control PowerPoint presentations using gestures and voice.",
-        "apps": ["PowerPoint", "Camera", "Microphone"],
-        "last_used": "Today • 2:41 PM",
-        "icon_symbol": "Pr",
-        "accent": "#3B82F6",
-    },
-
-    {
-        "title": "Coding Studio",
-        "time_ago": "Yesterday",
-        "description": "Launch your development workspace and AI coding tools.",
-        "apps": ["VS Code", "Terminal", "Git"],
-        "last_used": "Yesterday • 6:30 PM",
-        "icon_symbol": "</>",
-        "accent": "#10B981",
-    },
-
-    {
-        "title": "Gesture Studio",
-        "time_ago": "3 days ago",
-        "description": "Train, test and customize gesture recognition models.",
-        "apps": ["MediaPipe", "Camera", "Models"],
-        "last_used": "3 days ago • 11:20 AM",
-        "icon_symbol": "✋",
-        "accent": "#F59E0B",
-    },
-
-    {
-        "title": "Automation Studio",
-        "time_ago": "Never",
-        "description": "Create automation flows triggered by gestures.",
-        "apps": ["Flows", "Apps", "Actions"],
-        "last_used": "Not yet",
-        "icon_symbol": "⚡",
-        "accent": "#8B5CF6",
-    },
-]
-
-
-        for studio in studios:
-            card = StudioCard(**studio)
-            card.launch_clicked.connect(
-                self.launch_studio
-            )
-            self.cards_layout.addWidget(card)
-
 
         self.cards_container.setLayout(
             self.cards_layout
@@ -199,19 +283,141 @@ class HomePage(QWidget):
             self.cards_container
         )
 
-    def launch_studio(self, studio_name):
-        print(f"Launching {studio_name}")
-        self.studio_selected.emit(studio_name)
+        self.refresh_studios()
 
+    # =========================================================
+    # LOAD STUDIOS
+    # =========================================================
+
+    def load_studios(self):
+
+        config_path = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "..",
+                "backend",
+                "config",
+                "studios.json"
+            )
+        )
+
+        try:
+
+            with open(
+                config_path,
+                "r",
+                encoding="utf-8"
+            ) as f:
+
+                studios = json.load(f)
+
+            return studios
+
+        except Exception as e:
+
+            print(
+                f"❌ Could not load studios.json: {e}"
+            )
+
+            return []
+
+    # =========================================================
+    # REFRESH DASHBOARD
+    # =========================================================
+
+    def refresh_studios(self):
+
+        # Remove old cards
+
+        while self.cards_layout.count():
+
+            item = self.cards_layout.takeAt(0)
+
+            widget = item.widget()
+
+            if widget is not None:
+
+                widget.deleteLater()
+
+        # Load studios
+
+        studios = self.load_studios()
+
+        print(
+            f"📂 Loaded {len(studios)} studios"
+        )
+
+        # Create cards
+
+        for studio in studios:
+
+            card = StudioCard(
+                **{
+                    key: value
+                    for key, value in studio.items()
+                    if key in {
+                        "title",
+                        "time_ago",
+                        "description",
+                        "apps",
+                        "last_used",
+                        "icon_symbol",
+                        "accent"
+                    }
+                }
+            )
+
+            card.launch_clicked.connect(
+                self.launch_studio
+            )
+
+            self.cards_layout.addWidget(
+                card
+            )
+
+    # =========================================================
+    # STUDIO CLICK
+    # =========================================================
+
+    def launch_studio(
+        self,
+        studio_name
+    ):
+
+        print(
+            f"🎯 Studio selected: {studio_name}"
+        )
+
+        self.studio_selected.emit(
+            studio_name
+        )
+
+    # =========================================================
+    # RIGHT PANEL
+    # =========================================================
 
     def _update_right_panel(self):
+
         if self.width() < 1100:
+
             self.right_panel.hide()
+
         else:
+
             self.right_panel.show()
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._update_right_panel()
+    # =========================================================
+    # RESIZE
+    # =========================================================
 
-    
+    def resizeEvent(
+        self,
+        event
+    ):
+
+        super().resizeEvent(
+            event
+        )
+
+        self._update_right_panel()

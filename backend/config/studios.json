@@ -1,38 +1,75 @@
 [
-  {
-    "title": "Presentation Studio",
-    "time_ago": "Today",
-    "description": "Control PowerPoint presentations using gestures and voice.",
-    "apps": ["PowerPoint", "Camera", "Microphone"],
-    "last_used": "Today • 2:41 PM",
-    "icon_symbol": "Pr",
-    "accent": "#3B82F6"
-  },
-  {
-    "title": "Coding Studio",
-    "time_ago": "Yesterday",
-    "description": "Launch your development workspace and AI coding tools.",
-    "apps": ["VS Code", "Terminal", "Git"],
-    "last_used": "Yesterday • 6:30 PM",
-    "icon_symbol": "</>",
-    "accent": "#10B981"
-  },
-  {
-    "title": "Gesture Studio",
-    "time_ago": "3 days ago",
-    "description": "Train, test and customize gesture recognition models.",
-    "apps": ["MediaPipe", "Camera", "Models"],
-    "last_used": "3 days ago • 11:20 AM",
-    "icon_symbol": "✋",
-    "accent": "#F59E0B"
-  },
-  {
-    "title": "Automation Studio",
-    "time_ago": "Never",
-    "description": "Create automation flows triggered by gestures.",
-    "apps": ["Flows", "Apps", "Actions"],
-    "last_used": "Not yet",
-    "icon_symbol": "⚡",
-    "accent": "#8B5CF6"
-  }
+    {
+        "title": "Presentation Studio",
+        "time_ago": "Today",
+        "description": "Control PowerPoint presentations using gestures and voice.",
+        "apps": [
+            "PowerPoint",
+            "Camera",
+            "Microphone"
+        ],
+        "last_used": "Today • 2:41 PM",
+        "icon_symbol": "Pr",
+        "accent": "#3B82F6",
+        "type": "builtin"
+    },
+    {
+        "title": "Coding Studio",
+        "time_ago": "Yesterday",
+        "description": "Launch your development workspace and AI coding tools.",
+        "apps": [
+            "VS Code",
+            "Terminal",
+            "Git"
+        ],
+        "last_used": "Yesterday • 6:30 PM",
+        "icon_symbol": "</>",
+        "accent": "#10B981",
+        "type": "builtin"
+    },
+    {
+        "title": "Gesture Studio",
+        "time_ago": "3 days ago",
+        "description": "Train, test and customize gesture recognition models.",
+        "apps": [
+            "MediaPipe",
+            "Camera",
+            "Models"
+        ],
+        "last_used": "3 days ago • 11:20 AM",
+        "icon_symbol": "✋",
+        "accent": "#F59E0B",
+        "type": "builtin"
+    },
+    {
+        "title": "Automation Studio",
+        "time_ago": "Never",
+        "description": "Create automation flows triggered by gestures.",
+        "apps": [
+            "Flows",
+            "Apps",
+            "Actions"
+        ],
+        "last_used": "Not yet",
+        "icon_symbol": "⚡",
+        "accent": "#8B5CF6",
+        "type": "builtin"
+    },
+    {
+        "title": "Gaming Studio",
+        "time_ago": "Just now",
+        "description": "Custom gesture-controlled workspace.",
+        "apps": [],
+        "last_used": "Not yet",
+        "icon_symbol": "✦",
+        "accent": "#8B5CF6",
+        "type": "custom",
+        "events": [
+            {
+                "name": "open paper.io",
+                "gesture": "✋ Open Palm",
+                "action": "Open Website"
+            }
+        ]
+    }
 ]

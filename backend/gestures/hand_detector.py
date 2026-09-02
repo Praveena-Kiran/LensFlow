@@ -6,6 +6,19 @@ from backend.gestures.gesture_stabilizer import GestureStabilizer
 from backend.profile_manager import ProfileManager
 
 
+# ---------------------------------------------------------
+# Global objects
+# ---------------------------------------------------------
+
+stabilizer = GestureStabilizer()
+action_manager = ActionManager()
+profile_manager = ProfileManager()
+
+
+# ---------------------------------------------------------
+# Display names for actions
+# ---------------------------------------------------------
+
 ACTION_NAMES = {
     "presentation_start": "Start Presentation",
     "presentation_end": "End Presentation",
@@ -16,47 +29,57 @@ ACTION_NAMES = {
 }
 
 
+# ---------------------------------------------------------
+# Hand detection
+# ---------------------------------------------------------
+
 def start_hand_detection(profile_name="presentation"):
 
-    # -----------------------------
-    # Managers
-    # -----------------------------
+    # -----------------------------------------------------
+    # Load profile
+    # -----------------------------------------------------
 
-    stabilizer = GestureStabilizer()
-    action_manager = ActionManager()
-
-    profile_manager = ProfileManager()
-    profile_manager.load(profile_name)
+    if not profile_manager.load(profile_name):
+        print(f"❌ Could not load profile: {profile_name}")
+        return
 
     gesture_map = profile_manager.get_gesture_map()
 
-    # -----------------------------
-    # Camera + Recognizer
-    # -----------------------------
+    print(f"[OK] Loaded profile: {profile_name}")
+
+    # -----------------------------------------------------
+    # LensFlow state
+    # -----------------------------------------------------
+
+    lensflow_active = False
+
+    # -----------------------------------------------------
+    # Camera
+    # -----------------------------------------------------
 
     camera = cv2.VideoCapture(0)
-    recognizer = GoogleGestureRecognizer()
 
     if not camera.isOpened():
         print("❌ Could not open webcam.")
         return
 
+    recognizer = GoogleGestureRecognizer()
+
     print("✅ Hand Detection Started")
-    print(f"🎯 Profile: {profile_name}")
     print("Press Q to quit.")
 
-    # -----------------------------
+    # -----------------------------------------------------
     # UI state
-    # -----------------------------
+    # -----------------------------------------------------
 
     current_gesture = "None"
     current_action = "None"
 
-    studio_name = profile_name.title() + " Studio"
+    studio_name = profile_name.title()
 
-    # -----------------------------
-    # Detection loop
-    # -----------------------------
+    # -----------------------------------------------------
+    # Main loop
+    # -----------------------------------------------------
 
     while True:
 
@@ -65,56 +88,80 @@ def start_hand_detection(profile_name="presentation"):
         if not success:
             break
 
-        # Mirror effect
+        # Mirror camera
         frame = cv2.flip(frame, 1)
 
-        # -----------------------------
-        # Gesture Recognition
-        # -----------------------------
+        # -------------------------------------------------
+        # Gesture recognition
+        # -------------------------------------------------
 
         gesture, confidence = recognizer.detect(frame)
 
-        # -----------------------------
-        # Gesture Stabilization
-        # -----------------------------
-
+        # Stabilize gesture
         confirmed_gesture = stabilizer.update(
             gesture,
             confidence
         )
 
+        # -------------------------------------------------
+        # Process confirmed gesture
+        # -------------------------------------------------
+
         if confirmed_gesture:
 
             current_gesture = confirmed_gesture
 
-            action = gesture_map.get(
-                confirmed_gesture
-            )
+            # -------------------------------------------------
+            # Activation
+            # -------------------------------------------------
 
-            if action:
+            if confirmed_gesture == "Open_Palm":
 
-                current_action = action
+                if not lensflow_active:
 
-                action_manager.execute(
-                    confirmed_gesture,
-                    action
+                    lensflow_active = True
+                    current_action = "ACTIVATE"
+
+                    print("🟢 LensFlow ACTIVATED")
+
+                # Do NOT execute the presentation action
+                # associated with Open_Palm.
+                continue
+
+            # -------------------------------------------------
+            # Normal gesture processing
+            # -------------------------------------------------
+
+            if lensflow_active:
+
+                action = gesture_map.get(
+                    confirmed_gesture
                 )
 
-        # -----------------------------
-        # UI Panel
-        # -----------------------------
+                if action:
+
+                    current_action = action
+
+                    action_manager.execute(
+                        confirmed_gesture,
+                        action
+                    )
+
+        # -------------------------------------------------
+        # Camera UI panel
+        # -------------------------------------------------
 
         cv2.rectangle(
             frame,
             (10, 10),
-            (430, 200),
+            (460, 215),
             (35, 35, 35),
             -1
         )
 
-        # -----------------------------
+        # -------------------------------------------------
         # Title
-        # -----------------------------
+        # -------------------------------------------------
 
         cv2.putText(
             frame,
@@ -126,9 +173,9 @@ def start_hand_detection(profile_name="presentation"):
             3
         )
 
-        # -----------------------------
+        # -------------------------------------------------
         # Studio
-        # -----------------------------
+        # -------------------------------------------------
 
         cv2.putText(
             frame,
@@ -140,17 +187,19 @@ def start_hand_detection(profile_name="presentation"):
             2
         )
 
-        # -----------------------------
-        # Status
-        # -----------------------------
+        # -------------------------------------------------
+        # LensFlow status
+        # -------------------------------------------------
 
-        status = action_manager.status
+        if lensflow_active:
 
-        status_color = (
-            (0, 255, 0)
-            if status == "PRESENTING"
-            else (255, 255, 255)
-        )
+            status = "ACTIVE"
+            status_color = (0, 255, 0)
+
+        else:
+
+            status = "READY"
+            status_color = (180, 180, 180)
 
         cv2.putText(
             frame,
@@ -162,9 +211,9 @@ def start_hand_detection(profile_name="presentation"):
             2
         )
 
-        # -----------------------------
+        # -------------------------------------------------
         # Gesture
-        # -----------------------------
+        # -------------------------------------------------
 
         cv2.putText(
             frame,
@@ -176,9 +225,9 @@ def start_hand_detection(profile_name="presentation"):
             2
         )
 
-        # -----------------------------
+        # -------------------------------------------------
         # Action
-        # -----------------------------
+        # -------------------------------------------------
 
         display_action = ACTION_NAMES.get(
             current_action,
@@ -195,29 +244,33 @@ def start_hand_detection(profile_name="presentation"):
             2
         )
 
-        # -----------------------------
-        # Show Window
-        # -----------------------------
+        # -------------------------------------------------
+        # Show camera
+        # -------------------------------------------------
 
         cv2.imshow(
             "LensFlow - Hand Detection",
             frame
         )
 
-        # -----------------------------
+        # -------------------------------------------------
         # Quit
-        # -----------------------------
+        # -------------------------------------------------
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
-    # -----------------------------
+    # -----------------------------------------------------
     # Cleanup
-    # -----------------------------
+    # -----------------------------------------------------
 
     camera.release()
     cv2.destroyAllWindows()
 
 
+# ---------------------------------------------------------
+# Direct execution
+# ---------------------------------------------------------
+
 if __name__ == "__main__":
-    start_hand_detection("presentation")
+    start_hand_detection()
