@@ -71,5 +71,29 @@
                 "action": "Open Website"
             }
         ]
+    },
+    {
+        "title": "internship",
+        "time_ago": "Just now",
+        "description": "Custom gesture-controlled workspace.",
+        "apps": [],
+        "last_used": "Not yet",
+        "icon_symbol": "✦",
+        "accent": "#8B5CF6",
+        "type": "custom",
+        "events": [
+            {
+                "name": "intern tracker",
+                "gesture": "",
+                "action": "Open Application",
+                "value": "C:/Users/Praveena/OneDrive/Desktop/Internship_Tracker.xlsx"
+            },
+            {
+                "name": "resume",
+                "gesture": "",
+                "action": "Open Application",
+                "value": "C:/Users/Praveena/Downloads/Praveena_Kiran_Resume_.pdf"
+            }
+        ]
     }
 ]

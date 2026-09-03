@@ -1,7 +1,12 @@
-"""LensFlow - Reusable Studio Card
+"""
+LensFlow - Reusable Studio Card
 
 Compact card displaying studio icon badge, title, time-ago, description,
 app chips, last-used timestamp, and accent-coloured Launch button.
+
+Custom studios:
+- Launch All Events
+- Launch Specific Event
 """
 
 from typing import Optional
@@ -23,6 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QSizePolicy,
     QGraphicsDropShadowEffect,
+    QMenu,
 )
 
 
@@ -61,9 +67,9 @@ class _IconBadge(QWidget):
             )
         )
 
-        # ---------------------------------------------------------
+        # =====================================================
         # OUTER CIRCLE
-        # ---------------------------------------------------------
+        # =====================================================
 
         p.setPen(
             Qt.PenStyle.NoPen
@@ -84,9 +90,9 @@ class _IconBadge(QWidget):
             )
         )
 
-        # ---------------------------------------------------------
+        # =====================================================
         # INNER GRADIENT
-        # ---------------------------------------------------------
+        # =====================================================
 
         pad = s * 0.06
 
@@ -120,9 +126,9 @@ class _IconBadge(QWidget):
             inner
         )
 
-        # ---------------------------------------------------------
+        # =====================================================
         # SYMBOL
-        # ---------------------------------------------------------
+        # =====================================================
 
         p.setPen(
             QColor(
@@ -156,7 +162,21 @@ class _IconBadge(QWidget):
 class StudioCard(QFrame):
     """Reusable compact studio card widget."""
 
+    # =========================================================
+    # SIGNALS
+    # =========================================================
+
+    # Existing signal — keeps built-in studio behaviour working.
     launch_clicked = Signal(str)
+
+    # Custom studio launch signals.
+    launch_all_requested = Signal(str)
+
+    launch_event_requested = Signal(str, dict)
+
+    # =========================================================
+    # INIT
+    # =========================================================
 
     def __init__(
         self,
@@ -168,9 +188,9 @@ class StudioCard(QFrame):
         icon_symbol: str = "LF",
         accent: str = "#3B82F6",
 
-        # ---------------------------------------------------------
-        # NEW CUSTOM STUDIO FIELDS
-        # ---------------------------------------------------------
+        # -----------------------------------------------------
+        # CUSTOM STUDIO FIELDS
+        # -----------------------------------------------------
 
         studio_type: str = "built_in",
         events: Optional[list] = None,
@@ -179,18 +199,21 @@ class StudioCard(QFrame):
     ):
         super().__init__(parent)
 
-        # ---------------------------------------------------------
+        # =====================================================
         # STORE DATA
-        # ---------------------------------------------------------
+        # =====================================================
 
         self._title = title
+
         self._accent = accent
+
         self.studio_type = studio_type
+
         self.events = events or []
 
-        # ---------------------------------------------------------
+        # =====================================================
         # CARD
-        # ---------------------------------------------------------
+        # =====================================================
 
         self.setObjectName(
             "StudioCard"
@@ -215,9 +238,9 @@ class StudioCard(QFrame):
             Qt.CursorShape.PointingHandCursor
         )
 
-        # ---------------------------------------------------------
+        # =====================================================
         # DROP SHADOW
-        # ---------------------------------------------------------
+        # =====================================================
 
         shadow = QGraphicsDropShadowEffect(
             self
@@ -245,15 +268,15 @@ class StudioCard(QFrame):
             shadow
         )
 
-        # ---------------------------------------------------------
+        # =====================================================
         # STYLE
-        # ---------------------------------------------------------
+        # =====================================================
 
         self._apply_style()
 
-        # ---------------------------------------------------------
+        # =====================================================
         # MAIN LAYOUT
-        # ---------------------------------------------------------
+        # =====================================================
 
         layout = QVBoxLayout(
             self
@@ -280,7 +303,9 @@ class StudioCard(QFrame):
             12
         )
 
-        # Icon
+        # ---------------------------------------------------------
+        # ICON
+        # ---------------------------------------------------------
 
         badge = _IconBadge(
             icon_symbol,
@@ -294,7 +319,9 @@ class StudioCard(QFrame):
             Qt.AlignmentFlag.AlignTop
         )
 
-        # Title + Description
+        # ---------------------------------------------------------
+        # TITLE + DESCRIPTION
+        # ---------------------------------------------------------
 
         title_col = QVBoxLayout()
 
@@ -348,7 +375,9 @@ class StudioCard(QFrame):
             1
         )
 
-        # Time
+        # ---------------------------------------------------------
+        # TIME
+        # ---------------------------------------------------------
 
         time_lbl = QLabel(
             time_ago
@@ -440,7 +469,9 @@ class StudioCard(QFrame):
             0
         )
 
-        # Last used
+        # ---------------------------------------------------------
+        # LAST USED
+        # ---------------------------------------------------------
 
         used_col = QVBoxLayout()
 
@@ -482,22 +513,24 @@ class StudioCard(QFrame):
 
         bottom.addStretch()
 
-        # Launch
+        # =========================================================
+        # LAUNCH BUTTON
+        # =========================================================
 
-        launch = QPushButton(
+        self.launch = QPushButton(
             "Launch  →"
         )
 
-        launch.setCursor(
+        self.launch.setCursor(
             Qt.CursorShape.PointingHandCursor
         )
 
-        launch.setFixedSize(
+        self.launch.setFixedSize(
             100,
             34
         )
 
-        launch.setStyleSheet(
+        self.launch.setStyleSheet(
             f"""
             QPushButton {{
                 background-color: {accent};
@@ -520,20 +553,155 @@ class StudioCard(QFrame):
             """
         )
 
-        launch.clicked.connect(
-            lambda: self.launch_clicked.emit(
-                self._title
-            )
+        self.launch.clicked.connect(
+            self._handle_launch_clicked
         )
 
         bottom.addWidget(
-            launch,
+            self.launch,
             0,
             Qt.AlignmentFlag.AlignBottom
         )
 
         layout.addLayout(
             bottom
+        )
+
+    # =============================================================
+    # LAUNCH HANDLER
+    # =============================================================
+
+    def _handle_launch_clicked(self):
+
+        # ---------------------------------------------------------
+        # BUILT-IN STUDIO
+        # ---------------------------------------------------------
+
+        if self.studio_type != "custom":
+
+            self.launch_clicked.emit(
+                self._title
+            )
+
+            return
+
+        # ---------------------------------------------------------
+        # CUSTOM STUDIO WITHOUT EVENTS
+        # ---------------------------------------------------------
+
+        if not self.events:
+
+            self.launch_all_requested.emit(
+                self._title
+            )
+
+            return
+
+        # ---------------------------------------------------------
+        # CUSTOM STUDIO MENU
+        # ---------------------------------------------------------
+
+        menu = QMenu(
+            self
+        )
+
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #18181F;
+                color: #F9FAFB;
+                border: 1px solid rgba(255, 255, 255, 0.10);
+                border-radius: 10px;
+                padding: 6px;
+            }
+
+            QMenu::item {
+                padding: 9px 14px;
+                border-radius: 6px;
+            }
+
+            QMenu::item:selected {
+                background-color: rgba(139, 92, 246, 0.20);
+            }
+
+            QMenu::separator {
+                height: 1px;
+                background-color: rgba(255, 255, 255, 0.08);
+                margin: 5px 8px;
+            }
+        """)
+
+        # =====================================================
+        # LAUNCH ALL
+        # =====================================================
+
+        launch_all = menu.addAction(
+            "▶  Launch All Events"
+        )
+
+        launch_all.triggered.connect(
+            lambda: self.launch_all_requested.emit(
+                self._title
+            )
+        )
+
+        menu.addSeparator()
+
+        # =====================================================
+        # INDIVIDUAL EVENTS
+        # =====================================================
+
+        for event in self.events:
+
+            if not isinstance(
+                event,
+                dict
+            ):
+                continue
+
+            event_name = event.get(
+                "name",
+                "Unnamed Event"
+            )
+
+            gesture = event.get(
+                "gesture",
+                ""
+            )
+
+            if gesture:
+
+                label = (
+                    f"🎯  {event_name}"
+                    f"  ({gesture})"
+                )
+
+            else:
+
+                label = (
+                    f"⚡  {event_name}"
+                )
+
+            action = menu.addAction(
+                label
+            )
+
+            action.triggered.connect(
+                lambda checked=False,
+                selected_event=event:
+                    self.launch_event_requested.emit(
+                        self._title,
+                        selected_event
+                    )
+            )
+
+        # =====================================================
+        # SHOW MENU
+        # =====================================================
+
+        menu.exec(
+            self.launch.mapToGlobal(
+                self.launch.rect().topLeft()
+            )
         )
 
     # =============================================================

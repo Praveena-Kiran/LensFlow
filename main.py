@@ -4,7 +4,6 @@ LensFlow — Premium Desktop Workspace Operating System
 Main application window.
 """
 
-from mediapipe.python.solutions import selfie_segmentation
 import sys
 import os
 
@@ -15,6 +14,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QStackedWidget,
+    QDialog,
+    QLabel,
+    QLineEdit,
+    QDialogButtonBox,
 )
 
 from PySide6.QtCore import (
@@ -239,7 +242,7 @@ class MainWindow(QMainWindow):
         )
 
         # =====================================================
-        # HOME → STUDIO
+        # HOME → BUILT-IN STUDIO
         # =====================================================
 
         self.home_page.studio_selected.connect(
@@ -255,6 +258,18 @@ class MainWindow(QMainWindow):
         )
 
         # =====================================================
+        # HOME → CUSTOM STUDIO EXECUTION
+        # =====================================================
+
+        self.home_page.launch_all_events_requested.connect(
+            self.launch_all_events
+        )
+
+        self.home_page.launch_specific_event_requested.connect(
+            self.launch_specific_event
+        )
+
+        # =====================================================
         # CUSTOM → HOME
         # =====================================================
 
@@ -263,7 +278,7 @@ class MainWindow(QMainWindow):
         )
 
         # =====================================================
-        # CUSTOM SAVED
+        # CUSTOM → SAVE
         # =====================================================
 
         self.custom_page.studio_saved.connect(
@@ -295,7 +310,7 @@ class MainWindow(QMainWindow):
         )
 
         # =====================================================
-        # FINISH
+        # FINISH ROOT LAYOUT
         # =====================================================
 
         root_layout.addLayout(
@@ -306,7 +321,7 @@ class MainWindow(QMainWindow):
         self.showNormal()
 
     # =============================================================
-    # CENTER
+    # CENTER WINDOW
     # =============================================================
 
     def _center_on_screen(
@@ -341,10 +356,19 @@ class MainWindow(QMainWindow):
         )
 
     # =============================================================
-    # HOME
+    # GO HOME
     # =============================================================
 
-    def go_home(self):
+    def go_home(
+        self
+    ):
+
+        print(
+            "🏠 Returning to dashboard..."
+        )
+
+        self.stop_gesture_worker()
+
         self.home_page.refresh_studios()
 
         self.stack.setCurrentWidget(
@@ -358,6 +382,10 @@ class MainWindow(QMainWindow):
     def refresh_home(
         self
     ):
+
+        print(
+            "🔄 Refreshing dashboard..."
+        )
 
         self.home_page.refresh_studios()
 
@@ -373,15 +401,9 @@ class MainWindow(QMainWindow):
             "🛠 Creating Custom Studio"
         )
 
-        # Open dialog to ask for name
-
-        from PySide6.QtWidgets import (
-            QDialog,
-            QVBoxLayout,
-            QLabel,
-            QLineEdit,
-            QDialogButtonBox,
-        )
+        # =====================================================
+        # DIALOG
+        # =====================================================
 
         dialog = QDialog(
             self
@@ -470,6 +492,10 @@ class MainWindow(QMainWindow):
             buttons
         )
 
+        # =====================================================
+        # SHOW DIALOG
+        # =====================================================
+
         if (
             dialog.exec()
             != QDialog.DialogCode.Accepted
@@ -488,7 +514,7 @@ class MainWindow(QMainWindow):
             return
 
         # =====================================================
-        # CREATE STUDIO IN MEMORY
+        # CREATE STUDIO
         # =====================================================
 
         self.custom_page.start_new_studio(
@@ -517,9 +543,9 @@ class MainWindow(QMainWindow):
             studio_name
         )
 
-        # -----------------------------------------------------
+        # =====================================================
         # PRESENTATION
-        # -----------------------------------------------------
+        # =====================================================
 
         if studio_name == "Presentation Studio":
 
@@ -531,9 +557,9 @@ class MainWindow(QMainWindow):
                 "presentation"
             )
 
-        # -----------------------------------------------------
+        # =====================================================
         # CODING
-        # -----------------------------------------------------
+        # =====================================================
 
         elif studio_name == "Coding Studio":
 
@@ -541,9 +567,9 @@ class MainWindow(QMainWindow):
                 self.coding_page
             )
 
-        # -----------------------------------------------------
+        # =====================================================
         # GESTURE
-        # -----------------------------------------------------
+        # =====================================================
 
         elif studio_name == "Gesture Studio":
 
@@ -551,13 +577,11 @@ class MainWindow(QMainWindow):
                 self.gesture_page
             )
 
-        # -----------------------------------------------------
-        # CUSTOM
-        # -----------------------------------------------------
+        # =====================================================
+        # CUSTOM STUDIO
+        # =====================================================
 
         else:
-
-            # Check whether it is a custom studio
 
             if self.custom_page.load_studio(
                 studio_name
@@ -578,6 +602,112 @@ class MainWindow(QMainWindow):
                     f"⚠ No workspace configured for: "
                     f"{studio_name}"
                 )
+
+    # =============================================================
+    # LAUNCH ALL CUSTOM EVENTS
+    # =============================================================
+
+    def launch_all_events(self, studio_name):
+        print(f"🚀 Launching ALL events: {studio_name}")
+
+        studios = self.home_page.load_studios()
+
+        studio = next(
+            (
+                s for s in studios
+                if isinstance(s, dict)
+                and s.get("title") == studio_name
+            ),
+            None
+        )
+
+        if not studio:
+            print(f"❌ Could not find studio: {studio_name}")
+            return
+
+        events = studio.get("events", [])
+
+        if not events:
+            print("⚠️ This studio has no events.")
+            return
+
+        for event in events:
+            try:
+                self.action_manager.flow_manager.execute_custom_event(
+                    event
+                )
+            except Exception as e:
+                print(f"❌ Event failed: {e}")
+
+    # =============================================================
+    # LAUNCH SPECIFIC CUSTOM EVENT
+    # =============================================================
+
+    def launch_specific_event(
+        self,
+        studio_name,
+        event
+    ):
+
+        event_name = (
+            event.get(
+                "name",
+                "Unnamed Event"
+            )
+            if isinstance(event, dict)
+            else "Invalid Event"
+        )
+
+        print(
+            ""
+        )
+
+        print(
+            "========================================"
+        )
+
+        print(
+            f"🎯 LAUNCHING EVENT: {event_name}"
+        )
+
+        print(
+            f"📁 STUDIO: {studio_name}"
+        )
+
+        print(
+            "========================================"
+        )
+
+        if not isinstance(
+            event,
+            dict
+        ):
+
+            print(
+                "❌ Invalid event."
+            )
+
+            return
+
+        try:
+
+            self.action_manager.flow_manager.execute_custom_event(
+                event
+            )
+
+            print(
+                f"✅ Event completed: {event_name}"
+            )
+
+        except Exception as e:
+
+            print(
+                f"❌ Event failed: {event_name}"
+            )
+
+            print(
+                f"   {e}"
+            )
 
     # =============================================================
     # GESTURE WORKER
@@ -646,6 +776,36 @@ class MainWindow(QMainWindow):
         )
 
         self.gesture_thread.start()
+
+    # =============================================================
+    # STOP GESTURE WORKER
+    # =============================================================
+
+    def stop_gesture_worker(
+        self
+    ):
+
+        if self.gesture_worker is None:
+
+            return
+
+        print(
+            "🛑 Stopping gesture worker..."
+        )
+
+        try:
+
+            self.gesture_worker.stop()
+
+        except Exception as e:
+
+            print(
+                f"⚠ Could not stop gesture worker: {e}"
+            )
+
+        self.gesture_worker = None
+
+        self.gesture_thread = None
 
     # =============================================================
     # GESTURE ACTION

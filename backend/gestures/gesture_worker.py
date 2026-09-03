@@ -11,22 +11,44 @@ class GestureWorker(QObject):
 
     gesture_detected = Signal(str, float)
     action_detected = Signal(str)
+
+    # NEW:
+    # Sends the complete custom event, including
+    # action + selected file path.
+    custom_event_detected = Signal(dict)
+
     status_changed = Signal(str)
     error = Signal(str)
 
-    def __init__(self, profile_name="presentation"):
+    def __init__(
+        self,
+        profile_name="presentation",
+        custom_studio=None
+    ):
         super().__init__()
 
         self.profile_name = profile_name
+        self.custom_studio = custom_studio
         self.running = False
 
         self.stabilizer = GestureStabilizer()
         self.recognizer = GoogleGestureRecognizer()
 
-        self.profile_manager = ProfileManager()
-        self.profile_manager.load(profile_name)
+        # -----------------------------------------------------
+        # NORMAL PROFILE MODE
+        # -----------------------------------------------------
 
-        self.gesture_map = self.profile_manager.get_gesture_map()
+        self.profile_manager = None
+        self.gesture_map = {}
+
+        if self.custom_studio is None:
+
+            self.profile_manager = ProfileManager()
+            self.profile_manager.load(profile_name)
+
+            self.gesture_map = (
+                self.profile_manager.get_gesture_map()
+            )
 
     @Slot()
     def run(self):
@@ -36,7 +58,11 @@ class GestureWorker(QObject):
         camera = cv2.VideoCapture(0)
 
         if not camera.isOpened():
-            self.error.emit("Could not open webcam.")
+
+            self.error.emit(
+                "Could not open webcam."
+            )
+
             self.running = False
             return
 
@@ -47,39 +73,98 @@ class GestureWorker(QObject):
             success, frame = camera.read()
 
             if not success:
-                self.error.emit("Could not read webcam.")
+
+                self.error.emit(
+                    "Could not read webcam."
+                )
+
                 break
 
-            frame = cv2.flip(frame, 1)
+            frame = cv2.flip(
+                frame,
+                1
+            )
 
-            gesture, confidence = self.recognizer.detect(frame)
+            gesture, confidence = (
+                self.recognizer.detect(frame)
+            )
 
-            confirmed_gesture = self.stabilizer.update(
-                gesture,
+            confirmed_gesture = (
+                self.stabilizer.update(
+                    gesture,
+                    confidence
+                )
+            )
+
+            if not confirmed_gesture:
+                continue
+
+            # -------------------------------------------------
+            # GESTURE DETECTED
+            # -------------------------------------------------
+
+            self.gesture_detected.emit(
+                confirmed_gesture,
                 confidence
             )
 
-            if confirmed_gesture:
+            # =================================================
+            # CUSTOM STUDIO MODE
+            # =================================================
 
-                self.gesture_detected.emit(
-                    confirmed_gesture,
-                    confidence
+            if self.custom_studio is not None:
+
+                events = self.custom_studio.get(
+                    "events",
+                    []
                 )
 
-                action = self.gesture_map.get(
-                    confirmed_gesture
-                )
+                for event in events:
 
-                if action:
-                    self.action_detected.emit(action)
+                    event_gesture = event.get(
+                        "gesture",
+                        ""
+                    )
+
+                    if (
+                        event_gesture
+                        == confirmed_gesture
+                    ):
+
+                        print(
+                            "🎯 Custom event matched:",
+                            event.get("name")
+                        )
+
+                        self.custom_event_detected.emit(
+                            event
+                        )
+
+                        break
+
+                continue
+
+            # =================================================
+            # NORMAL PROFILE MODE
+            # =================================================
+
+            action = self.gesture_map.get(
+                confirmed_gesture
+            )
+
+            if action:
+
+                self.action_detected.emit(
+                    action
+                )
 
         camera.release()
 
-        self.status_changed.emit("STOPPED")
+        self.status_changed.emit(
+            "STOPPED"
+        )
 
     @Slot()
     def stop(self):
 
         self.running = False
-
-        

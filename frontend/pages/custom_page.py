@@ -1,12 +1,14 @@
 """
 LensFlow - Custom Studio Page
 
-Allows users to:
-    - Create and edit custom gesture-controlled studios
-    - Add, edit and delete events
-    - Assign gestures to actions
-    - Persist studio events inside backend/config/studios.json
-    - Delete custom studios without affecting other studios
+Handles:
+- Creating custom studios
+- Loading existing studios
+- Renaming studios
+- Adding/editing/deleting events
+- Saving studio configuration
+- Deleting custom studios
+- Selecting files through Windows File Explorer
 """
 
 import json
@@ -20,372 +22,89 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QLineEdit,
+    QMessageBox,
+    QScrollArea,
     QFrame,
     QDialog,
-    QLineEdit,
     QComboBox,
-    QDialogButtonBox,
-    QMessageBox,
+    QFileDialog,
 )
 
 
 class CustomPage(QWidget):
 
-    # ---------------------------------------------------------
-    # Signals
-    # ---------------------------------------------------------
+    # =========================================================
+    # SIGNALS
+    # =========================================================
 
     back_requested = Signal()
+    studio_saved = Signal()
+    studio_deleted = Signal()
 
-    # ---------------------------------------------------------
-    # Constructor
-    # ---------------------------------------------------------
+    # =========================================================
+    # INIT
+    # =========================================================
 
     def __init__(
         self,
-        parent: Optional[QWidget] = None,
+        parent: Optional[QWidget] = None
     ):
         super().__init__(parent)
 
-        self.setObjectName("CustomPage")
-
-        self.setAttribute(
-            Qt.WA_StyledBackground,
-            True
+        self.setObjectName(
+            "CustomPage"
         )
 
-        # Current studio
+        self.current_studio = None
         self.studio_name = ""
-
-        # Current studio's events
-        self.custom_events = []
-
-        # -----------------------------------------------------
-        # Styling
-        # -----------------------------------------------------
+        self.events = []
 
         self.setStyleSheet("""
             QWidget#CustomPage {
                 background-color: #0B0B0F;
             }
 
-            QFrame#ContentFrame {
-                background-color: #16161E;
-                border-radius: 16px;
-            }
-
-            QFrame#EventCard {
-                background-color: #20202A;
-                border: 1px solid #30303D;
-                border-radius: 12px;
-            }
-
-            QFrame#EventCard:hover {
-                border: 1px solid #3B82F6;
-            }
-        """)
-
-        # -----------------------------------------------------
-        # Main layout
-        # -----------------------------------------------------
-
-        main = QVBoxLayout(self)
-
-        main.setContentsMargins(
-            40,
-            32,
-            40,
-            32
-        )
-
-        main.setSpacing(24)
-
-        # =====================================================
-        # HEADER
-        # =====================================================
-
-        header = QHBoxLayout()
-
-        left = QVBoxLayout()
-
-        left.setSpacing(5)
-
-        # -----------------------------------------------------
-        # Back button
-        # -----------------------------------------------------
-
-        back_button = QPushButton(
-            "← Back"
-        )
-
-        back_button.setCursor(
-            Qt.PointingHandCursor
-        )
-
-        back_button.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                border: none;
-                color: #60A5FA;
-                font-size: 13px;
-                font-weight: 600;
-                text-align: left;
-            }
-
-            QPushButton:hover {
-                color: #93C5FD;
-            }
-        """)
-
-        back_button.clicked.connect(
-            self.back_requested.emit
-        )
-
-        left.addWidget(
-            back_button,
-            0,
-            Qt.AlignLeft
-        )
-
-        # -----------------------------------------------------
-        # Studio title
-        # -----------------------------------------------------
-
-        self.title_label = QLabel(
-            "Custom Studio"
-        )
-
-        self.title_label.setStyleSheet("""
-            color: white;
-            font-size: 28px;
-            font-weight: 700;
-        """)
-
-        left.addWidget(
-            self.title_label
-        )
-
-        # -----------------------------------------------------
-        # Subtitle
-        # -----------------------------------------------------
-
-        self.subtitle_label = QLabel(
-            "Create your own gesture-controlled workspace."
-        )
-
-        self.subtitle_label.setStyleSheet("""
-            color: #9CA3AF;
-            font-size: 14px;
-        """)
-
-        left.addWidget(
-            self.subtitle_label
-        )
-
-        header.addLayout(left)
-
-        header.addStretch()
-
-        # -----------------------------------------------------
-        # Delete studio button
-        # -----------------------------------------------------
-
-        self.delete_studio_button = QPushButton(
-            "Delete Studio"
-        )
-
-        self.delete_studio_button.setCursor(
-            Qt.PointingHandCursor
-        )
-
-        self.delete_studio_button.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                color: #F87171;
-                border: 1px solid #7F1D1D;
-                border-radius: 9px;
-                padding: 8px 14px;
-                font-size: 12px;
-                font-weight: 600;
-            }
-
-            QPushButton:hover {
-                background: #3A1518;
-                border: 1px solid #EF4444;
-            }
-        """)
-
-        self.delete_studio_button.clicked.connect(
-            self.delete_current_studio
-        )
-
-        header.addWidget(
-            self.delete_studio_button,
-            0,
-            Qt.AlignTop
-        )
-
-        main.addLayout(
-            header
-        )
-
-        # =====================================================
-        # CONTENT FRAME
-        # =====================================================
-
-        content_frame = QFrame()
-
-        content_frame.setObjectName(
-            "ContentFrame"
-        )
-
-        content_layout = QVBoxLayout(
-            content_frame
-        )
-
-        content_layout.setContentsMargins(
-            24,
-            24,
-            24,
-            24
-        )
-
-        content_layout.setSpacing(18)
-
-        # -----------------------------------------------------
-        # Events header
-        # -----------------------------------------------------
-
-        events_header = QHBoxLayout()
-
-        events_label = QLabel(
-            "Your Events"
-        )
-
-        events_label.setStyleSheet("""
-            color: white;
-            font-size: 18px;
-            font-weight: 600;
-        """)
-
-        events_header.addWidget(
-            events_label
-        )
-
-        events_header.addStretch()
-
-        # Add event button
-
-        add_event_button = QPushButton(
-            "+ Add Event"
-        )
-
-        add_event_button.setCursor(
-            Qt.PointingHandCursor
-        )
-
-        add_event_button.setStyleSheet("""
-            QPushButton {
-                background: #2563EB;
+            QLabel {
                 color: white;
-                border: none;
-                border-radius: 9px;
-                padding: 9px 16px;
-                font-size: 13px;
-                font-weight: 600;
+            }
+
+            QLineEdit,
+            QComboBox {
+                background-color: #15151C;
+                color: white;
+                border: 1px solid #2A2A35;
+                border-radius: 8px;
+                padding: 8px;
+            }
+
+            QLineEdit:focus,
+            QComboBox:focus {
+                border: 1px solid #8B5CF6;
+            }
+
+            QPushButton {
+                background-color: #181820;
+                color: white;
+                border: 1px solid #2A2A35;
+                border-radius: 8px;
+                padding: 8px 14px;
             }
 
             QPushButton:hover {
-                background: #3B82F6;
-            }
-
-            QPushButton:pressed {
-                background: #1D4ED8;
+                background-color: #22222D;
             }
         """)
 
-        add_event_button.clicked.connect(
-            self.open_add_event_dialog
-        )
-
-        events_header.addWidget(
-            add_event_button
-        )
-
-        content_layout.addLayout(
-            events_header
-        )
-
-        # -----------------------------------------------------
-        # Events container
-        # -----------------------------------------------------
-
-        self.events_layout = QVBoxLayout()
-
-        self.events_layout.setSpacing(
-            12
-        )
-
-        content_layout.addLayout(
-            self.events_layout
-        )
-
-        # -----------------------------------------------------
-        # Empty state
-        # -----------------------------------------------------
-
-        self.empty_label = QLabel(
-            "No custom events yet.\n"
-            "Add an event to start building this workspace."
-        )
-
-        self.empty_label.setStyleSheet("""
-            color: #9CA3AF;
-            font-size: 14px;
-            padding: 12px 0;
-        """)
-
-        self.events_layout.addWidget(
-            self.empty_label
-        )
-
-        content_layout.addStretch()
-
-        main.addWidget(
-            content_frame,
-            1
-        )
-
-        # =====================================================
-        # STATUS
-        # =====================================================
-
-        self.status = QLabel(
-            "Status: Ready"
-        )
-
-        self.status.setStyleSheet("""
-            color: #9CA3AF;
-            font-size: 12px;
-        """)
-
-        main.addWidget(
-            self.status
-        )
-
-        # -----------------------------------------------------
-        # Default state
-        # -----------------------------------------------------
-
-        self.delete_studio_button.hide()
+        self._build_ui()
 
     # =========================================================
-    # FILE PATH
+    # CONFIG PATH
     # =========================================================
 
     def get_config_path(self):
 
-        config_path = os.path.abspath(
+        return os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
                 "..",
@@ -396,53 +115,489 @@ class CustomPage(QWidget):
             )
         )
 
-        return config_path
-
     # =========================================================
-    # SET STUDIO
+    # LOAD ALL STUDIOS
     # =========================================================
 
-    def set_studio_name(
+    def load_all_studios(self):
+
+        path = self.get_config_path()
+
+        try:
+
+            if not os.path.exists(path):
+
+                print(
+                    "⚠️ studios.json does not exist."
+                )
+
+                return []
+
+            with open(
+                path,
+                "r",
+                encoding="utf-8"
+            ) as file:
+
+                data = json.load(file)
+
+            if not isinstance(data, list):
+
+                print(
+                    "⚠️ studios.json must contain a list."
+                )
+
+                return []
+
+            print(
+                f"📂 Loaded {len(data)} studios from config."
+            )
+
+            return data
+
+        except json.JSONDecodeError as e:
+
+            print(
+                f"❌ studios.json contains invalid JSON: {e}"
+            )
+
+            return []
+
+        except Exception as e:
+
+            print(
+                f"❌ Failed to load studios.json: {e}"
+            )
+
+            return []
+
+    # =========================================================
+    # SAVE ALL STUDIOS
+    # =========================================================
+
+    def save_all_studios(
+        self,
+        studios
+    ):
+
+        path = self.get_config_path()
+
+        try:
+
+            os.makedirs(
+                os.path.dirname(path),
+                exist_ok=True
+            )
+
+            with open(
+                path,
+                "w",
+                encoding="utf-8"
+            ) as file:
+
+                json.dump(
+                    studios,
+                    file,
+                    indent=4,
+                    ensure_ascii=False
+                )
+
+            print(
+                f"💾 Saved {len(studios)} studios to config."
+            )
+
+            return True
+
+        except Exception as e:
+
+            print(
+                f"❌ Failed to save studios.json: {e}"
+            )
+
+            QMessageBox.critical(
+                self,
+                "Save Error",
+                f"Could not save studios.json:\n\n{e}"
+            )
+
+            return False
+
+    # =========================================================
+    # BUILD UI
+    # =========================================================
+
+    def _build_ui(self):
+
+        outer = QVBoxLayout(
+            self
+        )
+
+        outer.setContentsMargins(
+            40,
+            30,
+            40,
+            40
+        )
+
+        outer.setSpacing(
+            20
+        )
+
+        # =====================================================
+        # TOP BAR
+        # =====================================================
+
+        top = QHBoxLayout()
+
+        back = QPushButton(
+            "← Back"
+        )
+
+        back.clicked.connect(
+            self.go_back
+        )
+
+        top.addWidget(
+            back
+        )
+
+        top.addSpacing(
+            12
+        )
+
+        title = QLabel(
+            "Custom Studio"
+        )
+
+        title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 700;
+        """)
+
+        top.addWidget(
+            title
+        )
+
+        top.addStretch()
+
+        # -----------------------------------------------------
+        # DELETE BUTTON
+        # -----------------------------------------------------
+
+        self.delete_button = QPushButton(
+            "Delete Studio"
+        )
+
+        self.delete_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2A1518;
+                color: #F87171;
+                border: 1px solid #5A252A;
+            }
+
+            QPushButton:hover {
+                background-color: #3A1B1F;
+            }
+        """)
+
+        self.delete_button.clicked.connect(
+            self.delete_current_studio
+        )
+
+        self.delete_button.hide()
+
+        top.addWidget(
+            self.delete_button
+        )
+
+        outer.addLayout(
+            top
+        )
+
+        # =====================================================
+        # STUDIO NAME
+        # =====================================================
+
+        name_label = QLabel(
+            "Studio Name"
+        )
+
+        name_label.setStyleSheet("""
+            font-size: 13px;
+            font-weight: 600;
+            color: #A1A1AA;
+        """)
+
+        outer.addWidget(
+            name_label
+        )
+
+        name_row = QHBoxLayout()
+
+        self.name_input = QLineEdit()
+
+        self.name_input.setPlaceholderText(
+            "Enter studio name..."
+        )
+
+        name_row.addWidget(
+            self.name_input,
+            1
+        )
+
+        save_name = QPushButton(
+            "Save Name"
+        )
+
+        save_name.clicked.connect(
+            self.save_studio_name
+        )
+
+        name_row.addWidget(
+            save_name
+        )
+
+        outer.addLayout(
+            name_row
+        )
+
+        # =====================================================
+        # EVENTS HEADER
+        # =====================================================
+
+        events_header = QHBoxLayout()
+
+        events_title = QLabel(
+            "Events & Automations"
+        )
+
+        events_title.setStyleSheet("""
+            font-size: 18px;
+            font-weight: 600;
+        """)
+
+        events_header.addWidget(
+            events_title
+        )
+
+        events_header.addStretch()
+
+        add_event = QPushButton(
+            "+ Add Event"
+        )
+
+        add_event.clicked.connect(
+            self.add_event
+        )
+
+        events_header.addWidget(
+            add_event
+        )
+
+        outer.addLayout(
+            events_header
+        )
+
+        # =====================================================
+        # EVENTS SCROLL
+        # =====================================================
+
+        self.events_scroll = QScrollArea()
+
+        self.events_scroll.setWidgetResizable(
+            True
+        )
+
+        self.events_scroll.setFrameShape(
+            QFrame.Shape.NoFrame
+        )
+
+        self.events_content = QWidget()
+
+        self.events_layout = QVBoxLayout(
+            self.events_content
+        )
+
+        self.events_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            20
+        )
+
+        self.events_layout.setSpacing(
+            12
+        )
+
+        self.events_layout.addStretch()
+
+        self.events_scroll.setWidget(
+            self.events_content
+        )
+
+        outer.addWidget(
+            self.events_scroll,
+            1
+        )
+
+    # =========================================================
+    # START NEW STUDIO
+    # =========================================================
+
+    def start_new_studio(
         self,
         name
     ):
 
-        self.studio_name = name
+        name = name.strip()
 
-        self.title_label.setText(
+        if not name:
+
+            QMessageBox.warning(
+                self,
+                "Invalid Name",
+                "Please enter a studio name."
+            )
+
+            return False
+
+        studios = self.load_all_studios()
+
+        # -----------------------------------------------------
+        # CHECK DUPLICATE
+        # -----------------------------------------------------
+
+        for studio in studios:
+
+            existing_name = studio.get(
+                "title",
+                ""
+            ).strip().lower()
+
+            if existing_name == name.lower():
+
+                QMessageBox.warning(
+                    self,
+                    "Studio Already Exists",
+                    f"A studio named '{name}' already exists."
+                )
+
+                return False
+
+        # -----------------------------------------------------
+        # CREATE STUDIO
+        # -----------------------------------------------------
+
+        new_studio = {
+            "title": name,
+            "time_ago": "Just now",
+            "description": "Custom gesture-controlled workspace.",
+            "apps": [],
+            "last_used": "Not yet",
+            "icon_symbol": "✦",
+            "accent": "#8B5CF6",
+            "type": "custom",
+            "events": []
+        }
+
+        studios.append(
+            new_studio
+        )
+
+        if not self.save_all_studios(
+            studios
+        ):
+
+            return False
+
+        print(
+            f"✨ Created custom studio: {name}"
+        )
+
+        self.load_studio(
             name
         )
 
-        self.subtitle_label.setText(
-            "Create and customize your gesture-controlled workspace."
-        )
+        self.delete_button.show()
 
-        # -----------------------------------------------------
-        # Load this studio's events
-        # -----------------------------------------------------
+        self.studio_saved.emit()
 
-        self.load_current_studio()
+        return True
 
-        # -----------------------------------------------------
-        # Determine whether this is custom
-        # -----------------------------------------------------
+    # =========================================================
+    # LOAD STUDIO
+    # =========================================================
 
-        studio = self.find_current_studio()
+    def load_studio(
+        self,
+        name
+    ):
 
-        if studio is not None:
+        studios = self.load_all_studios()
 
-            studio_type = studio.get(
-                "type",
-                "builtin"
+        found = None
+
+        for studio in studios:
+
+            title = studio.get(
+                "title",
+                ""
+            ).strip()
+
+            if title.lower() == name.strip().lower():
+
+                found = studio
+                break
+
+        if found is None:
+
+            print(
+                f"❌ Studio not found: {name}"
             )
 
-            if studio_type == "custom":
+            return False
 
-                self.delete_studio_button.show()
+        self.current_studio = found
 
-            else:
+        self.studio_name = found.get(
+            "title",
+            ""
+        )
 
-                self.delete_studio_button.hide()
+        self.events = found.get(
+            "events",
+            []
+        )
+
+        if not isinstance(
+            self.events,
+            list
+        ):
+
+            self.events = []
+
+        self.name_input.setText(
+            self.studio_name
+        )
+
+        if (
+            found.get("type") == "custom"
+            or "type" not in found
+        ):
+
+            self.delete_button.show()
+
+        else:
+
+            self.delete_button.hide()
+
+        self.refresh_events()
+
+        print(
+            f"📂 Loaded studio: {self.studio_name}"
+        )
+
+        return True
 
     # =========================================================
     # FIND CURRENT STUDIO
@@ -450,92 +605,24 @@ class CustomPage(QWidget):
 
     def find_current_studio(self):
 
+        if not self.studio_name:
+
+            return None
+
         studios = self.load_all_studios()
 
         for studio in studios:
 
-            if studio.get("title") == self.studio_name:
+            title = studio.get(
+                "title",
+                ""
+            ).strip().lower()
+
+            if title == self.studio_name.strip().lower():
 
                 return studio
 
         return None
-
-    # =========================================================
-    # LOAD ALL STUDIOS
-    # =========================================================
-
-    def load_all_studios(self):
-
-        config_path = self.get_config_path()
-
-        try:
-
-            with open(
-                config_path,
-                "r",
-                encoding="utf-8"
-            ) as f:
-
-                data = json.load(f)
-
-            if not isinstance(data, list):
-
-                return []
-
-            return data
-
-        except Exception as e:
-
-            print(
-                f"❌ Could not load studios.json: {e}"
-            )
-
-            return []
-
-    # =========================================================
-    # LOAD CURRENT STUDIO
-    # =========================================================
-
-    def load_current_studio(self):
-
-        studios = self.load_all_studios()
-
-        current_studio = None
-
-        for studio in studios:
-
-            if studio.get("title") == self.studio_name:
-
-                current_studio = studio
-                break
-
-        if current_studio is None:
-
-            self.custom_events = []
-
-            self.refresh_events()
-
-            return
-
-        # -----------------------------------------------------
-        # IMPORTANT:
-        #
-        # Only load THIS studio's events.
-        # We do NOT replace the entire studios list.
-        # -----------------------------------------------------
-
-        self.custom_events = list(
-            current_studio.get(
-                "events",
-                []
-            )
-        )
-
-        self.refresh_events()
-
-        print(
-            f"✅ Loaded studio: {self.studio_name}"
-        )
 
     # =========================================================
     # SAVE CURRENT STUDIO
@@ -547,25 +634,20 @@ class CustomPage(QWidget):
 
             return False
 
-        config_path = self.get_config_path()
-
         studios = self.load_all_studios()
 
         found = False
 
-        # -----------------------------------------------------
-        # Find ONLY current studio
-        # -----------------------------------------------------
-
         for studio in studios:
 
-            if studio.get("title") == self.studio_name:
+            title = studio.get(
+                "title",
+                ""
+            ).strip().lower()
 
-                studio["events"] = list(
-                    self.custom_events
-                )
+            if title == self.studio_name.strip().lower():
 
-                studio["type"] = "custom"
+                studio["events"] = self.events
 
                 found = True
 
@@ -574,297 +656,166 @@ class CustomPage(QWidget):
         if not found:
 
             print(
-                f"⚠ Could not find studio: {self.studio_name}"
+                f"⚠️ Could not save studio: {self.studio_name}"
             )
 
             return False
 
+        return self.save_all_studios(
+            studios
+        )
+
+    # =========================================================
+    # SET STUDIO NAME
+    # =========================================================
+
+    def set_studio_name(
+        self,
+        name
+    ):
+
+        self.studio_name = name.strip()
+
+        self.name_input.setText(
+            self.studio_name
+        )
+
+    # =========================================================
+    # SAVE / RENAME STUDIO
+    # =========================================================
+
+    def save_studio_name(self):
+
+        new_name = self.name_input.text().strip()
+
+        if not new_name:
+
+            QMessageBox.warning(
+                self,
+                "Invalid Name",
+                "Studio name cannot be empty."
+            )
+
+            return
+
+        if not self.studio_name:
+
+            return
+
+        old_name = self.studio_name
+
+        studios = self.load_all_studios()
+
         # -----------------------------------------------------
-        # Save ENTIRE list back
-        #
-        # This preserves every other studio.
+        # CHECK DUPLICATE
         # -----------------------------------------------------
 
-        try:
+        for studio in studios:
 
-            with open(
-                config_path,
-                "w",
-                encoding="utf-8"
-            ) as f:
+            existing = studio.get(
+                "title",
+                ""
+            ).strip().lower()
 
-                json.dump(
-                    studios,
-                    f,
-                    indent=4,
-                    ensure_ascii=False
+            if (
+                existing == new_name.lower()
+                and existing != old_name.lower()
+            ):
+
+                QMessageBox.warning(
+                    self,
+                    "Studio Already Exists",
+                    f"A studio named '{new_name}' already exists."
                 )
 
-            print(
-                f"✅ Saved studio: {self.studio_name}"
+                self.name_input.setText(
+                    old_name
+                )
+
+                return
+
+        # -----------------------------------------------------
+        # RENAME
+        # -----------------------------------------------------
+
+        renamed = False
+
+        for studio in studios:
+
+            existing = studio.get(
+                "title",
+                ""
+            ).strip().lower()
+
+            if existing == old_name.lower():
+
+                studio["title"] = new_name
+
+                renamed = True
+
+                break
+
+        if not renamed:
+
+            QMessageBox.warning(
+                self,
+                "Studio Not Found",
+                "Could not find the studio to rename."
             )
 
-            return True
+            return
 
-        except Exception as e:
+        if not self.save_all_studios(
+            studios
+        ):
 
-            print(
-                f"❌ Could not save studio: {e}"
-            )
+            return
 
-            return False
+        self.studio_name = new_name
+
+        self.current_studio = self.find_current_studio()
+
+        print(
+            f"✏️ Renamed studio: {old_name} → {new_name}"
+        )
+
+        self.studio_saved.emit()
 
     # =========================================================
     # ADD EVENT
     # =========================================================
 
-    def open_add_event_dialog(self):
+    def add_event(self):
 
         if not self.studio_name:
 
-            self.status.setText(
-                "Status: No studio selected."
+            QMessageBox.warning(
+                self,
+                "No Studio",
+                "Please create or select a studio first."
             )
 
             return
 
-        dialog = QDialog(
+        dialog = EventDialog(
             self
         )
-
-        dialog.setWindowTitle(
-            "Create New Event"
-        )
-
-        dialog.setMinimumWidth(
-            440
-        )
-
-        dialog.setStyleSheet("""
-            QDialog {
-                background: #16161E;
-            }
-
-            QLabel {
-                color: white;
-                font-size: 13px;
-            }
-
-            QLineEdit,
-            QComboBox {
-                background: #20202A;
-                color: white;
-                border: 1px solid #363646;
-                border-radius: 8px;
-                padding: 9px;
-                font-size: 13px;
-            }
-
-            QLineEdit:focus,
-            QComboBox:focus {
-                border: 1px solid #3B82F6;
-            }
-
-            QComboBox QAbstractItemView {
-                background: #20202A;
-                color: white;
-                selection-background-color: #2563EB;
-            }
-
-            QDialogButtonBox QPushButton {
-                background: #2563EB;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                padding: 8px 16px;
-                font-weight: 600;
-            }
-
-            QDialogButtonBox QPushButton:hover {
-                background: #3B82F6;
-            }
-        """)
-
-        layout = QVBoxLayout(
-            dialog
-        )
-
-        layout.setContentsMargins(
-            24,
-            24,
-            24,
-            24
-        )
-
-        layout.setSpacing(
-            10
-        )
-
-        # =====================================================
-        # EVENT NAME
-        # =====================================================
-
-        name_label = QLabel(
-            "Event Name"
-        )
-
-        layout.addWidget(
-            name_label
-        )
-
-        name_input = QLineEdit()
-
-        name_input.setPlaceholderText(
-            "e.g. Open GitHub"
-        )
-
-        layout.addWidget(
-            name_input
-        )
-
-        layout.addSpacing(
-            8
-        )
-
-        # =====================================================
-        # GESTURE
-        # =====================================================
-
-        gesture_label = QLabel(
-            "Gesture"
-        )
-
-        layout.addWidget(
-            gesture_label
-        )
-
-        gesture_combo = QComboBox()
-
-        gesture_combo.addItems([
-            "✋ Open Palm",
-            "✊ Fist",
-            "👍 Thumbs Up",
-            "👎 Thumbs Down",
-        ])
-
-        layout.addWidget(
-            gesture_combo
-        )
-
-        layout.addSpacing(
-            8
-        )
-
-        # =====================================================
-        # ACTION
-        # =====================================================
-
-        action_label = QLabel(
-            "Action"
-        )
-
-        layout.addWidget(
-            action_label
-        )
-
-        action_combo = QComboBox()
-
-        action_combo.addItems([
-            "Launch Application",
-            "Open Website",
-            "Hotkey",
-            "Wait",
-            "PowerPoint",
-        ])
-
-        layout.addWidget(
-            action_combo
-        )
-
-        layout.addSpacing(
-            16
-        )
-
-        # =====================================================
-        # BUTTONS
-        # =====================================================
-
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Cancel
-            | QDialogButtonBox.StandardButton.Ok
-        )
-
-        buttons.accepted.connect(
-            dialog.accept
-        )
-
-        buttons.rejected.connect(
-            dialog.reject
-        )
-
-        layout.addWidget(
-            buttons
-        )
-
-        # =====================================================
-        # RESULT
-        # =====================================================
 
         if dialog.exec() != QDialog.DialogCode.Accepted:
 
             return
 
-        event_name = name_input.text().strip()
+        event = dialog.get_event()
 
-        gesture = gesture_combo.currentText()
-
-        action = action_combo.currentText()
-
-        if not event_name:
-
-            self.status.setText(
-                "Status: Event name is required."
-            )
-
-            return
-
-        # -----------------------------------------------------
-        # Create event
-        # -----------------------------------------------------
-
-        event = {
-            "name": event_name,
-            "gesture": gesture,
-            "action": action,
-        }
-
-        self.custom_events.append(
+        self.events.append(
             event
         )
-
-        # -----------------------------------------------------
-        # Save ONLY current studio
-        # -----------------------------------------------------
 
         if self.save_current_studio():
 
             self.refresh_events()
 
-            self.status.setText(
-                f"Status: Created '{event_name}'"
-            )
-
-        else:
-
-            # Undo in-memory change if save failed
-
-            self.custom_events.remove(
-                event
-            )
-
-            self.status.setText(
-                "Status: Could not save event."
-            )
+            self.studio_saved.emit()
 
     # =========================================================
     # EDIT EVENT
@@ -872,261 +823,66 @@ class CustomPage(QWidget):
 
     def edit_event(
         self,
-        event
+        index
     ):
 
-        dialog = QDialog(
-            self
+        if index < 0 or index >= len(
+            self.events
+        ):
+
+            return
+
+        dialog = EventDialog(
+            self,
+            self.events[index]
         )
-
-        dialog.setWindowTitle(
-            "Edit Event"
-        )
-
-        dialog.setMinimumWidth(
-            440
-        )
-
-        dialog.setStyleSheet("""
-            QDialog {
-                background: #16161E;
-            }
-
-            QLabel {
-                color: white;
-                font-size: 13px;
-            }
-
-            QLineEdit,
-            QComboBox {
-                background: #20202A;
-                color: white;
-                border: 1px solid #363646;
-                border-radius: 8px;
-                padding: 9px;
-                font-size: 13px;
-            }
-
-            QLineEdit:focus,
-            QComboBox:focus {
-                border: 1px solid #3B82F6;
-            }
-
-            QComboBox QAbstractItemView {
-                background: #20202A;
-                color: white;
-                selection-background-color: #2563EB;
-            }
-
-            QDialogButtonBox QPushButton {
-                background: #2563EB;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                padding: 8px 16px;
-                font-weight: 600;
-            }
-
-            QDialogButtonBox QPushButton:hover {
-                background: #3B82F6;
-            }
-        """)
-
-        layout = QVBoxLayout(
-            dialog
-        )
-
-        layout.setContentsMargins(
-            24,
-            24,
-            24,
-            24
-        )
-
-        layout.setSpacing(
-            10
-        )
-
-        # =====================================================
-        # EVENT NAME
-        # =====================================================
-
-        layout.addWidget(
-            QLabel("Event Name")
-        )
-
-        name_input = QLineEdit(
-            event.get(
-                "name",
-                ""
-            )
-        )
-
-        layout.addWidget(
-            name_input
-        )
-
-        layout.addSpacing(
-            8
-        )
-
-        # =====================================================
-        # GESTURE
-        # =====================================================
-
-        layout.addWidget(
-            QLabel("Gesture")
-        )
-
-        gesture_combo = QComboBox()
-
-        gesture_combo.addItems([
-            "✋ Open Palm",
-            "✊ Fist",
-            "👍 Thumbs Up",
-            "👎 Thumbs Down",
-        ])
-
-        current_gesture = event.get(
-            "gesture",
-            "✋ Open Palm"
-        )
-
-        index = gesture_combo.findText(
-            current_gesture
-        )
-
-        if index >= 0:
-
-            gesture_combo.setCurrentIndex(
-                index
-            )
-
-        layout.addWidget(
-            gesture_combo
-        )
-
-        layout.addSpacing(
-            8
-        )
-
-        # =====================================================
-        # ACTION
-        # =====================================================
-
-        layout.addWidget(
-            QLabel("Action")
-        )
-
-        action_combo = QComboBox()
-
-        action_combo.addItems([
-            "Launch Application",
-            "Open Website",
-            "Hotkey",
-            "Wait",
-            "PowerPoint",
-        ])
-
-        current_action = event.get(
-            "action",
-            "Launch Application"
-        )
-
-        index = action_combo.findText(
-            current_action
-        )
-
-        if index >= 0:
-
-            action_combo.setCurrentIndex(
-                index
-            )
-
-        layout.addWidget(
-            action_combo
-        )
-
-        layout.addSpacing(
-            16
-        )
-
-        # =====================================================
-        # BUTTONS
-        # =====================================================
-
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Cancel
-            | QDialogButtonBox.StandardButton.Ok
-        )
-
-        buttons.accepted.connect(
-            dialog.accept
-        )
-
-        buttons.rejected.connect(
-            dialog.reject
-        )
-
-        layout.addWidget(
-            buttons
-        )
-
-        # =====================================================
-        # RESULT
-        # =====================================================
 
         if dialog.exec() != QDialog.DialogCode.Accepted:
 
             return
 
-        new_name = name_input.text().strip()
-
-        if not new_name:
-
-            self.status.setText(
-                "Status: Event name is required."
-            )
-
-            return
-
-        # Save old values
-        old_event = event.copy()
-
-        # Update event
-        event["name"] = new_name
-
-        event["gesture"] = (
-            gesture_combo.currentText()
-        )
-
-        event["action"] = (
-            action_combo.currentText()
-        )
-
-        # -----------------------------------------------------
-        # Save
-        # -----------------------------------------------------
+        self.events[index] = dialog.get_event()
 
         if self.save_current_studio():
 
             self.refresh_events()
 
-            self.status.setText(
-                f"Status: Updated '{new_name}'"
-            )
+            self.studio_saved.emit()
 
-        else:
+    # =========================================================
+    # DELETE EVENT
+    # =========================================================
 
-            event.clear()
+    def delete_event(
+        self,
+        index
+    ):
 
-            event.update(
-                old_event
-            )
+        if index < 0 or index >= len(
+            self.events
+        ):
 
-            self.status.setText(
-                "Status: Could not save changes."
-            )
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Delete Event",
+            "Are you sure you want to delete this event?",
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+
+            return
+
+        del self.events[index]
+
+        if self.save_current_studio():
+
+            self.refresh_events()
+
+            self.studio_saved.emit()
 
     # =========================================================
     # REFRESH EVENTS
@@ -1135,10 +891,10 @@ class CustomPage(QWidget):
     def refresh_events(self):
 
         # -----------------------------------------------------
-        # Remove old widgets
+        # REMOVE EXISTING EVENT WIDGETS
         # -----------------------------------------------------
 
-        while self.events_layout.count():
+        while self.events_layout.count() > 1:
 
             item = self.events_layout.takeAt(
                 0
@@ -1151,249 +907,238 @@ class CustomPage(QWidget):
                 widget.deleteLater()
 
         # -----------------------------------------------------
-        # Empty state
+        # EMPTY STATE
         # -----------------------------------------------------
 
-        if not self.custom_events:
+        if not self.events:
 
-            self.events_layout.addWidget(
-                self.empty_label
+            empty = QLabel(
+                "No events yet.\n"
+                "Click '+ Add Event' to create your first automation."
+            )
+
+            empty.setAlignment(
+                Qt.AlignmentFlag.AlignCenter
+            )
+
+            empty.setMinimumHeight(
+                100
+            )
+
+            empty.setStyleSheet("""
+                QLabel {
+                    color: #71717A;
+                    background: #111116;
+                    border: 1px solid #24242D;
+                    border-radius: 12px;
+                    padding: 30px;
+                    font-size: 13px;
+                }
+            """)
+
+            self.events_layout.insertWidget(
+                0,
+                empty
             )
 
             return
 
         # -----------------------------------------------------
-        # Event cards
+        # CREATE EVENT CARDS
         # -----------------------------------------------------
 
-        for event in self.custom_events:
+        for index, event in enumerate(
+            self.events
+        ):
 
-            self.create_event_card(
-                event
+            card = QFrame()
+
+            card.setStyleSheet("""
+                QFrame {
+                    background: #111116;
+                    border: 1px solid #24242D;
+                    border-radius: 12px;
+                }
+            """)
+
+            card_layout = QVBoxLayout(
+                card
             )
 
-    # =========================================================
-    # CREATE EVENT CARD
-    # =========================================================
-
-    def create_event_card(
-        self,
-        event
-    ):
-
-        card = QFrame()
-
-        card.setObjectName(
-            "EventCard"
-        )
-
-        card_layout = QHBoxLayout(
-            card
-        )
-
-        card_layout.setContentsMargins(
-            16,
-            14,
-            16,
-            14
-        )
-
-        card_layout.setSpacing(
-            12
-        )
-
-        # -----------------------------------------------------
-        # Information
-        # -----------------------------------------------------
-
-        info = QVBoxLayout()
-
-        info.setSpacing(
-            4
-        )
-
-        name = QLabel(
-            event.get(
-                "name",
-                "Unnamed Event"
+            card_layout.setContentsMargins(
+                16,
+                14,
+                16,
+                14
             )
-        )
 
-        name.setStyleSheet("""
-            color: white;
-            font-size: 15px;
-            font-weight: 600;
-        """)
+            card_layout.setSpacing(
+                8
+            )
 
-        info.addWidget(
-            name
-        )
+            # -------------------------------------------------
+            # EVENT NAME
+            # -------------------------------------------------
 
-        details = QLabel(
-            f'{event.get("gesture", "")}'
-            f'  →  '
-            f'{event.get("action", "")}'
-        )
-
-        details.setStyleSheet("""
-            color: #9CA3AF;
-            font-size: 13px;
-        """)
-
-        info.addWidget(
-            details
-        )
-
-        card_layout.addLayout(
-            info
-        )
-
-        card_layout.addStretch()
-
-        # -----------------------------------------------------
-        # Edit button
-        # -----------------------------------------------------
-
-        edit_button = QPushButton(
-            "Edit"
-        )
-
-        edit_button.setCursor(
-            Qt.PointingHandCursor
-        )
-
-        edit_button.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                color: #60A5FA;
-                border: none;
-                font-size: 12px;
-                font-weight: 600;
-                padding: 5px 8px;
-            }
-
-            QPushButton:hover {
-                color: #93C5FD;
-            }
-        """)
-
-        edit_button.clicked.connect(
-            lambda checked=False,
-            current_event=event:
-                self.edit_event(
-                    current_event
+            event_name = QLabel(
+                event.get(
+                    "name",
+                    "Unnamed Event"
                 )
-        )
+            )
 
-        card_layout.addWidget(
-            edit_button
-        )
+            event_name.setStyleSheet("""
+                QLabel {
+                    color: white;
+                    font-size: 15px;
+                    font-weight: 600;
+                    border: none;
+                }
+            """)
 
-        # -----------------------------------------------------
-        # Delete button
-        # -----------------------------------------------------
+            card_layout.addWidget(
+                event_name
+            )
 
-        delete_button = QPushButton(
-            "Delete"
-        )
+            # -------------------------------------------------
+            # GESTURE
+            # -------------------------------------------------
 
-        delete_button.setCursor(
-            Qt.PointingHandCursor
-        )
+            gesture = event.get(
+                "gesture",
+                ""
+            )
 
-        delete_button.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                color: #9CA3AF;
-                border: none;
-                font-size: 12px;
-                padding: 5px 8px;
-            }
+            if gesture:
 
-            QPushButton:hover {
-                color: #F87171;
-            }
-        """)
-
-        delete_button.clicked.connect(
-            lambda checked=False,
-            current_event=event:
-                self.delete_event(
-                    current_event
+                gesture_label = QLabel(
+                    f"Gesture: {gesture}"
                 )
-        )
 
-        card_layout.addWidget(
-            delete_button
-        )
+                gesture_label.setStyleSheet("""
+                    QLabel {
+                        color: #A1A1AA;
+                        font-size: 12px;
+                        border: none;
+                    }
+                """)
 
-        self.events_layout.addWidget(
-            card
-        )
+                card_layout.addWidget(
+                    gesture_label
+                )
 
-    # =========================================================
-    # DELETE EVENT
-    # =========================================================
+            # -------------------------------------------------
+            # ACTION
+            # -------------------------------------------------
 
-    def delete_event(
-        self,
-        event
-    ):
-
-        event_name = event.get(
-            "name",
-            "this event"
-        )
-
-        reply = QMessageBox.question(
-            self,
-            "Delete Event",
-            f"Are you sure you want to delete "
-            f"'{event_name}'?",
-            QMessageBox.StandardButton.Yes
-            | QMessageBox.StandardButton.No
-        )
-
-        if reply != QMessageBox.StandardButton.Yes:
-
-            return
-
-        if event not in self.custom_events:
-
-            return
-
-        # -----------------------------------------------------
-        # Remove ONLY this event
-        # -----------------------------------------------------
-
-        self.custom_events.remove(
-            event
-        )
-
-        # -----------------------------------------------------
-        # Save current studio
-        # -----------------------------------------------------
-
-        if self.save_current_studio():
-
-            self.refresh_events()
-
-            self.status.setText(
-                f"Status: Deleted '{event_name}'"
+            action = QLabel(
+                f"Action: {event.get('action', 'Unknown')}"
             )
 
-        else:
+            action.setStyleSheet("""
+                QLabel {
+                    color: #A1A1AA;
+                    font-size: 12px;
+                    border: none;
+                }
+            """)
 
-            # Restore event if save failed
-
-            self.custom_events.append(
-                event
+            card_layout.addWidget(
+                action
             )
 
-            self.refresh_events()
+            # -------------------------------------------------
+            # VALUE
+            # -------------------------------------------------
 
-            self.status.setText(
-                "Status: Could not delete event."
+            value = event.get(
+                "value",
+                ""
+            )
+
+            if value:
+
+                value_label = QLabel(
+                    f"Value: {value}"
+                )
+
+                value_label.setWordWrap(
+                    True
+                )
+
+                value_label.setStyleSheet("""
+                    QLabel {
+                        color: #71717A;
+                        font-size: 12px;
+                        border: none;
+                    }
+                """)
+
+                card_layout.addWidget(
+                    value_label
+                )
+
+            # -------------------------------------------------
+            # BUTTONS
+            # -------------------------------------------------
+
+            buttons = QHBoxLayout()
+
+            buttons.addStretch()
+
+            edit_button = QPushButton(
+                "Edit"
+            )
+
+            edit_button.setCursor(
+                Qt.CursorShape.PointingHandCursor
+            )
+
+            edit_button.clicked.connect(
+                lambda checked=False, i=index:
+                self.edit_event(i)
+            )
+
+            buttons.addWidget(
+                edit_button
+            )
+
+            delete_button = QPushButton(
+                "Delete"
+            )
+
+            delete_button.setCursor(
+                Qt.CursorShape.PointingHandCursor
+            )
+
+            delete_button.setStyleSheet("""
+                QPushButton {
+                    color: #F87171;
+                    background: transparent;
+                    border: none;
+                }
+
+                QPushButton:hover {
+                    color: #FCA5A5;
+                }
+            """)
+
+            delete_button.clicked.connect(
+                lambda checked=False, i=index:
+                self.delete_event(i)
+            )
+
+            buttons.addWidget(
+                delete_button
+            )
+
+            card_layout.addLayout(
+                buttons
+            )
+
+            self.events_layout.insertWidget(
+                index,
+                card
             )
 
     # =========================================================
@@ -1406,40 +1151,65 @@ class CustomPage(QWidget):
 
             return
 
-        studio = self.find_current_studio()
+        studios = self.load_all_studios()
 
-        if studio is None:
+        current = None
 
-            return
+        for studio in studios:
 
-        # -----------------------------------------------------
-        # Prevent deleting built-in studios
-        # -----------------------------------------------------
+            title = studio.get(
+                "title",
+                ""
+            ).strip().lower()
 
-        if studio.get(
-            "type",
-            "builtin"
-        ) != "custom":
+            if title == self.studio_name.strip().lower():
 
-            QMessageBox.information(
+                current = studio
+                break
+
+        if current is None:
+
+            QMessageBox.warning(
                 self,
-                "Built-in Studio",
-                "Built-in LensFlow studios cannot be deleted."
+                "Studio Not Found",
+                "The selected studio could not be found."
             )
 
             return
 
         # -----------------------------------------------------
-        # Confirmation
+        # ONLY CUSTOM STUDIOS
+        # -----------------------------------------------------
+
+        studio_type = current.get(
+            "type"
+        )
+
+        if (
+            studio_type is not None
+            and studio_type != "custom"
+        ):
+
+            QMessageBox.warning(
+                self,
+                "Cannot Delete Studio",
+                "Built-in studios cannot be deleted."
+            )
+
+            return
+
+        # -----------------------------------------------------
+        # CONFIRM
         # -----------------------------------------------------
 
         reply = QMessageBox.question(
             self,
             "Delete Studio",
-            f"Are you sure you want to delete "
-            f"'{self.studio_name}'?\n\n"
-            f"All events inside this studio will also "
-            f"be removed.",
+            (
+                f"Are you sure you want to delete "
+                f"'{self.studio_name}'?\n\n"
+                "This will permanently remove this custom studio."
+            ),
             QMessageBox.StandardButton.Yes
             | QMessageBox.StandardButton.No
         )
@@ -1448,177 +1218,432 @@ class CustomPage(QWidget):
 
             return
 
-        config_path = self.get_config_path()
-
-        studios = self.load_all_studios()
-
         # -----------------------------------------------------
-        # IMPORTANT:
-        #
-        # Remove ONLY the selected studio.
+        # REMOVE ONLY CURRENT STUDIO
         # -----------------------------------------------------
 
-        updated_studios = [
-            studio
-            for studio in studios
-            if studio.get("title") != self.studio_name
-        ]
+        old_name = self.studio_name.strip().lower()
 
-        # Safety check
-        if len(updated_studios) == len(studios):
+        updated_studios = []
 
-            self.status.setText(
-                "Status: Studio could not be found."
+        deleted = False
+
+        for studio in studios:
+
+            title = studio.get(
+                "title",
+                ""
+            ).strip().lower()
+
+            if title == old_name:
+
+                deleted = True
+
+                print(
+                    f"🗑️ Removing studio: {studio.get('title')}"
+                )
+
+                continue
+
+            updated_studios.append(
+                studio
+            )
+
+        if not deleted:
+
+            print(
+                "⚠️ Delete failed: studio was not found."
             )
 
             return
 
         # -----------------------------------------------------
-        # Save remaining studios
+        # SAVE COMPLETE REMAINING LIST
         # -----------------------------------------------------
 
-        try:
+        if not self.save_all_studios(
+            updated_studios
+        ):
 
-            with open(
-                config_path,
-                "w",
-                encoding="utf-8"
-            ) as f:
+            return
 
-                json.dump(
-                    updated_studios,
-                    f,
-                    indent=4,
-                    ensure_ascii=False
-                )
+        print(
+            f"✅ Deleted studio: {self.studio_name}"
+        )
 
-            deleted_name = self.studio_name
+        print(
+            f"📂 Remaining studios: {len(updated_studios)}"
+        )
 
-            print(
-                f"🗑️ Deleted studio: {deleted_name}"
-            )
+        # -----------------------------------------------------
+        # CLEAR PAGE
+        # -----------------------------------------------------
 
-            # -------------------------------------------------
-            # Clear current studio
-            # -------------------------------------------------
+        self.current_studio = None
+        self.studio_name = ""
+        self.events = []
 
-            self.studio_name = ""
+        self.name_input.clear()
 
-            self.custom_events = []
+        self.delete_button.hide()
 
-            self.title_label.setText(
-                "Custom Studio"
-            )
+        self.refresh_events()
 
-            self.subtitle_label.setText(
-                "Create your own gesture-controlled workspace."
-            )
+        # -----------------------------------------------------
+        # NOTIFY MAIN WINDOW
+        # -----------------------------------------------------
 
-            self.delete_studio_button.hide()
+        self.studio_deleted.emit()
 
-            self.refresh_events()
+        self.studio_saved.emit()
 
-            self.status.setText(
-                f"Status: Deleted '{deleted_name}'"
-            )
-
-            # -------------------------------------------------
-            # Go home
-            # -------------------------------------------------
-
-            self.back_requested.emit()
-
-        except Exception as e:
-
-            print(
-                f"❌ Could not delete studio: {e}"
-            )
-
-            self.status.setText(
-                "Status: Could not delete studio."
-            )
+        self.back_requested.emit()
 
     # =========================================================
-    # SAVE STUDIO NAME
+    # BACK
     # =========================================================
 
-    def save_studio_name(
+    def go_back(self):
+
+        self.back_requested.emit()
+
+
+# =============================================================
+# EVENT DIALOG
+# =============================================================
+
+class EventDialog(QDialog):
+
+    def __init__(
         self,
-        new_name
+        parent=None,
+        event=None
     ):
 
-        new_name = new_name.strip()
+        super().__init__(
+            parent
+        )
 
-        if not new_name:
+        self.setWindowTitle(
+            "Event"
+        )
 
-            return False
+        self.setMinimumWidth(
+            500
+        )
 
-        if not self.studio_name:
+        layout = QVBoxLayout(
+            self
+        )
 
-            return False
+        layout.setSpacing(
+            10
+        )
 
-        studios = self.load_all_studios()
+        # =====================================================
+        # EVENT NAME
+        # =====================================================
 
-        # -----------------------------------------------------
-        # Check duplicate
-        # -----------------------------------------------------
+        layout.addWidget(
+            QLabel(
+                "Event Name"
+            )
+        )
 
-        for studio in studios:
+        self.name_input = QLineEdit()
 
-            if (
-                studio.get("title", "").lower()
-                == new_name.lower()
-                and studio.get("title")
-                != self.studio_name
-            ):
+        self.name_input.setPlaceholderText(
+            "Example: Open VS Code"
+        )
 
-                self.status.setText(
-                    "Status: A studio with this name already exists."
+        layout.addWidget(
+            self.name_input
+        )
+
+        # =====================================================
+        # GESTURE
+        # =====================================================
+
+        layout.addWidget(
+            QLabel(
+                "Gesture (Optional)"
+            )
+        )
+
+        self.gesture_input = QLineEdit()
+
+        self.gesture_input.setPlaceholderText(
+            "Example: ✋ Open Palm"
+        )
+
+        layout.addWidget(
+            self.gesture_input
+        )
+
+        # =====================================================
+        # ACTION
+        # =====================================================
+
+        layout.addWidget(
+            QLabel(
+                "Action"
+            )
+        )
+
+        self.action_combo = QComboBox()
+
+        self.action_combo.addItems([
+            "Open Application",
+            "Open File",
+            "Open Website",
+            "Hotkey",
+            "Wait",
+            "PowerPoint"
+        ])
+
+        layout.addWidget(
+            self.action_combo
+        )
+
+        # =====================================================
+        # VALUE + FILE EXPLORER
+        # =====================================================
+
+        layout.addWidget(
+            QLabel(
+                "Value"
+            )
+        )
+
+        value_row = QHBoxLayout()
+
+        self.value_input = QLineEdit()
+
+        self.value_input.setPlaceholderText(
+            "Application path, file path, URL, hotkey, etc."
+        )
+
+        value_row.addWidget(
+            self.value_input,
+            1
+        )
+
+        self.browse_button = QPushButton(
+            "📁 Browse"
+        )
+
+        self.browse_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.browse_button.clicked.connect(
+            self.browse_file
+        )
+
+        value_row.addWidget(
+            self.browse_button
+        )
+
+        layout.addLayout(
+            value_row
+        )
+
+        # =====================================================
+        # HINT
+        # =====================================================
+
+        self.file_hint = QLabel(
+            "Browse lets you select a file or application from Windows File Explorer."
+        )
+
+        self.file_hint.setWordWrap(
+            True
+        )
+
+        self.file_hint.setStyleSheet("""
+            QLabel {
+                color: #71717A;
+                font-size: 11px;
+                border: none;
+            }
+        """)
+
+        layout.addWidget(
+            self.file_hint
+        )
+
+        # =====================================================
+        # BUTTONS
+        # =====================================================
+
+        buttons = QHBoxLayout()
+
+        buttons.addStretch()
+
+        cancel = QPushButton(
+            "Cancel"
+        )
+
+        cancel.clicked.connect(
+            self.reject
+        )
+
+        save = QPushButton(
+            "Save Event"
+        )
+
+        save.setStyleSheet("""
+            QPushButton {
+                background-color: #8B5CF6;
+                border: 1px solid #A78BFA;
+            }
+
+            QPushButton:hover {
+                background-color: #7C3AED;
+            }
+        """)
+
+        save.clicked.connect(
+            self.save_event
+        )
+
+        buttons.addWidget(
+            cancel
+        )
+
+        buttons.addWidget(
+            save
+        )
+
+        layout.addLayout(
+            buttons
+        )
+
+        # =====================================================
+        # LOAD EXISTING EVENT
+        # =====================================================
+
+        if event:
+
+            self.name_input.setText(
+                event.get(
+                    "name",
+                    ""
                 )
-
-                return False
-
-        # -----------------------------------------------------
-        # Rename current studio
-        # -----------------------------------------------------
-
-        for studio in studios:
-
-            if studio.get("title") == self.studio_name:
-
-                studio["title"] = new_name
-
-                break
-
-        config_path = self.get_config_path()
-
-        try:
-
-            with open(
-                config_path,
-                "w",
-                encoding="utf-8"
-            ) as f:
-
-                json.dump(
-                    studios,
-                    f,
-                    indent=4,
-                    ensure_ascii=False
-                )
-
-            self.studio_name = new_name
-
-            self.title_label.setText(
-                new_name
             )
 
-            return True
-
-        except Exception as e:
-
-            print(
-                f"❌ Could not rename studio: {e}"
+            self.gesture_input.setText(
+                event.get(
+                    "gesture",
+                    ""
+                )
             )
 
-            return False
+            action = event.get(
+                "action",
+                ""
+            )
+
+            action_index = self.action_combo.findText(
+                action
+            )
+
+            if action_index >= 0:
+
+                self.action_combo.setCurrentIndex(
+                    action_index
+                )
+
+            self.value_input.setText(
+                str(
+                    event.get(
+                        "value",
+                        ""
+                    )
+                )
+            )
+
+    # =========================================================
+    # BROWSE FILE
+    # =========================================================
+
+    def browse_file(self):
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select File",
+            "",
+            (
+                "All Files (*.*);;"
+                "Applications (*.exe *.bat *.cmd);;"
+                "Python Files (*.py);;"
+                "Documents (*.pdf *.doc *.docx *.txt);;"
+                "Images (*.png *.jpg *.jpeg *.gif);;"
+                "Videos (*.mp4 *.avi *.mkv)"
+            )
+        )
+
+        if not file_path:
+
+            return
+
+        self.value_input.setText(
+            file_path
+        )
+
+        print(
+            f"📁 Selected file: {file_path}"
+        )
+
+    # =========================================================
+    # SAVE EVENT
+    # =========================================================
+
+    def save_event(self):
+
+        name = self.name_input.text().strip()
+
+        action = self.action_combo.currentText()
+
+        value = self.value_input.text().strip()
+
+        gesture = self.gesture_input.text().strip()
+
+        # -----------------------------------------------------
+        # VALIDATION
+        # -----------------------------------------------------
+
+        if not name:
+
+            QMessageBox.warning(
+                self,
+                "Missing Event Name",
+                "Please enter an event name."
+            )
+
+            return
+
+        if not value:
+
+            QMessageBox.warning(
+                self,
+                "Missing Value",
+                "Please enter a value or select a file."
+            )
+
+            return
+
+        self.accept()
+
+    # =========================================================
+    # GET EVENT
+    # =========================================================
+
+    def get_event(self):
+
+        return {
+            "name": self.name_input.text().strip(),
+            "gesture": self.gesture_input.text().strip(),
+            "action": self.action_combo.currentText(),
+            "value": self.value_input.text().strip()
+        }
