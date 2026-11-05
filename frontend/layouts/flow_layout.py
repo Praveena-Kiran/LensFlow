@@ -1,4 +1,3 @@
-from PIL.Image import item
 from PySide6.QtCore import QPoint, QRect, QSize, Qt
 from PySide6.QtWidgets import QLayout, QSizePolicy
 

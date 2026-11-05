@@ -47,3 +47,25 @@ Clone the repository:
 ```bash
 git clone https://github.com/Praveena-Kiran/LensFlow.git
 cd LensFlow
+```
+
+Install the dependencies (a virtual environment is recommended):
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Run the app:
+
+```bash
+python main.py
+```
+
+### Manual hardware checks
+
+```bash
+python -m tools.webcam_gesture_check
+python -m tools.camera_preview_check
+```
