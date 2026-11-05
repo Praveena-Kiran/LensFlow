@@ -825,6 +825,8 @@ class MainWindow(QMainWindow):
 
         try:
 
+            # Ask the camera loop to finish. Called directly (not through a
+            # signal) because the worker's thread is busy inside run().
             self.gesture_worker.stop()
 
         except Exception as e:
@@ -832,6 +834,19 @@ class MainWindow(QMainWindow):
             print(
                 f"⚠ Could not stop gesture worker: {e}"
             )
+
+        # Wait for run() to return and the thread to exit before dropping
+        # our references. Destroying a QThread that is still running makes
+        # Qt abort the whole app (this was the Presentation Studio "Back" crash).
+        if self.gesture_thread is not None:
+
+            self.gesture_thread.quit()
+
+            if not self.gesture_thread.wait(3000):
+
+                print(
+                    "⚠ Gesture thread did not stop in time."
+                )
 
         self.gesture_worker = None
 
