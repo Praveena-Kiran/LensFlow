@@ -1,23 +1,16 @@
 import os
-import sys
 
 import cv2
 import mediapipe as mp
 
-
-def _model_path():
-    """Locate the bundled gesture model, both from source and from a PyInstaller build."""
-    base = getattr(sys, "_MEIPASS", None) or os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    )
-    return os.path.join(base, "backend", "models", "gesture_recognizer.task")
+from backend.paths import model_path as bundled_model_path
 
 
 class GoogleGestureRecognizer:
 
     def __init__(self):
 
-        model_path = _model_path()
+        model_path = bundled_model_path("gesture_recognizer.task")
 
         if not os.path.exists(model_path):
             raise FileNotFoundError(

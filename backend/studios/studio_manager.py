@@ -1,17 +1,13 @@
 import json
-import os
+
+from backend.paths import user_config_path
 
 
 class StudioManager:
 
     def __init__(self):
-        config_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "config"
-        )
         with open(
-        os.path.join(config_dir, "studios.json"),
+        user_config_path("studios.json"),
         "r",
         encoding="utf-8"
         ) as f:
@@ -20,14 +16,9 @@ class StudioManager:
         
 
     def get_studios(self):
-        config_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "config"
-        )
 
         with open(
-            os.path.join(config_dir, "studios.json"),
+            user_config_path("studios.json"),
             encoding="utf-8"
         ) as f:
             self.studios = json.load(f)
@@ -44,13 +35,8 @@ class StudioManager:
         return None
 
     def save(self):
-        config_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "config"
-        )
         with open(
-            os.path.join(config_dir, "studios.json"),
+            user_config_path("studios.json"),
             "w",
             encoding="utf-8"
         ) as f:
@@ -81,11 +67,6 @@ class StudioManager:
 
         self.studios.append(studio)
 
-        config_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "config"
-        )
 
         self.save()
 
@@ -96,11 +77,6 @@ class StudioManager:
             if studio["id"] != studio_id
         ]
 
-        config_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "config"
-        )
 
         self.save()
 

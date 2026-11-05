@@ -3,6 +3,8 @@ import os
 import subprocess
 import platform
 
+from backend.paths import user_config_path
+
 from .actions.launch_action import LaunchAction
 from .actions.wait_action import WaitAction
 from .actions.website_action import WebsiteAction
@@ -15,12 +17,6 @@ class FlowManager:
     def __init__(self):
         self.current_studio = None
 
-        config_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "config"
-        )
-
         self.actions = {
             "launch": LaunchAction(),
             "wait": WaitAction(),
@@ -30,14 +26,14 @@ class FlowManager:
         }
 
         with open(
-            os.path.join(config_dir, "apps.json"),
+            user_config_path("apps.json"),
             "r",
             encoding="utf-8"
         ) as f:
             self.apps = json.load(f)
 
         with open(
-            os.path.join(config_dir, "flows.json"),
+            user_config_path("flows.json"),
             "r",
             encoding="utf-8"
         ) as f:

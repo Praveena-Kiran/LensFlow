@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
 )
+from backend.paths import user_config_path
 
 
 class CustomPage(QWidget):
@@ -104,16 +105,7 @@ class CustomPage(QWidget):
 
     def get_config_path(self):
 
-        return os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "..",
-                "backend",
-                "config",
-                "studios.json"
-            )
-        )
+        return user_config_path("studios.json")
 
     # =========================================================
     # LOAD ALL STUDIOS
