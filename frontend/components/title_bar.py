@@ -6,12 +6,21 @@ and Windows 11 style Minimize, Maximize/Restore, and Close buttons.
 
 from typing import Optional
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QPainter, QColor, QFont, QPen, QRadialGradient, QBrush
+from PySide6.QtGui import QPainter, QColor, QFont, QRadialGradient, QBrush
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QLabel, QPushButton, QGraphicsDropShadowEffect
+    QWidget, QHBoxLayout, QLabel, QPushButton
 )
 
-
+from frontend.styles.theme import (
+    BG_DARK,
+    BORDER,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+    PRIMARY,
+    SECONDARY_ACCENT,
+    ERROR,
+)
 
 
 class WindowControlButton(QPushButton):
@@ -19,7 +28,7 @@ class WindowControlButton(QPushButton):
 
     def __init__(self, symbol: str, tooltip: str = "", is_close: bool = False, parent=None):
         super().__init__(symbol, parent)
-        self.setFixedSize(50, 40)
+        self.setFixedSize(46, 38)
         self.setToolTip(tooltip)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.is_close = is_close
@@ -29,13 +38,13 @@ class WindowControlButton(QPushButton):
         self.setText(symbol)
 
     def _apply_style(self):
-        hover_bg = "#EF4444" if self.is_close else "rgba(255, 255, 255, 0.12)"
+        hover_bg = ERROR if self.is_close else "rgba(255, 255, 255, 0.08)"
         hover_fg = "#FFFFFF"
 
         self.setStyleSheet(f"""
             QPushButton {{
-                background-color: #222222;
-                color: #9CA3AF;
+                background-color: transparent;
+                color: {SECONDARY_TEXT};
                 border: none;
                 font-size: 13px;
                 font-weight: 500;
@@ -46,7 +55,7 @@ class WindowControlButton(QPushButton):
                 color: {hover_fg};
             }}
             QPushButton:pressed {{
-                background-color: {"#DC2626" if self.is_close else "rgba(255, 255, 255, 0.2)"};
+                background-color: {"#DC2626" if self.is_close else "rgba(255, 255, 255, 0.15)"};
             }}
         """)
 
@@ -56,17 +65,17 @@ class TitleBar(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setFixedHeight(44)
+        self.setFixedHeight(42)
         self.setObjectName("TitleBar")
-        self.setStyleSheet("""
-            QWidget#TitleBar {
-                background-color: #0B0B0F;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            }
+        self.setStyleSheet(f"""
+            QWidget#TitleBar {{
+                background-color: {BG_DARK};
+                border-bottom: 1px solid {BORDER};
+            }}
         """)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(16, 0, 16, 0)
+        layout.setContentsMargins(14, 0, 8, 0)
         layout.setSpacing(0)
 
         # ── LF Monogram Logo Badge ───────────────────────────────────────
@@ -76,17 +85,20 @@ class TitleBar(QWidget):
 
         # ── Title Brand Label ───────────────────────────────────────────
         brand = QLabel("LensFlow")
-        brand.setStyleSheet(
-            "color: #FFFFFF; font-size: 14px; font-weight: 600; letter-spacing: -0.2px;"
-        )
+        brand.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        """)
         layout.addWidget(brand, 0, Qt.AlignmentFlag.AlignVCenter)
 
         layout.addStretch()
 
         # ── Window Control Buttons ──────────────────────────────────────
-        self.btn_minimize = WindowControlButton("\u2014", tooltip="Minimize")
-        self.btn_maximize = WindowControlButton("\u25A1", tooltip="Maximize")
-        self.btn_close = WindowControlButton("\u2715", tooltip="Close", is_close=True)
+        self.btn_minimize = WindowControlButton("—", tooltip="Minimize")
+        self.btn_maximize = WindowControlButton("□", tooltip="Maximize")
+        self.btn_close = WindowControlButton("✕", tooltip="Close", is_close=True)
 
         layout.addWidget(self.btn_minimize)
         layout.addWidget(self.btn_maximize)
@@ -119,11 +131,11 @@ class TitleBar(QWidget):
         if w:
             if w.isMaximized():
                 w.showNormal()
-                self.btn_maximize.set_symbol("\u25A1")
+                self.btn_maximize.set_symbol("□")
                 self.btn_maximize.setToolTip("Maximize")
             else:
                 w.showMaximized()
-                self.btn_maximize.set_symbol("\u2749")  # Restore icon symbol
+                self.btn_maximize.set_symbol("❐")
                 self.btn_maximize.setToolTip("Restore")
 
     def _close(self):
@@ -133,11 +145,11 @@ class TitleBar(QWidget):
 
 
 class _LFBadge(QWidget):
-    """Small 28x28 rounded badge with 'LF' monogram."""
+    """Small 26x26 rounded badge with 'LF' monogram."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(28, 28)
+        self.setFixedSize(26, 26)
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -145,14 +157,14 @@ class _LFBadge(QWidget):
         w, h = float(self.width()), float(self.height())
 
         grad = QRadialGradient(w * 0.4, h * 0.35, w * 0.6)
-        grad.setColorAt(0.0, QColor(96, 165, 250))
-        grad.setColorAt(1.0, QColor(99, 102, 241))
+        grad.setColorAt(0.0, QColor(SECONDARY_ACCENT))
+        grad.setColorAt(1.0, QColor(PRIMARY))
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(grad))
-        p.drawRoundedRect(0, 0, int(w), int(h), 7, 7)
+        p.drawRoundedRect(0, 0, int(w), int(h), 6, 6)
 
         p.setPen(QColor("#FFFFFF"))
-        font = QFont("Inter", 9)
+        font = QFont("Inter", 8)
         font.setWeight(QFont.Weight.Bold)
         p.setFont(font)
         p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "LF")

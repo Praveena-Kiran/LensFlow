@@ -1,10 +1,10 @@
-"""LensFlow - Hero Section
+"""LensFlow - Hero Action Section
 
 Features:
 - Time-aware dynamic greeting ("Good Morning", "Good Afternoon", "Good Evening")
 - Auto-updating clock timer for live greeting transitions
 - Centred interactive glowing orb (breathing idle pulse, hover scale, gesture ripple)
-- Connected 'Start Listening' toggle button
+- Connected 'Start Listening' CTA button with brand Indigo/Violet styling
 """
 
 import datetime
@@ -12,9 +12,18 @@ from typing import Optional
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QColor
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QFrame
 )
 from frontend.components.glow_orb import GlowOrb
+from frontend.styles.theme import (
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_PRESSED,
+    SUCCESS,
+)
 
 
 def _greeting() -> str:
@@ -28,7 +37,7 @@ def _greeting() -> str:
 
 
 class HeroSection(QWidget):
-    """Hero greeting area with dynamic time greeting, interactive orb, and listening controls."""
+    """Compact hero action section with dynamic greeting, interactive orb, and listening controls."""
 
     def __init__(self, user_name: str = "Praveena", parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -36,102 +45,107 @@ class HeroSection(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 12)
+        layout.setSpacing(10)
 
         # ── Top Row: Dynamic Greeting + System Badge ─────────────────────
         top = QHBoxLayout()
         top.setContentsMargins(0, 0, 0, 0)
 
         greeting_col = QVBoxLayout()
-        greeting_col.setSpacing(6)
+        greeting_col.setSpacing(4)
 
-        # Dynamic Title Row: "Good Evening, Praveena."
+        # Title Row: "Good Evening, Praveena."
         title_row = QHBoxLayout()
-        title_row.setSpacing(0)
+        title_row.setSpacing(8)
 
         self.greeting_prefix = QLabel(_greeting())
-        self.greeting_prefix.setStyleSheet(
-            "color: #FFFFFF; font-size: 34px; font-weight: 700; letter-spacing: -0.7px;"
-        )
+        self.greeting_prefix.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        """)
         title_row.addWidget(self.greeting_prefix)
-        title_row.addSpacing(10)
 
         self.greeting_name = QLabel(f"{user_name}.")
-        self.greeting_name.setStyleSheet(
-            "color: #60A5FA; font-size: 34px; font-weight: 700; letter-spacing: -0.7px;"
-        )
+        self.greeting_name.setStyleSheet(f"""
+            color: {PRIMARY};
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        """)
         title_row.addWidget(self.greeting_name)
         title_row.addStretch()
         greeting_col.addLayout(title_row)
 
-        # Subtitles
-        sub = QLabel("What are we building today?")
-        sub.setStyleSheet("color: #9CA3AF; font-size: 15px; font-weight: 400;")
+        # Subtitle
+        sub = QLabel("LensFlow AI Workspace · Ready to listen")
+        sub.setStyleSheet(f"color: {SECONDARY_TEXT}; font-size: 13px; font-weight: 400;")
         greeting_col.addWidget(sub)
-
-        sub2 = QLabel("Your personalized AI workspace.")
-        sub2.setStyleSheet("color: #6B7280; font-size: 13px; font-weight: 400;")
-        greeting_col.addWidget(sub2)
 
         top.addLayout(greeting_col, 1)
 
-        # System Ready Badge
-        self.badge = QLabel("SYSTEM READY")
-        self.badge.setFixedHeight(28)
-        self.badge.setStyleSheet("""
-            color: #22C55E;
+        # System Status Badge (Semantic Green)
+        self.badge = QLabel("● SYSTEM READY")
+        self.badge.setFixedHeight(26)
+        self.badge.setStyleSheet(f"""
+            color: {SUCCESS};
             background-color: rgba(34, 197, 94, 0.10);
             border: 1px solid rgba(34, 197, 94, 0.25);
-            border-radius: 14px;
+            border-radius: 13px;
             font-size: 10px;
             font-weight: 700;
-            letter-spacing: 0.8px;
-            padding: 0px 14px;
+            letter-spacing: 0.6px;
+            padding: 0px 12px;
         """)
         top.addWidget(self.badge, 0, Qt.AlignmentFlag.AlignTop)
 
         layout.addLayout(top)
-        layout.addSpacing(8)
+        layout.addSpacing(2)
 
-        # ── Centred Interactive Glowing Orb ─────────────────────────────
-        self.orb = GlowOrb(diameter=120)
+        # ── Interactive Glowing Orb (Compact Hero Center) ───────────────
+        self.orb = GlowOrb(diameter=96)
         self.orb.setSizePolicy(
             QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed
         )
-        self.orb.setToolTip("Click to test gesture ripple effect / Hover to expand")
+        self.orb.setToolTip("Click to trigger gesture ripple / Hover to expand")
         layout.addWidget(self.orb, 0, Qt.AlignmentFlag.AlignHCenter)
 
         layout.addSpacing(2)
 
-        # ── Start Listening Action Button ───────────────────────────────
-        self.btn_listen = QPushButton("\u266A   Start Listening")
+        # ── Start Listening CTA Button (Primary Brand Action) ───────────
+        self.btn_listen = QPushButton("♪   Start Listening")
         self.btn_listen.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_listen.setFixedSize(180, 42)
-        self.btn_listen.setStyleSheet("""
-            QPushButton {
+        self.btn_listen.setFixedSize(170, 36)
+        self.btn_listen.setStyleSheet(f"""
+            QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 rgba(59, 130, 246, 0.25), stop:1 rgba(99, 102, 241, 0.25));
+                    stop:0 rgba(124, 92, 255, 0.35), stop:1 rgba(91, 140, 255, 0.35));
                 color: #FFFFFF;
-                border: 1px solid rgba(59, 130, 246, 0.35);
-                border-radius: 21px;
-                font-size: 13px;
+                border: 1px solid rgba(124, 92, 255, 0.45);
+                border-radius: 18px;
+                font-size: 12px;
                 font-weight: 600;
                 letter-spacing: 0.2px;
-            }
-            QPushButton:hover {
+            }}
+            QPushButton:hover {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 rgba(59, 130, 246, 0.45), stop:1 rgba(99, 102, 241, 0.45));
-                border: 1px solid rgba(59, 130, 246, 0.65);
-            }
+                    stop:0 rgba(124, 92, 255, 0.55), stop:1 rgba(91, 140, 255, 0.55));
+                border: 1px solid rgba(139, 112, 255, 0.75);
+            }}
+            QPushButton:pressed {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 rgba(104, 69, 236, 0.65), stop:1 rgba(91, 140, 255, 0.65));
+            }}
         """)
         self.btn_listen.clicked.connect(self._on_listen_clicked)
         layout.addWidget(self.btn_listen, 0, Qt.AlignmentFlag.AlignHCenter)
 
         # ── Auto-updating greeting timer (checks every 60s) ─────────────
         self._clock_timer = QTimer(self)
-        self._clock_timer.setInterval(60000)  # 60 seconds
+        self._clock_timer.setInterval(60000)
         self._clock_timer.timeout.connect(self._update_greeting)
         self._clock_timer.start()
 
@@ -143,50 +157,61 @@ class HeroSection(QWidget):
         """Toggles listening mode on orb & updates button visual state."""
         new_mode = self.orb.toggle_listening()
         if new_mode == GlowOrb.MODE_LISTENING:
-            self.btn_listen.setText("\u25C9   Listening...")
-            self.btn_listen.setStyleSheet("""
-                QPushButton {
+            self.btn_listen.setText("◉   Listening...")
+            self.btn_listen.setStyleSheet(f"""
+                QPushButton {{
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 rgba(168, 85, 247, 0.45), stop:1 rgba(59, 130, 246, 0.45));
+                        stop:0 rgba(124, 92, 255, 0.60), stop:1 rgba(139, 112, 255, 0.60));
                     color: #FFFFFF;
-                    border: 1px solid rgba(168, 85, 247, 0.7);
-                    border-radius: 21px;
-                    font-size: 13px;
+                    border: 1px solid rgba(139, 112, 255, 0.85);
+                    border-radius: 18px;
+                    font-size: 12px;
                     font-weight: 600;
-                }
+                }}
+                QPushButton:hover {{
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 rgba(124, 92, 255, 0.75), stop:1 rgba(139, 112, 255, 0.75));
+                    border: 1px solid rgba(139, 112, 255, 1.0);
+                }}
             """)
-            self.badge.setText("LISTENING")
-            self.badge.setStyleSheet("""
-                color: #A855F7;
-                background-color: rgba(168, 85, 247, 0.12);
-                border: 1px solid rgba(168, 85, 247, 0.35);
-                border-radius: 14px;
+            self.badge.setText("● LISTENING")
+            self.badge.setStyleSheet(f"""
+                color: {PRIMARY_HOVER};
+                background-color: rgba(124, 92, 255, 0.12);
+                border: 1px solid rgba(124, 92, 255, 0.35);
+                border-radius: 13px;
                 font-size: 10px;
                 font-weight: 700;
-                letter-spacing: 0.8px;
-                padding: 0px 14px;
+                letter-spacing: 0.6px;
+                padding: 0px 12px;
             """)
         else:
-            self.btn_listen.setText("\u266A   Start Listening")
-            self.btn_listen.setStyleSheet("""
-                QPushButton {
+            self.btn_listen.setText("♪   Start Listening")
+            self.btn_listen.setStyleSheet(f"""
+                QPushButton {{
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 rgba(59, 130, 246, 0.25), stop:1 rgba(99, 102, 241, 0.25));
+                        stop:0 rgba(124, 92, 255, 0.35), stop:1 rgba(91, 140, 255, 0.35));
                     color: #FFFFFF;
-                    border: 1px solid rgba(59, 130, 246, 0.35);
-                    border-radius: 21px;
-                    font-size: 13px;
+                    border: 1px solid rgba(124, 92, 255, 0.45);
+                    border-radius: 18px;
+                    font-size: 12px;
                     font-weight: 600;
-                }
+                    letter-spacing: 0.2px;
+                }}
+                QPushButton:hover {{
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 rgba(124, 92, 255, 0.55), stop:1 rgba(91, 140, 255, 0.55));
+                    border: 1px solid rgba(139, 112, 255, 0.75);
+                }}
             """)
-            self.badge.setText("SYSTEM READY")
-            self.badge.setStyleSheet("""
-                color: #22C55E;
+            self.badge.setText("● SYSTEM READY")
+            self.badge.setStyleSheet(f"""
+                color: {SUCCESS};
                 background-color: rgba(34, 197, 94, 0.10);
                 border: 1px solid rgba(34, 197, 94, 0.25);
-                border-radius: 14px;
+                border-radius: 13px;
                 font-size: 10px;
                 font-weight: 700;
-                letter-spacing: 0.8px;
-                padding: 0px 14px;
+                letter-spacing: 0.6px;
+                padding: 0px 12px;
             """)

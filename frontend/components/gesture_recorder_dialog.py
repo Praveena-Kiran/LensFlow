@@ -29,6 +29,24 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from frontend.styles.theme import (
+    BG_DARK,
+    BORDER,
+    ERROR,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_MUTED,
+    PRIMARY_PRESSED,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    SUCCESS,
+    SURFACE,
+    SURFACE_ACTIVE,
+    SURFACE_HOVER,
+    TEXT_DISABLED,
+    TEXT_MUTED,
+    WARNING,
+)
 from backend.gestures.custom_gestures import (
     CustomGestureStore,
     normalize_landmarks,
@@ -139,7 +157,7 @@ def draw_hand(frame, landmarks):
     points = [(int(lm.x * w), int(lm.y * h)) for lm in landmarks]
 
     for a, b in HAND_CONNECTIONS:
-        cv2.line(frame, points[a], points[b], (246, 130, 59), 2, cv2.LINE_AA)
+        cv2.line(frame, points[a], points[b], (255, 92, 124), 2, cv2.LINE_AA)  # brand violet, in BGR
 
     for p in points:
         cv2.circle(frame, p, 4, (255, 255, 255), -1, cv2.LINE_AA)
@@ -192,30 +210,31 @@ class GestureRecorderDialog(QDialog):
 
     def _build_ui(self):
 
-        self.setStyleSheet("""
-            QDialog { background: #0B0B0F; }
-            QLabel { color: #E5E7EB; font-size: 14px; }
-            QLineEdit {
-                background: #16161E; color: white;
-                border: 1px solid #2A2A36; border-radius: 10px;
+        self.setStyleSheet(f"""
+            QDialog {{ background: {BG_DARK}; }}
+            QLabel {{ color: {PRIMARY_TEXT}; font-size: 14px; }}
+            QLineEdit {{
+                background: {SURFACE}; color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER}; border-radius: 10px;
                 padding: 10px 12px; font-size: 15px;
-            }
-            QLineEdit:focus { border-color: #3B82F6; }
-            QPushButton {
-                background: #2A2A36; color: white; border: none;
+            }}
+            QLineEdit:focus {{ border-color: {PRIMARY}; }}
+            QPushButton {{
+                background: {SURFACE_HOVER}; color: {PRIMARY_TEXT}; border: 1px solid {BORDER};
                 border-radius: 10px; padding: 10px 18px;
                 font-size: 14px; font-weight: 600;
-            }
-            QPushButton:hover { background: #363646; }
-            QPushButton:disabled { background: #1C1C24; color: #4B5563; }
-            QPushButton#Primary { background: #2563EB; }
-            QPushButton#Primary:hover { background: #3B82F6; }
-            QPushButton#Primary:disabled { background: #1E2A44; color: #6B7280; }
-            QProgressBar {
-                background: #16161E; border: none; border-radius: 4px;
+            }}
+            QPushButton:hover {{ background: {SURFACE_ACTIVE}; }}
+            QPushButton:disabled {{ background: {SURFACE}; color: {TEXT_DISABLED}; }}
+            QPushButton#Primary {{ background: {PRIMARY}; border: none; color: white; }}
+            QPushButton#Primary:hover {{ background: {PRIMARY_HOVER}; }}
+            QPushButton#Primary:pressed {{ background: {PRIMARY_PRESSED}; }}
+            QPushButton#Primary:disabled {{ background: {PRIMARY_MUTED}; color: {TEXT_MUTED}; }}
+            QProgressBar {{
+                background: {SURFACE}; border: none; border-radius: 4px;
                 height: 8px; text-align: center;
-            }
-            QProgressBar::chunk { background: #3B82F6; border-radius: 4px; }
+            }}
+            QProgressBar::chunk {{ background: {PRIMARY}; border-radius: 4px; }}
         """)
 
         layout = QVBoxLayout(self)
@@ -223,7 +242,7 @@ class GestureRecorderDialog(QDialog):
         layout.setSpacing(14)
 
         title = QLabel("Teach LensFlow a new gesture")
-        title.setStyleSheet("color: white; font-size: 20px; font-weight: 700;")
+        title.setStyleSheet(f"color: {PRIMARY_TEXT}; font-size: 20px; font-weight: 700;")
         layout.addWidget(title)
 
         intro = QLabel(
@@ -232,7 +251,7 @@ class GestureRecorderDialog(QDialog):
             f"{TAKES_REQUIRED} times."
         )
         intro.setWordWrap(True)
-        intro.setStyleSheet("color: #9CA3AF; font-size: 14px;")
+        intro.setStyleSheet(f"color: {SECONDARY_TEXT}; font-size: 14px;")
         layout.addWidget(intro)
 
         self.name_input = QLineEdit()
@@ -245,7 +264,7 @@ class GestureRecorderDialog(QDialog):
         self.preview.setAlignment(Qt.AlignCenter)
         self.preview.setFixedSize(PREVIEW_WIDTH, PREVIEW_HEIGHT)
         self.preview.setStyleSheet(
-            "background: #16161E; border-radius: 14px; color: #6B7280;"
+            f"background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 14px; color: {TEXT_MUTED};"
         )
         layout.addWidget(self.preview, 0, Qt.AlignHCenter)
 
@@ -256,7 +275,7 @@ class GestureRecorderDialog(QDialog):
         self.status = QLabel("")
         self.status.setAlignment(Qt.AlignCenter)
         self.status.setWordWrap(True)
-        self.status.setStyleSheet("color: white; font-size: 16px; font-weight: 600;")
+        self.status.setStyleSheet(f"color: {PRIMARY_TEXT}; font-size: 16px; font-weight: 600;")
         self.status.setAccessibleName("Recording status")
         layout.addWidget(self.status)
 
@@ -300,7 +319,7 @@ class GestureRecorderDialog(QDialog):
         self._set_status("Type a name, then press Record.")
         self._update_buttons()
 
-    def _set_status(self, text, color="white"):
+    def _set_status(self, text, color=PRIMARY_TEXT):
         self.status.setText(text)
         self.status.setStyleSheet(
             f"color: {color}; font-size: 16px; font-weight: 600;"
@@ -365,10 +384,10 @@ class GestureRecorderDialog(QDialog):
 
         if vector is None:
             self.hand_status.setText("No hand in view")
-            self.hand_status.setStyleSheet("color: #F59E0B; font-size: 13px;")
+            self.hand_status.setStyleSheet(f"color: {WARNING}; font-size: 13px;")
         else:
             self.hand_status.setText("Hand detected")
-            self.hand_status.setStyleSheet("color: #34D399; font-size: 13px;")
+            self.hand_status.setStyleSheet(f"color: {SUCCESS}; font-size: 13px;")
 
         if self.state == "capturing" and vector is not None:
             self.take_samples.append(vector)
@@ -379,7 +398,7 @@ class GestureRecorderDialog(QDialog):
     def _on_camera_error(self, message):
         self.worker = None
         self.preview.setText("Camera unavailable")
-        self._set_status(message, "#F87171")
+        self._set_status(message, ERROR)
         self._update_buttons()
 
     # -----------------------------------------------------
@@ -405,7 +424,7 @@ class GestureRecorderDialog(QDialog):
         self.countdown_timer.stop()
         self.state = "capturing"
         self.take_samples = []
-        self._set_status("Hold it…", "#60A5FA")
+        self._set_status("Hold it…", PRIMARY_HOVER)
         self.capture_timer.start(CAPTURE_MS)
         self._update_buttons()
 
@@ -416,7 +435,7 @@ class GestureRecorderDialog(QDialog):
             self._set_status(
                 "Your hand wasn't visible. Keep your whole hand in view "
                 "and try that take again.",
-                "#F59E0B",
+                WARNING,
             )
             self._update_buttons()
             return
@@ -453,10 +472,10 @@ class GestureRecorderDialog(QDialog):
                 if self.store.get(name) is None
                 else f'Ready to save. This replaces your existing "{name}".'
             )
-            self._set_status(note, "#34D399")
+            self._set_status(note, SUCCESS)
         else:
             self.state = "idle"
-            self._set_status(message, "#F87171")
+            self._set_status(message, ERROR)
             self.record_button.setEnabled(False)
 
         self._update_buttons()
