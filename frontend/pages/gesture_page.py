@@ -760,8 +760,10 @@ class GesturePage(StudioPage):
 
             QMessageBox.information(
                 self,
-                "No Gestures Available",
-                "All supported gestures are already configured."
+                "All Gestures Assigned",
+                "Every available gesture already has an action.\n\n"
+                "Use \"+ Record Custom Gesture\" below to teach "
+                "LensFlow a new one."
             )
 
             return
