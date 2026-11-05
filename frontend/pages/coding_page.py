@@ -11,6 +11,20 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.pages.studio_page import StudioPage
+from frontend.styles.theme import (
+    SURFACE,
+    SURFACE_HOVER,
+    BORDER,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_PRESSED,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+    SUCCESS,
+    ERROR,
+    INFO,
+)
 
 from backend.automation.flow_manager import FlowManager
 
@@ -38,12 +52,12 @@ class CodingPage(StudioPage):
 
         workspace_frame = QFrame()
 
-        workspace_frame.setStyleSheet("""
-            QFrame {
-                background-color: #111118;
-                border: 1px solid rgba(255, 255, 255, 0.06);
+        workspace_frame.setStyleSheet(f"""
+            QFrame {{
+                background-color: {SURFACE};
+                border: 1px solid {BORDER};
                 border-radius: 14px;
-            }
+            }}
         """)
 
         workspace_layout = QVBoxLayout(
@@ -67,8 +81,8 @@ class CodingPage(StudioPage):
             "Development Workspace"
         )
 
-        title.setStyleSheet("""
-            color: white;
+        title.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
             font-size: 16px;
             font-weight: 600;
         """)
@@ -85,8 +99,8 @@ class CodingPage(StudioPage):
             "Launch the tools you need to start coding."
         )
 
-        description.setStyleSheet("""
-            color: #6B7280;
+        description.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 13px;
         """)
 
@@ -116,29 +130,29 @@ class CodingPage(StudioPage):
             42
         )
 
-        self.launch_button.setStyleSheet("""
-            QPushButton {
-                background-color: #10B981;
+        self.launch_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {PRIMARY};
                 color: white;
                 border: none;
                 border-radius: 9px;
                 padding: 0 20px;
                 font-size: 13px;
                 font-weight: 600;
-            }
+            }}
 
-            QPushButton:hover {
-                background-color: #34D399;
-            }
+            QPushButton:hover {{
+                background-color: {PRIMARY_HOVER};
+            }}
 
-            QPushButton:pressed {
-                background-color: #059669;
-            }
+            QPushButton:pressed {{
+                background-color: {PRIMARY_PRESSED};
+            }}
 
-            QPushButton:disabled {
-                background-color: #374151;
-                color: #9CA3AF;
-            }
+            QPushButton:disabled {{
+                background-color: rgba(255, 255, 255, 0.06);
+                color: {TEXT_MUTED};
+            }}
         """)
 
         buttons_layout.addWidget(
@@ -161,12 +175,12 @@ class CodingPage(StudioPage):
 
         apps_frame = QFrame()
 
-        apps_frame.setStyleSheet("""
-            QFrame {
-                background-color: #111118;
-                border: 1px solid rgba(255, 255, 255, 0.06);
+        apps_frame.setStyleSheet(f"""
+            QFrame {{
+                background-color: {SURFACE};
+                border: 1px solid {BORDER};
                 border-radius: 14px;
-            }
+            }}
         """)
 
         apps_layout = QVBoxLayout(
@@ -192,8 +206,8 @@ class CodingPage(StudioPage):
             "Workspace Applications"
         )
 
-        apps_title.setStyleSheet("""
-            color: white;
+        apps_title.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
             font-size: 15px;
             font-weight: 600;
         """)
@@ -216,11 +230,11 @@ class CodingPage(StudioPage):
 
             row = QFrame()
 
-            row.setStyleSheet("""
-                QFrame {
-                    background-color: #181820;
+            row.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {SURFACE_HOVER};
                     border-radius: 9px;
-                }
+                }}
             """)
 
             row_layout = QHBoxLayout(
@@ -238,8 +252,8 @@ class CodingPage(StudioPage):
                 name
             )
 
-            name_label.setStyleSheet("""
-                color: #F9FAFB;
+            name_label.setStyleSheet(f"""
+                color: {PRIMARY_TEXT};
                 font-size: 13px;
                 font-weight: 600;
             """)
@@ -248,8 +262,8 @@ class CodingPage(StudioPage):
                 description_text
             )
 
-            description_label.setStyleSheet("""
-                color: #6B7280;
+            description_label.setStyleSheet(f"""
+                color: {SECONDARY_TEXT};
                 font-size: 12px;
             """)
 
@@ -294,8 +308,8 @@ class CodingPage(StudioPage):
             "Status: Launching workspace..."
         )
 
-        self.status_label.setStyleSheet("""
-            color: #60A5FA;
+        self.status_label.setStyleSheet(f"""
+            color: {INFO};
             font-size: 12px;
         """)
 
@@ -322,8 +336,8 @@ class CodingPage(StudioPage):
                 "Status: Workspace launched"
             )
 
-            self.status_label.setStyleSheet("""
-                color: #34D399;
+            self.status_label.setStyleSheet(f"""
+                color: {SUCCESS};
                 font-size: 12px;
             """)
 
@@ -341,8 +355,8 @@ class CodingPage(StudioPage):
                 "Status: Launch failed"
             )
 
-            self.status_label.setStyleSheet("""
-                color: #F87171;
+            self.status_label.setStyleSheet(f"""
+                color: {ERROR};
                 font-size: 12px;
             """)
 

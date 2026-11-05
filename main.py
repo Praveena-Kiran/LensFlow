@@ -7,6 +7,17 @@ Main application window.
 import sys
 import os
 
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -37,6 +48,15 @@ from frontend.pages.presentation_page import PresentationPage
 from frontend.pages.coding_page import CodingPage
 from frontend.pages.gesture_page import GesturePage
 from frontend.pages.custom_page import CustomPage
+from frontend.styles.theme import (
+    BG_DARK,
+    SURFACE,
+    BORDER,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+)
 
 from backend.gestures.gesture_worker import GestureWorker
 from backend.automation.action_manager import ActionManager
@@ -105,7 +125,7 @@ class MainWindow(QMainWindow):
         )
 
         self.setStyleSheet(
-            "background-color: #0B0B0F;"
+            "background-color: #08090D;"
         )
 
         # =====================================================
@@ -417,31 +437,41 @@ class MainWindow(QMainWindow):
             400
         )
 
-        dialog.setStyleSheet("""
-            QDialog {
-                background: #16161E;
-            }
+        dialog.setStyleSheet(f"""
+            QDialog {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+            }}
 
-            QLabel {
-                color: white;
+            QLabel {{
+                color: {PRIMARY_TEXT};
                 font-size: 13px;
-            }
+            }}
 
-            QLineEdit {
-                background: #20202A;
-                color: white;
-                border: 1px solid #363646;
+            QLineEdit {{
+                background: {BG_DARK};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
                 border-radius: 8px;
                 padding: 10px;
-            }
+            }}
 
-            QDialogButtonBox QPushButton {
-                background: #2563EB;
+            QLineEdit:focus {{
+                border: 1px solid {PRIMARY};
+            }}
+
+            QDialogButtonBox QPushButton {{
+                background: {PRIMARY};
                 color: white;
                 border: none;
                 border-radius: 8px;
                 padding: 8px 16px;
-            }
+                font-weight: 600;
+            }}
+
+            QDialogButtonBox QPushButton:hover {{
+                background: {PRIMARY_HOVER};
+            }}
         """)
 
         layout = QVBoxLayout(
