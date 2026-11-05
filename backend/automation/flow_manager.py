@@ -4,6 +4,7 @@ import subprocess
 import platform
 
 from backend.paths import user_config_path
+from backend.automation.app_launcher import launch_app
 
 from .actions.launch_action import LaunchAction
 from .actions.wait_action import WaitAction
@@ -245,39 +246,13 @@ class FlowManager:
     # =========================================================
 
     def launch_app(self, app):
+        """Launch an app; raises AppLaunchError if it can't be found."""
 
-        system = platform.system()
+        target = launch_app(app, self.apps)
 
-        try:
-
-            if system == "Windows":
-
-                subprocess.Popen(
-                    app,
-                    shell=True
-                )
-
-            elif system == "Darwin":
-
-                subprocess.Popen(
-                    ["open", "-a", app]
-                )
-
-            elif system == "Linux":
-
-                subprocess.Popen(
-                    [app]
-                )
-
-            print(
-                f"✅ Launched {app}"
-            )
-
-        except Exception as e:
-
-            print(
-                f"❌ Could not launch {app}: {e}"
-            )
+        print(
+            f"✅ Launched {app} ({target})"
+        )
 
     # =========================================================
     # DASHBOARD HELPERS
