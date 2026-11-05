@@ -1,4 +1,3 @@
-from PIL import ImageColor
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QFrame
 from backend.automation.controllers.powerpoint_controller import PowerPointController
 from frontend.pages.studio_page import StudioPage

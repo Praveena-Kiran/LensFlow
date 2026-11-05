@@ -1,4 +1,3 @@
-from mediapipe.python.solutions import selfie_segmentation
 import json
 import os
 
