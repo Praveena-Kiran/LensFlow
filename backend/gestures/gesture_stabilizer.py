@@ -21,6 +21,13 @@ class GestureStabilizer:
         # Ignore low-confidence detections
         if current_gesture is None or confidence < self.confidence_threshold:
             self.detections.append(None)
+
+            # Once the hand has been relaxed / out of view for a full window,
+            # allow the same gesture to trigger again (e.g. two "next slide"
+            # thumbs-ups in a row).
+            if all(d is None for d in self.detections):
+                self.triggered_gesture = None
+
             return None
 
         self.detections.append(current_gesture)

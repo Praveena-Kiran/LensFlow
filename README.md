@@ -77,6 +77,13 @@ comfortable hand pose for three short takes. LensFlow rejects poses that look
 like a built-in gesture or another of your gestures, so actions don't trigger by
 accident. Then use **+ Add Gesture** to assign it to an action.
 
+**Test Gestures** opens a live view showing what LensFlow recognises and what
+it would trigger, without running anything.
+
+To use gestures in your own studios, open the studio, pick a gesture for each
+event (built-in or your own), then press **Start Gesture Control**. Making the
+gesture runs that event.
+
 Your studios, settings and custom gestures are stored per user in
 `%APPDATA%\LensFlow` (Windows), so they survive app updates.
 
