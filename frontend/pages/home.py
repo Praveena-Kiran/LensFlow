@@ -27,6 +27,7 @@ from frontend.components.hero_section import HeroSection
 from frontend.components.studio_card import StudioCard
 from frontend.components.right_panel import RightPanel
 from frontend.layouts.flow_layout import FlowLayout
+from backend.paths import user_config_path
 
 
 class HomePage(QWidget):
@@ -347,16 +348,7 @@ class HomePage(QWidget):
 
     def get_config_path(self):
 
-        return os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "..",
-                "backend",
-                "config",
-                "studios.json"
-            )
-        )
+        return user_config_path("studios.json")
 
     # =========================================================
     # LOAD STUDIOS
