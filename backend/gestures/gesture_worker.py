@@ -1,3 +1,5 @@
+import time
+
 import cv2
 
 from PySide6.QtCore import QObject, Signal, Slot
@@ -21,6 +23,9 @@ class GestureWorker(QObject):
     status_changed = Signal(str)
     error = Signal(str)
 
+    # Emitted when run() has fully exited and the camera is released.
+    finished = Signal()
+
     def __init__(
         self,
         profile_name="presentation",
@@ -31,6 +36,10 @@ class GestureWorker(QObject):
         self.profile_name = profile_name
         self.custom_studio = custom_studio
         self.running = False
+
+        # Set by stop(). Separate from `running` so a stop requested before
+        # run() starts (e.g. leaving a studio straight away) still counts.
+        self._stop_requested = False
 
         self.stabilizer = GestureStabilizer()
         self.recognizer = GoogleGestureRecognizer()
@@ -54,25 +63,71 @@ class GestureWorker(QObject):
                 self.profile_manager.get_gesture_map()
             )
 
+    def _open_camera(self, attempts=4, delay=0.75):
+        """
+        Open the webcam, retrying briefly: on Windows the previous studio
+        may still be releasing it.
+        """
+
+        for attempt in range(attempts):
+
+            if self._stop_requested:
+                return None
+
+            camera = cv2.VideoCapture(0)
+
+            if camera.isOpened():
+                return camera
+
+            camera.release()
+
+            if attempt < attempts - 1:
+                time.sleep(delay)
+
+        return None
+
     @Slot()
     def run(self):
 
+        try:
+            self._run()
+        finally:
+            self.running = False
+            self.finished.emit()
+
+    def _run(self):
+
+        if self._stop_requested:
+            return
+
         self.running = True
 
-        camera = cv2.VideoCapture(0)
+        camera = self._open_camera()
 
-        if not camera.isOpened():
+        if camera is None:
 
-            self.error.emit(
-                "Could not open webcam."
-            )
+            if not self._stop_requested:
+                self.error.emit(
+                    "Could not open webcam. Check that no other app "
+                    "is using it."
+                )
 
-            self.running = False
             return
+
+        try:
+            self._loop(camera)
+        finally:
+            camera.release()
+
+        self.status_changed.emit(
+            "STOPPED"
+        )
+
+    def _loop(self, camera):
 
         self.status_changed.emit("READY")
 
-        while self.running:
+        while not self._stop_requested:
 
             success, frame = camera.read()
 
@@ -177,13 +232,7 @@ class GestureWorker(QObject):
                     action
                 )
 
-        camera.release()
-
-        self.status_changed.emit(
-            "STOPPED"
-        )
-
     @Slot()
     def stop(self):
 
-        self.running = False
+        self._stop_requested = True

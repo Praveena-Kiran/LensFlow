@@ -61,6 +61,7 @@ from frontend.styles.theme import (
 
 from backend.gestures.gesture_worker import GestureWorker
 from backend.automation.action_manager import ActionManager
+from frontend.styles.theme import ERROR
 
 
 # =============================================================
@@ -259,6 +260,9 @@ class MainWindow(QMainWindow):
         self.gesture_worker = None
 
         self.custom_gesture_studio = ""
+
+        # Stopped camera threads that are still shutting down.
+        self._retiring_threads = []
 
         self.action_manager = (
             ActionManager()
@@ -804,14 +808,33 @@ class MainWindow(QMainWindow):
         event
     ):
 
-        self.custom_page.show_gesture_feedback(
-            f"{event.get('gesture', '')}  →  ran "
-            f"\"{event.get('name', 'event')}\""
+        gesture = event.get("gesture", "")
+        name = event.get("name", "event")
+
+        print(
+            f"🎯 {gesture} → {name} "
+            f"({self.custom_gesture_studio})"
         )
 
-        self.launch_specific_event(
-            self.custom_gesture_studio,
-            event
+        try:
+
+            self.action_manager.flow_manager.execute_custom_event(
+                event
+            )
+
+        except Exception as e:
+
+            print(f"❌ Event failed: {name}: {e}")
+
+            self.custom_page.show_gesture_feedback(
+                f"{gesture}  →  \"{name}\" failed: {e}",
+                ERROR
+            )
+
+            return
+
+        self.custom_page.show_gesture_feedback(
+            f"{gesture}  →  ran \"{name}\""
         )
 
     @Slot(str, float)
@@ -888,6 +911,14 @@ class MainWindow(QMainWindow):
             self.gesture_worker.run
         )
 
+        # When the camera loop exits, end the thread's event loop too.
+        # Direct connection: quit() runs on the worker thread itself, so this
+        # works even while the UI thread is blocked waiting (closeEvent).
+        self.gesture_worker.finished.connect(
+            self.gesture_thread.quit,
+            Qt.ConnectionType.DirectConnection
+        )
+
         self.gesture_worker.error.connect(
             lambda message:
             print(
@@ -944,18 +975,26 @@ class MainWindow(QMainWindow):
                 f"⚠ Could not stop gesture worker: {e}"
             )
 
-        # Wait for run() to return and the thread to exit before dropping
-        # our references. Destroying a QThread that is still running makes
-        # Qt abort the whole app (this was the Presentation Studio "Back" crash).
-        if self.gesture_thread is not None:
+        # Don't block the UI waiting for the camera: on Windows releasing a
+        # webcam can take several seconds. Keep the old thread alive in
+        # `_retiring_threads` until it has really finished — destroying a
+        # QThread that is still running makes Qt abort the whole app (this
+        # was the Presentation Studio "Back" crash).
+        thread = self.gesture_thread
+        worker = self.gesture_worker
 
-            self.gesture_thread.quit()
+        if thread is not None:
 
-            if not self.gesture_thread.wait(3000):
+            entry = (thread, worker)
 
-                print(
-                    "⚠ Gesture thread did not stop in time."
-                )
+            self._retiring_threads.append(entry)
+
+            thread.finished.connect(
+                lambda e=entry: self._forget_thread(e)
+            )
+
+            if not thread.isRunning():
+                self._forget_thread(entry)
 
         self.gesture_worker = None
 
@@ -966,6 +1005,42 @@ class MainWindow(QMainWindow):
             self.custom_page.set_gesture_control_running(
                 False
             )
+
+    def _forget_thread(
+        self,
+        entry
+    ):
+
+        if entry in self._retiring_threads:
+
+            self._retiring_threads.remove(entry)
+
+            entry[0].deleteLater()
+
+    # =============================================================
+    # WINDOW CLOSE
+    # =============================================================
+
+    def closeEvent(
+        self,
+        event
+    ):
+
+        # Let the camera thread finish before the app exits. Hide first so
+        # closing feels instant even if the webcam is slow to release.
+        self.hide()
+
+        self.stop_gesture_worker()
+
+        for thread, _worker in list(self._retiring_threads):
+
+            if not thread.wait(5000):
+
+                print(
+                    "⚠ Camera thread did not stop before exit."
+                )
+
+        super().closeEvent(event)
 
     # =============================================================
     # GESTURE ACTION
