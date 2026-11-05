@@ -69,3 +69,19 @@ python main.py
 python -m tools.webcam_gesture_check
 python -m tools.camera_preview_check
 ```
+
+### Custom gestures
+
+Open **Gesture Studio → + Record Custom Gesture**, name the gesture and hold any
+comfortable hand pose for three short takes. LensFlow rejects poses that look
+like a built-in gesture or another of your gestures, so actions don't trigger by
+accident. Then use **+ Add Gesture** to assign it to an action.
+
+Your studios, settings and custom gestures are stored per user in
+`%APPDATA%\LensFlow` (Windows), so they survive app updates.
+
+### Tests
+
+```bash
+python -m unittest discover tests
+```

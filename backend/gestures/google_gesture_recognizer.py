@@ -6,6 +6,19 @@ import mediapipe as mp
 from backend.paths import model_path as bundled_model_path
 
 
+# MediaPipe category name -> name shown in LensFlow.
+BUILTIN_GESTURES = {
+    "Thumb_Up": "👍 Thumbs Up",
+    "Thumb_Down": "👎 Thumbs Down",
+    "Open_Palm": "✋ Open Palm",
+    "Closed_Fist": "✊ Fist",
+    "Victory": "✌️ Peace",
+    "Pointing_Up": "☝️ Pointing Up",
+}
+
+BUILTIN_GESTURE_NAMES = list(BUILTIN_GESTURES.values())
+
+
 class GoogleGestureRecognizer:
 
     def __init__(self):
@@ -34,6 +47,10 @@ class GoogleGestureRecognizer:
 
         self.recognizer = GestureRecognizer.create_from_options(options)
 
+        self.last_landmarks = None
+        self.last_image_landmarks = None
+        self.last_handedness = None
+
     def detect(self, frame):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -44,20 +61,26 @@ class GoogleGestureRecognizer:
 
         result = self.recognizer.recognize(mp_image)
 
-        mapping = {
-            "Thumb_Up": "👍 Thumbs Up",
-            "Thumb_Down": "👎 Thumbs Down",
-            "Open_Palm": "✋ Open Palm",
-            "Closed_Fist": "✊ Fist",
-            "Victory": "✌️ Peace",
-            "Pointing_Up": "☝️ Pointing Up"
-        }
+        # Keep the landmarks from this frame so custom gestures can be
+        # matched without running MediaPipe a second time.
+        self.last_landmarks = None
+        self.last_image_landmarks = None
+        self.last_handedness = None
+
+        if result.hand_world_landmarks:
+            self.last_landmarks = result.hand_world_landmarks[0]
+
+        if result.hand_landmarks:
+            self.last_image_landmarks = result.hand_landmarks[0]
+
+        if result.handedness:
+            self.last_handedness = result.handedness[0][0].category_name
 
         if result.gestures:
 
             gesture = result.gestures[0][0].category_name
             confidence = result.gestures[0][0].score
 
-            return mapping.get(gesture), confidence
+            return BUILTIN_GESTURES.get(gesture), confidence
 
         return None, 0.0

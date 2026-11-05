@@ -12,7 +12,10 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.pages.studio_page import StudioPage
+from frontend.components.gesture_recorder_dialog import GestureRecorderDialog
 from backend.profile_manager import ProfileManager
+from backend.gestures.custom_gestures import CustomGestureStore
+from backend.gestures.google_gesture_recognizer import BUILTIN_GESTURE_NAMES
 
 
 class GesturePage(StudioPage):
@@ -52,13 +55,10 @@ class GesturePage(StudioPage):
         # Supported gestures
         # -----------------------------------------
 
-        self.available_gestures = [
-            "✋ Open Palm",
-            "✊ Fist",
-            "✌️ Peace",
-            "👍 Thumbs Up",
-            "👎 Thumbs Down",
-        ]
+        self.builtin_gestures = list(BUILTIN_GESTURE_NAMES)
+
+        # The user's own recorded gestures
+        self.custom_store = CustomGestureStore()
 
         # -----------------------------------------
         # Store UI labels
@@ -137,7 +137,241 @@ class GesturePage(StudioPage):
             Qt.AlignLeft
         )
 
+        # -----------------------------------------
+        # Custom gestures
+        # -----------------------------------------
+
+        self._build_custom_section()
+
         self.content_layout.addStretch()
+
+    # ==================================================
+    # AVAILABLE GESTURES (built-in + custom)
+    # ==================================================
+
+    @property
+    def available_gestures(self):
+
+        return self.builtin_gestures + self.custom_store.names()
+
+    # ==================================================
+    # CUSTOM GESTURES SECTION
+    # ==================================================
+
+    def _build_custom_section(self):
+
+        heading = QLabel("Your gestures")
+
+        heading.setStyleSheet("""
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 12px;
+        """)
+
+        self.content_layout.addWidget(heading)
+
+        info = QLabel(
+            "Record any hand pose that's comfortable for you, "
+            "then assign it to an action above."
+        )
+
+        info.setWordWrap(True)
+
+        info.setStyleSheet("""
+            color: #9CA3AF;
+            font-size: 14px;
+        """)
+
+        self.content_layout.addWidget(info)
+
+        self.custom_list_layout = QVBoxLayout()
+
+        self.custom_list_layout.setSpacing(10)
+
+        self.content_layout.addLayout(
+            self.custom_list_layout
+        )
+
+        record_button = QPushButton(
+            "+ Record Custom Gesture"
+        )
+
+        record_button.setCursor(
+            Qt.PointingHandCursor
+        )
+
+        record_button.setStyleSheet("""
+            QPushButton {
+                background: #2A2A36;
+                color: white;
+                border: 1px solid #3B82F6;
+                border-radius: 10px;
+                padding: 10px 18px;
+                font-size: 14px;
+                font-weight: 600;
+            }
+
+            QPushButton:hover {
+                background: #1E2A44;
+            }
+        """)
+
+        record_button.clicked.connect(
+            self.record_custom_gesture
+        )
+
+        self.content_layout.addWidget(
+            record_button,
+            0,
+            Qt.AlignLeft
+        )
+
+        self.refresh_custom_list()
+
+    def refresh_custom_list(self):
+
+        while self.custom_list_layout.count():
+
+            widget = self.custom_list_layout.takeAt(0).widget()
+
+            if widget:
+                widget.deleteLater()
+
+        self.custom_store.load()
+
+        if not self.custom_store.gestures:
+
+            empty = QLabel("No custom gestures yet.")
+
+            empty.setStyleSheet("""
+                color: #6B7280;
+                font-size: 13px;
+            """)
+
+            self.custom_list_layout.addWidget(empty)
+
+            return
+
+        for gesture in self.custom_store.gestures:
+
+            self.create_custom_card(gesture)
+
+    def create_custom_card(self, gesture):
+
+        name = gesture["name"]
+
+        card = QFrame()
+
+        card.setStyleSheet("""
+            QFrame {
+                background: #20202A;
+                border-radius: 12px;
+            }
+        """)
+
+        layout = QHBoxLayout(card)
+
+        layout.setContentsMargins(18, 14, 18, 14)
+
+        name_label = QLabel(name)
+
+        name_label.setStyleSheet("""
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+        """)
+
+        action = self.gesture_map.get(name)
+
+        detail = (
+            f"→  {action}"
+            if action
+            else "Not assigned yet"
+        )
+
+        detail_label = QLabel(detail)
+
+        detail_label.setStyleSheet("""
+            color: #9CA3AF;
+            font-size: 14px;
+        """)
+
+        delete_button = QPushButton("Delete")
+
+        delete_button.setCursor(Qt.PointingHandCursor)
+
+        delete_button.setAccessibleName(f"Delete gesture {name}")
+
+        delete_button.setStyleSheet("""
+            QPushButton {
+                background: #2A2A36;
+                color: #F87171;
+                border: none;
+                border-radius: 8px;
+                padding: 7px 14px;
+            }
+
+            QPushButton:hover {
+                background: #3A2228;
+            }
+        """)
+
+        delete_button.clicked.connect(
+            lambda checked=False, n=name:
+            self.delete_custom_gesture(n)
+        )
+
+        layout.addWidget(name_label)
+        layout.addStretch()
+        layout.addWidget(detail_label)
+        layout.addStretch()
+        layout.addWidget(delete_button)
+
+        self.custom_list_layout.addWidget(card)
+
+    def record_custom_gesture(self):
+
+        dialog = GestureRecorderDialog(
+            self.builtin_gestures,
+            store=self.custom_store,
+            parent=self,
+        )
+
+        if dialog.exec() and dialog.saved_name:
+
+            self.refresh_custom_list()
+
+            self.status_label.setText(
+                f'Status: Saved "{dialog.saved_name}". '
+                "Use + Add Gesture to assign it to an action."
+            )
+
+    def delete_custom_gesture(self, name):
+
+        assigned = name in self.gesture_map
+
+        message = f'Delete your "{name}" gesture?'
+
+        if assigned:
+            message += "\n\nIts action assignment will be removed too."
+
+        answer = QMessageBox.question(
+            self,
+            "Delete Gesture",
+            message,
+        )
+
+        if answer != QMessageBox.Yes:
+            return
+
+        self.custom_store.delete(name)
+
+        if assigned:
+            self.profile_manager.remove_gesture(name)
+            self.refresh_gesture_list()
+
+        self.refresh_custom_list()
 
     # ==================================================
     # REFRESH GESTURE LIST
@@ -177,6 +411,10 @@ class GesturePage(StudioPage):
                 gesture,
                 action
             )
+
+        # Custom gesture cards show their assigned action, so keep them in sync.
+        if hasattr(self, "custom_list_layout"):
+            self.refresh_custom_list()
 
     # ==================================================
     # CREATE GESTURE CARD
@@ -414,6 +652,8 @@ class GesturePage(StudioPage):
                 ].setText(
                     "→  " + new_action
                 )
+
+            self.refresh_custom_list()
 
     # ==================================================
     # ADD GESTURE

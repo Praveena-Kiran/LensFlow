@@ -16,6 +16,7 @@ import os
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QCompleter
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -1365,8 +1366,30 @@ class EventDialog(QDialog):
         self.gesture_input = QLineEdit()
 
         self.gesture_input.setPlaceholderText(
-            "Example: ✋ Open Palm"
+            "Start typing, e.g. ✋ Open Palm or one of your gestures"
         )
+
+        # Suggest built-in gestures and the user's recorded ones.
+        try:
+            from backend.gestures.custom_gestures import CustomGestureStore
+            from backend.gestures.google_gesture_recognizer import (
+                BUILTIN_GESTURE_NAMES,
+            )
+
+            suggestions = (
+                list(BUILTIN_GESTURE_NAMES)
+                + CustomGestureStore().names()
+            )
+
+        except Exception as e:
+            print(f"⚠ Could not load gesture suggestions: {e}")
+            suggestions = []
+
+        completer = QCompleter(suggestions, self)
+        completer.setCaseSensitivity(Qt.CaseInsensitive)
+        completer.setFilterMode(Qt.MatchContains)
+
+        self.gesture_input.setCompleter(completer)
 
         layout.addWidget(
             self.gesture_input
