@@ -16,7 +16,6 @@ import os
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QCompleter
 from PySide6.QtGui import QColor, QPainter, QRadialGradient, QBrush, QPen, QFont
 from PySide6.QtWidgets import (
     QWidget,
@@ -107,6 +106,10 @@ class CustomPage(QWidget):
     studio_saved = Signal()
     studio_deleted = Signal()
 
+    # Gesture control: the main window owns the camera worker.
+    gesture_control_started = Signal(dict)
+    gesture_control_stopped = Signal()
+
     # =========================================================
     # INIT
     # =========================================================
@@ -124,6 +127,7 @@ class CustomPage(QWidget):
         self.current_studio = None
         self.studio_name = ""
         self.events = []
+        self.gesture_control_running = False
 
         self.setStyleSheet(f"""
             QWidget#CustomPage {{
@@ -503,6 +507,30 @@ class CustomPage(QWidget):
 
         events_header.addStretch()
 
+        # -----------------------------------------------------
+        # GESTURE CONTROL TOGGLE
+        # -----------------------------------------------------
+
+        self.gesture_button = QPushButton(
+            "Start Gesture Control"
+        )
+        self.gesture_button.setFixedHeight(34)
+        self.gesture_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        self.gesture_button.setAccessibleName(
+            "Start or stop gesture control for this studio"
+        )
+        self.gesture_button.clicked.connect(
+            self.toggle_gesture_control
+        )
+
+        events_header.addWidget(
+            self.gesture_button
+        )
+
+        events_header.addSpacing(8)
+
         add_event = QPushButton(
             "+ Add Event"
         )
@@ -539,6 +567,17 @@ class CustomPage(QWidget):
         outer.addLayout(
             events_header
         )
+
+        self.gesture_status = QLabel("")
+        self.gesture_status.setWordWrap(True)
+        self.gesture_status.setAccessibleName("Gesture control status")
+        self.gesture_status.hide()
+
+        outer.addWidget(
+            self.gesture_status
+        )
+
+        self.set_gesture_control_running(False)
 
         # =====================================================
         # EVENTS SCROLL
@@ -698,6 +737,9 @@ class CustomPage(QWidget):
             )
 
             return False
+
+        if self.gesture_control_running:
+            self.gesture_control_stopped.emit()
 
         self.current_studio = found
 
@@ -1500,6 +1542,103 @@ class CustomPage(QWidget):
         self.back_requested.emit()
 
     # =========================================================
+    # GESTURE CONTROL
+    # =========================================================
+
+    def toggle_gesture_control(self):
+
+        if self.gesture_control_running:
+
+            self.gesture_control_stopped.emit()
+
+            return
+
+        with_gestures = [
+            event
+            for event in self.events
+            if isinstance(event, dict) and event.get("gesture")
+        ]
+
+        if not with_gestures:
+
+            QMessageBox.information(
+                self,
+                "No Gestures Yet",
+                "Edit an event and choose a gesture trigger for it, "
+                "then start gesture control."
+            )
+
+            return
+
+        # self.events is passed by reference, so events edited while
+        # gesture control is running take effect immediately.
+        self.gesture_control_started.emit({
+            "title": self.studio_name,
+            "events": self.events,
+        })
+
+    def set_gesture_control_running(self, running, message=None):
+
+        self.gesture_control_running = running
+
+        if running:
+
+            self.gesture_button.setText("Stop Gesture Control")
+
+            self.gesture_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgba(239, 68, 68, 0.10);
+                    color: {ERROR};
+                    border: 1px solid rgba(239, 68, 68, 0.25);
+                    border-radius: 8px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    padding: 0px 14px;
+                }}
+                QPushButton:hover {{
+                    background-color: rgba(239, 68, 68, 0.18);
+                }}
+            """)
+
+        else:
+
+            self.gesture_button.setText("Start Gesture Control")
+
+            self.gesture_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgba(255, 255, 255, 0.04);
+                    color: {PRIMARY_TEXT};
+                    border: 1px solid {BORDER};
+                    border-radius: 8px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    padding: 0px 14px;
+                }}
+                QPushButton:hover {{
+                    background-color: rgba(255, 255, 255, 0.08);
+                    border: 1px solid {PRIMARY};
+                }}
+            """)
+
+        if message:
+            self.show_gesture_feedback(message)
+        elif not running:
+            self.gesture_status.hide()
+
+    def show_gesture_feedback(self, message, color=None):
+
+        self.gesture_status.setText(message)
+
+        self.gesture_status.setStyleSheet(f"""
+            color: {color or SECONDARY_TEXT};
+            font-size: 13px;
+            background: transparent;
+            border: none;
+        """)
+
+        self.gesture_status.show()
+
+    # =========================================================
     # BACK
     # =========================================================
 
@@ -1611,13 +1750,13 @@ class EventDialog(QDialog):
             )
         )
 
-        self.gesture_input = QLineEdit()
+        # A dropdown (not free text) so a typo can't silently stop the
+        # gesture from ever matching.
+        self.gesture_input = QComboBox()
         self.gesture_input.setFixedHeight(36)
-        self.gesture_input.setPlaceholderText(
-            "Start typing, e.g. ✋ Open Palm or one of your gestures"
-        )
+        self.gesture_input.setAccessibleName("Gesture trigger")
 
-        # Suggest built-in gestures and the user's recorded ones.
+        # Built-in gestures and the user's recorded ones.
         try:
             from backend.gestures.custom_gestures import CustomGestureStore
             from backend.gestures.google_gesture_recognizer import (
@@ -1633,11 +1772,10 @@ class EventDialog(QDialog):
             print(f"⚠ Could not load gesture suggestions: {e}")
             suggestions = []
 
-        completer = QCompleter(suggestions, self)
-        completer.setCaseSensitivity(Qt.CaseInsensitive)
-        completer.setFilterMode(Qt.MatchContains)
+        self.gesture_input.addItem("No gesture", "")
 
-        self.gesture_input.setCompleter(completer)
+        for gesture_name in suggestions:
+            self.gesture_input.addItem(gesture_name, gesture_name)
 
         layout.addWidget(
             self.gesture_input
@@ -1848,7 +1986,7 @@ class EventDialog(QDialog):
                 )
             )
 
-            self.gesture_input.setText(
+            self.set_gesture(
                 event.get(
                     "gesture",
                     ""
@@ -1878,6 +2016,27 @@ class EventDialog(QDialog):
                     )
                 )
             )
+
+    # =========================================================
+    # GESTURE SELECTION
+    # =========================================================
+
+    def set_gesture(self, gesture):
+
+        index = self.gesture_input.findData(gesture or "")
+
+        if index < 0:
+
+            # Keep a gesture that no longer exists (e.g. a deleted custom
+            # gesture) visible instead of silently dropping it.
+            self.gesture_input.addItem(f"{gesture} (not found)", gesture)
+            index = self.gesture_input.count() - 1
+
+        self.gesture_input.setCurrentIndex(index)
+
+    def selected_gesture(self):
+
+        return self.gesture_input.currentData() or ""
 
     # =========================================================
     # BROWSE FILE
@@ -1923,8 +2082,6 @@ class EventDialog(QDialog):
 
         value = self.value_input.text().strip()
 
-        gesture = self.gesture_input.text().strip()
-
         # -----------------------------------------------------
         # VALIDATION
         # -----------------------------------------------------
@@ -1959,7 +2116,7 @@ class EventDialog(QDialog):
 
         return {
             "name": self.name_input.text().strip(),
-            "gesture": self.gesture_input.text().strip(),
+            "gesture": self.selected_gesture(),
             "action": self.action_combo.currentText(),
             "value": self.value_input.text().strip()
         }

@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 
 from frontend.pages.studio_page import StudioPage
 from frontend.components.gesture_recorder_dialog import GestureRecorderDialog
+from frontend.components.gesture_test_dialog import GestureTestDialog
 from frontend.styles.theme import (
     BG_DARK,
     SURFACE,
@@ -86,7 +87,8 @@ class GesturePage(StudioPage):
         # -----------------------------------------
 
         intro = QLabel(
-            "Assign gestures to actions and create your own controls."
+            "Gestures for Presentation Studio. To use gestures in your own "
+            "studios, choose one for each event inside that studio."
         )
 
         intro.setStyleSheet(f"""
@@ -148,10 +150,51 @@ class GesturePage(StudioPage):
             self.add_gesture
         )
 
-        self.content_layout.addWidget(
-            add_button,
-            0,
-            Qt.AlignLeft
+        test_button = QPushButton(
+            "Test Gestures"
+        )
+
+        test_button.setCursor(
+            Qt.PointingHandCursor
+        )
+
+        test_button.setAccessibleName(
+            "Test gestures with the camera"
+        )
+
+        test_button.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255, 255, 255, 0.04);
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+                padding: 10px 18px;
+                font-size: 13px;
+                font-weight: 600;
+            }}
+
+            QPushButton:hover {{
+                background: {SURFACE_HOVER};
+                border: 1px solid {PRIMARY};
+            }}
+        """)
+
+        test_button.clicked.connect(
+            self.test_gestures
+        )
+
+        button_row = QHBoxLayout()
+
+        button_row.setSpacing(10)
+
+        button_row.addWidget(add_button)
+
+        button_row.addWidget(test_button)
+
+        button_row.addStretch()
+
+        self.content_layout.addLayout(
+            button_row
         )
 
         # -----------------------------------------
@@ -357,6 +400,16 @@ class GesturePage(StudioPage):
         layout.addWidget(delete_button)
 
         self.custom_list_layout.addWidget(card)
+
+    def test_gestures(self):
+
+        dialog = GestureTestDialog(
+            gesture_map=self.gesture_map,
+            store=self.custom_store,
+            parent=self,
+        )
+
+        dialog.exec()
 
     def record_custom_gesture(self):
 

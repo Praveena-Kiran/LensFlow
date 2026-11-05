@@ -81,8 +81,9 @@ HAND_CONNECTIONS = [
 
 class CameraPreviewWorker(QObject):
 
-    # QImage for the preview, normalised pose (or None), built-in gesture name (or None)
-    frame_ready = Signal(QImage, object, object)
+    # QImage for the preview, normalised pose (or None),
+    # built-in gesture name (or None), built-in confidence
+    frame_ready = Signal(QImage, object, object, float)
     error = Signal(str)
     finished = Signal()
 
@@ -141,7 +142,9 @@ class CameraPreviewWorker(QObject):
             if confidence < BUILTIN_CONFIDENCE:
                 builtin = None
 
-            self.frame_ready.emit(to_qimage(frame), vector, builtin)
+            self.frame_ready.emit(
+                to_qimage(frame), vector, builtin, float(confidence or 0.0)
+            )
 
         camera.release()
         self.finished.emit()
@@ -370,8 +373,8 @@ class GestureRecorderDialog(QDialog):
         self.worker = None
         self.thread = None
 
-    @Slot(QImage, object, object)
-    def _on_frame(self, image, vector, builtin):
+    @Slot(QImage, object, object, float)
+    def _on_frame(self, image, vector, builtin, builtin_confidence=0.0):
 
         self.preview.setPixmap(
             QPixmap.fromImage(image).scaled(
