@@ -1,27 +1,28 @@
 import os
-print("Current working directory:", os.getcwd())
+import sys
+
 import cv2
 import mediapipe as mp
 
 
+def _model_path():
+    """Locate the bundled gesture model, both from source and from a PyInstaller build."""
+    base = getattr(sys, "_MEIPASS", None) or os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    return os.path.join(base, "backend", "models", "gesture_recognizer.task")
 
 
 class GoogleGestureRecognizer:
 
     def __init__(self):
 
-        print("GoogleGestureRecognizer created!")
+        model_path = _model_path()
 
-        import traceback
-        traceback.print_stack(limit=5)
-
-        model_path = r"C:\\Users\\Praveena\\OneDrive\\Desktop\\LensFlow\\LensFlow\\backend\\models\\gesture_recognizer.task"
-
-        print("MODEL =", model_path)
-        print("repr  =", repr(model_path))
-
-        print("MODEL PATH =", model_path)
-        print("EXISTS =", os.path.exists(model_path))
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(
+                f"Gesture model not found at {model_path}"
+            )
 
         BaseOptions = mp.tasks.BaseOptions 
         GestureRecognizer = mp.tasks.vision.GestureRecognizer 
@@ -37,9 +38,7 @@ class GoogleGestureRecognizer:
             ),
             running_mode=VisionRunningMode.IMAGE
         )
-        
-        print("MODEL PATH =", model_path)
-        print("ABSOLUTE =", os.path.isabs(model_path))
+
         self.recognizer = GestureRecognizer.create_from_options(options)
 
     def detect(self, frame):
@@ -66,12 +65,6 @@ class GoogleGestureRecognizer:
             gesture = result.gestures[0][0].category_name
             confidence = result.gestures[0][0].score
 
-            print(f"Detected: {gesture} | Confidence: {confidence:.2f}")
-
             return mapping.get(gesture), confidence
 
         return None, 0.0
-
-            
-
-      
