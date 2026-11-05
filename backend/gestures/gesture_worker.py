@@ -4,6 +4,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 
 from backend.gestures.google_gesture_recognizer import GoogleGestureRecognizer
 from backend.gestures.gesture_stabilizer import GestureStabilizer
+from backend.gestures.custom_gestures import CustomGestureMatcher
 from backend.profile_manager import ProfileManager
 
 
@@ -33,6 +34,9 @@ class GestureWorker(QObject):
 
         self.stabilizer = GestureStabilizer()
         self.recognizer = GoogleGestureRecognizer()
+
+        # The user's own recorded gestures (see Gesture Studio).
+        self.custom_matcher = CustomGestureMatcher.from_store()
 
         # -----------------------------------------------------
         # NORMAL PROFILE MODE
@@ -88,6 +92,21 @@ class GestureWorker(QObject):
             gesture, confidence = (
                 self.recognizer.detect(frame)
             )
+
+            # A recorded custom gesture takes priority. Recording rejects
+            # poses that look like built-in gestures, so the two don't clash.
+            if self.custom_matcher.has_gestures():
+
+                custom_gesture, custom_confidence = (
+                    self.custom_matcher.match(
+                        self.recognizer.last_landmarks,
+                        self.recognizer.last_handedness
+                    )
+                )
+
+                if custom_gesture:
+                    gesture = custom_gesture
+                    confidence = custom_confidence
 
             confirmed_gesture = (
                 self.stabilizer.update(
