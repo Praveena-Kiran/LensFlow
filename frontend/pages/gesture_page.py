@@ -12,6 +12,18 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.pages.studio_page import StudioPage
+from frontend.styles.theme import (
+    BG_DARK,
+    SURFACE,
+    SURFACE_HOVER,
+    BORDER,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_PRESSED,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+)
 from backend.profile_manager import ProfileManager
 
 
@@ -76,8 +88,8 @@ class GesturePage(StudioPage):
             "Assign gestures to actions and create your own controls."
         )
 
-        intro.setStyleSheet("""
-            color: #9CA3AF;
+        intro.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 14px;
         """)
 
@@ -111,20 +123,24 @@ class GesturePage(StudioPage):
             Qt.PointingHandCursor
         )
 
-        add_button.setStyleSheet("""
-            QPushButton {
-                background: #2563EB;
+        add_button.setStyleSheet(f"""
+            QPushButton {{
+                background: {PRIMARY};
                 color: white;
                 border: none;
                 border-radius: 10px;
                 padding: 10px 18px;
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 600;
-            }
+            }}
 
-            QPushButton:hover {
-                background: #3B82F6;
-            }
+            QPushButton:hover {{
+                background: {PRIMARY_HOVER};
+            }}
+
+            QPushButton:pressed {{
+                background: {PRIMARY_PRESSED};
+            }}
         """)
 
         add_button.clicked.connect(
@@ -190,11 +206,12 @@ class GesturePage(StudioPage):
 
         card = QFrame()
 
-        card.setStyleSheet("""
-            QFrame {
-                background: #20202A;
+        card.setStyleSheet(f"""
+            QFrame {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
                 border-radius: 12px;
-            }
+            }}
         """)
 
         layout = QHBoxLayout(card)
@@ -212,10 +229,12 @@ class GesturePage(StudioPage):
             gesture
         )
 
-        gesture_label.setStyleSheet("""
-            color: white;
+        gesture_label.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
             font-size: 15px;
             font-weight: 600;
+            border: none;
+            background: transparent;
         """)
 
         # Action
@@ -224,9 +243,11 @@ class GesturePage(StudioPage):
             "→  " + action
         )
 
-        action_label.setStyleSheet("""
-            color: #9CA3AF;
+        action_label.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 14px;
+            border: none;
+            background: transparent;
         """)
 
         self.action_labels[
@@ -243,18 +264,22 @@ class GesturePage(StudioPage):
             Qt.PointingHandCursor
         )
 
-        edit_button.setStyleSheet("""
-            QPushButton {
-                background: #2A2A36;
-                color: white;
-                border: none;
+        edit_button.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255, 255, 255, 0.04);
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
                 border-radius: 8px;
                 padding: 7px 14px;
-            }
+                font-size: 12px;
+                font-weight: 500;
+            }}
 
-            QPushButton:hover {
-                background: #363646;
-            }
+            QPushButton:hover {{
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                color: #FFFFFF;
+            }}
         """)
 
         edit_button.clicked.connect(
@@ -311,6 +336,38 @@ class GesturePage(StudioPage):
             220
         )
 
+        dialog.setStyleSheet(f"""
+            QDialog {{
+                background-color: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 12px;
+            }}
+            QLabel {{
+                color: {PRIMARY_TEXT};
+            }}
+            QComboBox {{
+                background-color: {BG_DARK};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 8px 12px;
+            }}
+            QComboBox:focus {{
+                border: 1px solid {PRIMARY};
+            }}
+            QDialogButtonBox QPushButton {{
+                background-color: {PRIMARY};
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 6px 16px;
+                font-weight: 600;
+            }}
+            QDialogButtonBox QPushButton:hover {{
+                background-color: {PRIMARY_HOVER};
+            }}
+        """)
+
         layout = QVBoxLayout(
             dialog
         )
@@ -321,8 +378,8 @@ class GesturePage(StudioPage):
             f"Gesture: {gesture}"
         )
 
-        gesture_label.setStyleSheet("""
-            color: white;
+        gesture_label.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
             font-size: 15px;
             font-weight: 600;
         """)
@@ -337,8 +394,8 @@ class GesturePage(StudioPage):
             "Action:"
         )
 
-        action_label.setStyleSheet("""
-            color: #9CA3AF;
+        action_label.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 13px;
         """)
 
@@ -432,6 +489,38 @@ class GesturePage(StudioPage):
             240
         )
 
+        dialog.setStyleSheet(f"""
+            QDialog {{
+                background-color: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 12px;
+            }}
+            QLabel {{
+                color: {PRIMARY_TEXT};
+            }}
+            QComboBox {{
+                background-color: {BG_DARK};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 8px 12px;
+            }}
+            QComboBox:focus {{
+                border: 1px solid {PRIMARY};
+            }}
+            QDialogButtonBox QPushButton {{
+                background-color: {PRIMARY};
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 6px 16px;
+                font-weight: 600;
+            }}
+            QDialogButtonBox QPushButton:hover {{
+                background-color: {PRIMARY_HOVER};
+            }}
+        """)
+
         layout = QVBoxLayout(
             dialog
         )
@@ -442,8 +531,8 @@ class GesturePage(StudioPage):
             "Gesture:"
         )
 
-        gesture_label.setStyleSheet("""
-            color: #9CA3AF;
+        gesture_label.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 13px;
         """)
 
@@ -476,8 +565,8 @@ class GesturePage(StudioPage):
             "Action:"
         )
 
-        action_label.setStyleSheet("""
-            color: #9CA3AF;
+        action_label.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 13px;
         """)
 

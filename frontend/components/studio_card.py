@@ -1,12 +1,11 @@
 """
 LensFlow - Reusable Studio Card
 
-Compact card displaying studio icon badge, title, time-ago, description,
-app chips, last-used timestamp, and accent-coloured Launch button.
-
-Custom studios:
-- Launch All Events
-- Launch Specific Event
+Displays a studio card with a cohesive LensFlow brand dark aesthetic:
+- Neutral dark card surface (#101118) and subtle border (#252936)
+- Subtle brand gradient variation for studio icons
+- Unified LensFlow Primary Indigo/Violet (#7C5CFF) Launch button
+- Refined typography and capability tags
 """
 
 from typing import Optional
@@ -18,6 +17,7 @@ from PySide6.QtGui import (
     QFont,
     QRadialGradient,
     QBrush,
+    QPen,
 )
 from PySide6.QtWidgets import (
     QFrame,
@@ -31,127 +31,70 @@ from PySide6.QtWidgets import (
     QMenu,
 )
 
+from frontend.styles.theme import (
+    SURFACE,
+    SURFACE_HOVER,
+    BORDER,
+    BORDER_HOVER,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_PRESSED,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+    MENU_STYLE,
+)
+
 
 class _IconBadge(QWidget):
-    """Circular coloured badge with a centred symbol drawn via QPainter."""
+    """Refined circular icon badge with subtle brand tint."""
 
     def __init__(
         self,
         symbol: str,
-        color: str,
-        size: int = 40,
+        color: str = PRIMARY,
+        size: int = 38,
         parent=None
     ):
         super().__init__(parent)
-
-        self.setFixedSize(
-            size,
-            size
-        )
-
+        self.setFixedSize(size, size)
         self._symbol = symbol
         self._color = QColor(color)
 
     def paintEvent(self, event):
-
         p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        p.setRenderHint(
-            QPainter.RenderHint.Antialiasing
-        )
+        s = float(min(self.width(), self.height()))
 
-        s = float(
-            min(
-                self.width(),
-                self.height()
-            )
-        )
+        # Background with subtle brand tint
+        bg_color = QColor(self._color)
+        bg_color.setAlpha(30)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(bg_color))
+        p.drawEllipse(QRectF(0, 0, s, s))
 
-        # =====================================================
-        # OUTER CIRCLE
-        # =====================================================
+        # Delicate border ring
+        border_color = QColor(self._color)
+        border_color.setAlpha(80)
+        p.setPen(QPen(border_color, 1.2))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawEllipse(QRectF(0.6, 0.6, s - 1.2, s - 1.2))
 
-        p.setPen(
-            Qt.PenStyle.NoPen
-        )
+        # Soft top radial highlight for glass feel
+        grad = QRadialGradient(s * 0.5, s * 0.25, s * 0.6)
+        grad.setColorAt(0.0, QColor(255, 255, 255, 30))
+        grad.setColorAt(1.0, QColor(255, 255, 255, 0))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(grad))
+        p.drawEllipse(QRectF(1, 1, s - 2, s - 2))
 
-        p.setBrush(
-            QBrush(
-                self._color.darker(130)
-            )
-        )
-
-        p.drawEllipse(
-            QRectF(
-                0,
-                0,
-                s,
-                s
-            )
-        )
-
-        # =====================================================
-        # INNER GRADIENT
-        # =====================================================
-
-        pad = s * 0.06
-
-        inner = QRectF(
-            pad,
-            pad,
-            s - 2 * pad,
-            s - 2 * pad
-        )
-
-        grad = QRadialGradient(
-            inner.center(),
-            s * 0.45
-        )
-
-        grad.setColorAt(
-            0.0,
-            self._color.lighter(120)
-        )
-
-        grad.setColorAt(
-            1.0,
-            self._color
-        )
-
-        p.setBrush(
-            QBrush(grad)
-        )
-
-        p.drawEllipse(
-            inner
-        )
-
-        # =====================================================
-        # SYMBOL
-        # =====================================================
-
-        p.setPen(
-            QColor(
-                255,
-                255,
-                255,
-                230
-            )
-        )
-
-        font = QFont(
-            "Inter",
-            int(s * 0.26)
-        )
-
-        font.setWeight(
-            QFont.Weight.Bold
-        )
-
-        p.setFont(
-            font
-        )
-
+        # Centered Icon / Text Symbol
+        symbol_color = QColor(self._color).lighter(135)
+        p.setPen(symbol_color)
+        font = QFont("Inter", int(s * 0.32))
+        font.setWeight(QFont.Weight.Bold)
+        p.setFont(font)
         p.drawText(
             self.rect(),
             Qt.AlignmentFlag.AlignCenter,
@@ -160,24 +103,19 @@ class _IconBadge(QWidget):
 
 
 class StudioCard(QFrame):
-    """Reusable compact studio card widget."""
+    """Unified LensFlow brand studio card widget."""
 
     # =========================================================
     # SIGNALS
     # =========================================================
-
-    # Existing signal — keeps built-in studio behaviour working.
     launch_clicked = Signal(str)
-
-    # Custom studio launch signals.
+    studio_clicked = Signal(str)
     launch_all_requested = Signal(str)
-
     launch_event_requested = Signal(str, dict)
 
     # =========================================================
     # INIT
     # =========================================================
-
     def __init__(
         self,
         title: str,
@@ -185,542 +123,248 @@ class StudioCard(QFrame):
         description: str,
         apps: list,
         last_used: str,
-        icon_symbol: str = "LF",
-        accent: str = "#3B82F6",
-
-        # -----------------------------------------------------
-        # CUSTOM STUDIO FIELDS
-        # -----------------------------------------------------
-
+        icon_symbol: str = "✦",
+        accent: str = PRIMARY,
         studio_type: str = "built_in",
         events: Optional[list] = None,
-
         parent: Optional[QWidget] = None
     ):
         super().__init__(parent)
 
-        # =====================================================
-        # STORE DATA
-        # =====================================================
-
         self._title = title
-
         self._accent = accent
-
         self.studio_type = studio_type
-
         self.events = events or []
 
-        # =====================================================
-        # CARD
-        # =====================================================
+        self.setObjectName("StudioCard")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setFixedSize(300, 225)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        self.setObjectName(
-            "StudioCard"
-        )
-
-        self.setAttribute(
-            Qt.WidgetAttribute.WA_StyledBackground,
-            True
-        )
-
-        self.setFixedSize(
-            300,
-            225
-        )
-
-        self.setSizePolicy(
-            QSizePolicy.Policy.Fixed,
-            QSizePolicy.Policy.Fixed
-        )
-
-        self.setCursor(
-            Qt.CursorShape.PointingHandCursor
-        )
-
-        # =====================================================
-        # DROP SHADOW
-        # =====================================================
-
-        shadow = QGraphicsDropShadowEffect(
-            self
-        )
-
-        shadow.setBlurRadius(
-            30
-        )
-
-        shadow.setOffset(
-            0,
-            6
-        )
-
-        shadow.setColor(
-            QColor(
-                0,
-                0,
-                0,
-                60
-            )
-        )
-
-        self.setGraphicsEffect(
-            shadow
-        )
-
-        # =====================================================
-        # STYLE
-        # =====================================================
+        # Drop Shadow
+        self._shadow = QGraphicsDropShadowEffect(self)
+        self._shadow.setBlurRadius(20)
+        self._shadow.setOffset(0, 4)
+        self._shadow.setColor(QColor(0, 0, 0, 70))
+        self.setGraphicsEffect(self._shadow)
 
         self._apply_style()
 
+        # Layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(10)
+
         # =====================================================
-        # MAIN LAYOUT
+        # ROW 1: ICON + TITLE + TIME
         # =====================================================
-
-        layout = QVBoxLayout(
-            self
-        )
-
-        layout.setContentsMargins(
-            20,
-            20,
-            20,
-            20
-        )
-
-        layout.setSpacing(
-            12
-        )
-
-        # =========================================================
-        # ROW 1 — ICON + TITLE + TIME
-        # =========================================================
-
         top = QHBoxLayout()
+        top.setSpacing(12)
 
-        top.setSpacing(
-            12
-        )
-
-        # ---------------------------------------------------------
-        # ICON
-        # ---------------------------------------------------------
-
-        badge = _IconBadge(
-            icon_symbol,
-            accent,
-            size=38
-        )
-
-        top.addWidget(
-            badge,
-            0,
-            Qt.AlignmentFlag.AlignTop
-        )
-
-        # ---------------------------------------------------------
-        # TITLE + DESCRIPTION
-        # ---------------------------------------------------------
+        badge = _IconBadge(icon_symbol, accent, size=38)
+        top.addWidget(badge, 0, Qt.AlignmentFlag.AlignTop)
 
         title_col = QVBoxLayout()
+        title_col.setSpacing(3)
 
-        title_col.setSpacing(
-            4
-        )
-
-        t = QLabel(
-            title
-        )
-
-        t.setStyleSheet("""
-            color: #FFFFFF;
+        t = QLabel(title)
+        t.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
             font-size: 15px;
             font-weight: 600;
-            letter-spacing: -0.1px;
+            letter-spacing: -0.2px;
         """)
+        title_col.addWidget(t)
 
-        title_col.addWidget(
-            t
-        )
-
-        desc = QLabel(
-            description
-        )
-
-        desc.setWordWrap(
-            True
-        )
-
-        desc.setMaximumHeight(
-            36
-        )
-
-        desc.setFixedWidth(
-            230
-        )
-
-        desc.setStyleSheet("""
-            color: #9CA3AF;
+        desc = QLabel(description)
+        desc.setWordWrap(True)
+        desc.setMaximumHeight(34)
+        desc.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 12px;
             font-weight: 400;
+            line-height: 1.3;
         """)
+        title_col.addWidget(desc)
 
-        title_col.addWidget(
-            desc
-        )
+        top.addLayout(title_col, 1)
 
-        top.addLayout(
-            title_col,
-            1
-        )
-
-        # ---------------------------------------------------------
-        # TIME
-        # ---------------------------------------------------------
-
-        time_lbl = QLabel(
-            time_ago
-        )
-
-        time_lbl.setFixedWidth(
-            60
-        )
-
-        time_lbl.setStyleSheet("""
-            color: #6B7280;
-            font-size: 11px;
-            font-weight: 400;
-        """)
-
-        top.addWidget(
-            time_lbl,
-            0,
-            Qt.AlignmentFlag.AlignTop
-        )
-
-        layout.addLayout(
-            top
-        )
-
-        layout.addSpacing(
-            12
-        )
-
-        # =========================================================
-        # ROW 2 — APP CHIPS
-        # =========================================================
-
-        chips_row = QHBoxLayout()
-
-        chips_row.setSpacing(
-            6
-        )
-
-        chips_row.setContentsMargins(
-            0,
-            0,
-            0,
-            0
-        )
-
-        for name in apps[:4]:
-
-            chip = QLabel(
-                name
-            )
-
-            chip.setStyleSheet("""
-                color: #D1D5DB;
-                background-color: rgba(255, 255, 255, 0.06);
-                border: 1px solid rgba(255, 255, 255, 0.06);
-                border-radius: 8px;
-                font-size: 11px;
-                font-weight: 500;
-                padding: 3px 10px;
-            """)
-
-            chip.setFixedHeight(
-                24
-            )
-
-            chips_row.addWidget(
-                chip
-            )
-
-        chips_row.addStretch()
-
-        layout.addLayout(
-            chips_row
-        )
-
-        layout.addStretch()
-
-        # =========================================================
-        # ROW 3 — LAST USED + LAUNCH
-        # =========================================================
-
-        bottom = QHBoxLayout()
-
-        bottom.setContentsMargins(
-            0,
-            0,
-            0,
-            0
-        )
-
-        # ---------------------------------------------------------
-        # LAST USED
-        # ---------------------------------------------------------
-
-        used_col = QVBoxLayout()
-
-        used_col.setSpacing(
-            1
-        )
-
-        used_label = QLabel(
-            "Last used"
-        )
-
-        used_label.setStyleSheet("""
-            color: #6B7280;
-            font-size: 10px;
-            font-weight: 400;
-        """)
-
-        used_col.addWidget(
-            used_label
-        )
-
-        used_val = QLabel(
-            last_used
-        )
-
-        used_val.setStyleSheet("""
-            color: #9CA3AF;
+        time_lbl = QLabel(time_ago)
+        time_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        time_lbl.setStyleSheet(f"""
+            color: {TEXT_MUTED};
             font-size: 11px;
             font-weight: 500;
         """)
+        top.addWidget(time_lbl, 0, Qt.AlignmentFlag.AlignTop)
 
-        used_col.addWidget(
-            used_val
-        )
+        layout.addLayout(top)
 
-        bottom.addLayout(
-            used_col
-        )
+        # =====================================================
+        # ROW 2: APP CHIPS / TAGS
+        # =====================================================
+        chips_row = QHBoxLayout()
+        chips_row.setSpacing(6)
+        chips_row.setContentsMargins(0, 4, 0, 0)
 
+        display_apps = apps[:3]
+        if display_apps:
+            for name in display_apps:
+                chip = QLabel(name)
+                chip.setStyleSheet(f"""
+                    color: {SECONDARY_TEXT};
+                    background-color: rgba(255, 255, 255, 0.04);
+                    border: 1px solid {BORDER};
+                    border-radius: 6px;
+                    font-size: 11px;
+                    font-weight: 500;
+                    padding: 2px 8px;
+                """)
+                chip.setFixedHeight(22)
+                chips_row.addWidget(chip)
+        elif self.studio_type == "custom":
+            event_count = len(self.events)
+            count_label = f"{event_count} action{'s' if event_count != 1 else ''}"
+            chip = QLabel(count_label)
+            chip.setStyleSheet(f"""
+                color: #A78BFA;
+                background-color: rgba(124, 92, 255, 0.10);
+                border: 1px solid rgba(124, 92, 255, 0.22);
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 500;
+                padding: 2px 8px;
+            """)
+            chip.setFixedHeight(22)
+            chips_row.addWidget(chip)
+
+        chips_row.addStretch()
+        layout.addLayout(chips_row)
+
+        layout.addStretch()
+
+        # =====================================================
+        # ROW 3: LAST USED + UNIFIED LAUNCH BUTTON
+        # =====================================================
+        bottom = QHBoxLayout()
+        bottom.setContentsMargins(0, 0, 0, 0)
+
+        used_col = QVBoxLayout()
+        used_col.setSpacing(1)
+
+        used_label = QLabel("LAST USED")
+        used_label.setStyleSheet(f"""
+            color: {TEXT_MUTED};
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        """)
+        used_col.addWidget(used_label)
+
+        used_val = QLabel(last_used)
+        used_val.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
+            font-size: 11px;
+            font-weight: 500;
+        """)
+        used_col.addWidget(used_val)
+
+        bottom.addLayout(used_col)
         bottom.addStretch()
 
-        # =========================================================
-        # LAUNCH BUTTON
-        # =========================================================
+        # Unified Primary Launch Button
+        btn_label = "Launch  ▾" if self.studio_type == "custom" else "Launch  →"
+        self.launch = QPushButton(btn_label)
+        self.launch.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.launch.setFixedSize(96, 32)
 
-        self.launch = QPushButton(
-            "Launch  →"
-        )
-
-        self.launch.setCursor(
-            Qt.CursorShape.PointingHandCursor
-        )
-
-        self.launch.setFixedSize(
-            100,
-            34
-        )
-
-        self.launch.setStyleSheet(
-            f"""
+        self.launch.setStyleSheet(f"""
             QPushButton {{
-                background-color: {accent};
+                background-color: {PRIMARY};
                 color: #FFFFFF;
                 border: none;
-                border-radius: 10px;
+                border-radius: 8px;
                 font-size: 12px;
                 font-weight: 600;
+                letter-spacing: 0.1px;
             }}
-
             QPushButton:hover {{
-                background-color:
-                    {QColor(accent).lighter(120).name()};
+                background-color: {PRIMARY_HOVER};
             }}
-
             QPushButton:pressed {{
-                background-color:
-                    {QColor(accent).darker(120).name()};
+                background-color: {PRIMARY_PRESSED};
             }}
-            """
-        )
-
-        self.launch.clicked.connect(
-            self._handle_launch_clicked
-        )
-
-        bottom.addWidget(
-            self.launch,
-            0,
-            Qt.AlignmentFlag.AlignBottom
-        )
-
-        layout.addLayout(
-            bottom
-        )
-
-    # =============================================================
-    # LAUNCH HANDLER
-    # =============================================================
-
-    def _handle_launch_clicked(self):
-
-        # ---------------------------------------------------------
-        # BUILT-IN STUDIO
-        # ---------------------------------------------------------
-
-        if self.studio_type != "custom":
-
-            self.launch_clicked.emit(
-                self._title
-            )
-
-            return
-
-        # ---------------------------------------------------------
-        # CUSTOM STUDIO WITHOUT EVENTS
-        # ---------------------------------------------------------
-
-        if not self.events:
-
-            self.launch_all_requested.emit(
-                self._title
-            )
-
-            return
-
-        # ---------------------------------------------------------
-        # CUSTOM STUDIO MENU
-        # ---------------------------------------------------------
-
-        menu = QMenu(
-            self
-        )
-
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: #18181F;
-                color: #F9FAFB;
-                border: 1px solid rgba(255, 255, 255, 0.10);
-                border-radius: 10px;
-                padding: 6px;
-            }
-
-            QMenu::item {
-                padding: 9px 14px;
-                border-radius: 6px;
-            }
-
-            QMenu::item:selected {
-                background-color: rgba(139, 92, 246, 0.20);
-            }
-
-            QMenu::separator {
-                height: 1px;
-                background-color: rgba(255, 255, 255, 0.08);
-                margin: 5px 8px;
-            }
         """)
 
-        # =====================================================
-        # LAUNCH ALL
-        # =====================================================
+        self.launch.clicked.connect(self._handle_launch_clicked)
+        bottom.addWidget(self.launch, 0, Qt.AlignmentFlag.AlignBottom)
 
-        launch_all = menu.addAction(
-            "▶  Launch All Events"
-        )
+        layout.addLayout(bottom)
 
+    # =========================================================
+    # LAUNCH HANDLER
+    # =========================================================
+    def _handle_launch_clicked(self):
+        if self.studio_type != "custom":
+            self.launch_clicked.emit(self._title)
+            return
+
+        menu = self._create_custom_menu()
+        menu.exec(self.launch.mapToGlobal(self.launch.rect().bottomLeft()))
+
+    # =========================================================
+    # CREATE CUSTOM STUDIO MENU
+    # =========================================================
+    def _create_custom_menu(self):
+        menu = QMenu(self)
+        menu.setStyleSheet(MENU_STYLE)
+
+        launch_all = menu.addAction("▶  Launch All Events")
         launch_all.triggered.connect(
-            lambda: self.launch_all_requested.emit(
-                self._title
-            )
+            lambda: self.launch_all_requested.emit(self._title)
         )
 
-        menu.addSeparator()
+        if self.events:
+            menu.addSeparator()
+            for event in self.events:
+                if not isinstance(event, dict):
+                    continue
 
-        # =====================================================
-        # INDIVIDUAL EVENTS
-        # =====================================================
+                event_name = event.get("name", "Unnamed Event")
+                gesture = event.get("gesture", "")
+                label = f"🎯  {event_name} ({gesture})" if gesture else f"⚡  {event_name}"
 
-        for event in self.events:
-
-            if not isinstance(
-                event,
-                dict
-            ):
-                continue
-
-            event_name = event.get(
-                "name",
-                "Unnamed Event"
-            )
-
-            gesture = event.get(
-                "gesture",
-                ""
-            )
-
-            if gesture:
-
-                label = (
-                    f"🎯  {event_name}"
-                    f"  ({gesture})"
+                action = menu.addAction(label)
+                action.triggered.connect(
+                    lambda checked=False, selected_event=event:
+                        self.launch_event_requested.emit(self._title, selected_event)
                 )
 
-            else:
+        return menu
 
-                label = (
-                    f"⚡  {event_name}"
-                )
-
-            action = menu.addAction(
-                label
-            )
-
-            action.triggered.connect(
-                lambda checked=False,
-                selected_event=event:
-                    self.launch_event_requested.emit(
-                        self._title,
-                        selected_event
-                    )
-            )
-
-        # =====================================================
-        # SHOW MENU
-        # =====================================================
-
-        menu.exec(
-            self.launch.mapToGlobal(
-                self.launch.rect().topLeft()
-            )
-        )
-
-    # =============================================================
-    # STYLE
-    # =============================================================
-
+    # =========================================================
+    # STYLE & HOVER
+    # =========================================================
     def _apply_style(self):
-
-        self.setStyleSheet(
-            """
-            QFrame#StudioCard {
-                background-color: #16161E;
-                border: 1px solid rgba(255, 255, 255, 0.06);
+        self.setStyleSheet(f"""
+            QFrame#StudioCard {{
+                background-color: {SURFACE};
+                border: 1px solid {BORDER};
                 border-radius: 16px;
-            }
+            }}
+            QFrame#StudioCard:hover {{
+                background-color: {SURFACE_HOVER};
+                border: 1px solid {BORDER_HOVER};
+            }}
+        """)
 
-            QFrame#StudioCard:hover {
-                border: 1px solid rgba(59, 130, 246, 0.3);
-                background-color: #1A1A24;
-            }
-            """
-        )
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.launch.geometry().contains(event.position().toPoint()):
+                super().mousePressEvent(event)
+                return
+
+            self.studio_clicked.emit(self._title)
+
+        super().mousePressEvent(event)
