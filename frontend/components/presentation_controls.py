@@ -6,6 +6,17 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
 )
+from frontend.styles.theme import (
+    SURFACE,
+    BORDER,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_PRESSED,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+    ERROR,
+)
 
 
 class PresentationControls(QFrame):
@@ -20,60 +31,68 @@ class PresentationControls(QFrame):
 
         self.setObjectName("PresentationControls")
 
-        self.setStyleSheet("""
-            QFrame#PresentationControls {
-                background-color: #16161E;
-                border: 1px solid rgba(255, 255, 255, 0.06);
+        self.setStyleSheet(f"""
+            QFrame#PresentationControls {{
+                background-color: {SURFACE};
+                border: 1px solid {BORDER};
                 border-radius: 16px;
-            }
+            }}
 
-            QLabel#SectionTitle {
-                color: white;
+            QLabel#SectionTitle {{
+                color: {PRIMARY_TEXT};
                 font-size: 16px;
                 font-weight: 600;
-            }
+            }}
 
-            QLabel#SectionSubtitle {
-                color: #6B7280;
+            QLabel#SectionSubtitle {{
+                color: {SECONDARY_TEXT};
                 font-size: 12px;
-            }
+            }}
 
-            QPushButton {
-                background-color: #1E1E28;
-                color: #D1D5DB;
-                border: 1px solid rgba(255, 255, 255, 0.06);
+            QPushButton {{
+                background-color: rgba(255, 255, 255, 0.04);
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
                 border-radius: 10px;
                 font-size: 12px;
                 font-weight: 600;
                 padding: 10px 16px;
-            }
+            }}
 
-            QPushButton:hover {
-                background-color: #252532;
-                border: 1px solid rgba(255, 255, 255, 0.12);
-            }
+            QPushButton:hover {{
+                background-color: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+            }}
 
-            QPushButton:pressed {
-                background-color: #2D2D3A;
-            }
+            QPushButton:pressed {{
+                background-color: rgba(255, 255, 255, 0.03);
+            }}
 
-            QPushButton#StartButton {
-                background-color: #3B82F6;
+            QPushButton#StartButton {{
+                background-color: {PRIMARY};
                 color: white;
                 border: none;
-            }
+            }}
 
-            QPushButton#StartButton:hover {
-                background-color: #60A5FA;
-            }
+            QPushButton#StartButton:hover {{
+                background-color: {PRIMARY_HOVER};
+            }}
 
-            QPushButton#EndButton {
+            QPushButton#StartButton:pressed {{
+                background-color: {PRIMARY_PRESSED};
+            }}
+
+            QPushButton#EndButton {{
+                background-color: rgba(239, 68, 68, 0.10);
+                color: {ERROR};
+                border: 1px solid rgba(239, 68, 68, 0.25);
+            }}
+
+            QPushButton#EndButton:hover {{
+                background-color: rgba(239, 68, 68, 0.20);
+                border: 1px solid rgba(239, 68, 68, 0.40);
                 color: #FCA5A5;
-            }
-
-            QPushButton#EndButton:hover {
-                background-color: rgba(239, 68, 68, 0.12);
-            }
+            }}
         """)
 
         layout = QVBoxLayout(self)

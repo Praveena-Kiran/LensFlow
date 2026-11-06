@@ -4,11 +4,22 @@ Reusable sidebar with dynamic menu items, active state highlighting,
 and a user profile section at the bottom.
 """
 
-from typing import Optional, Dict, Callable
+from typing import Optional, Dict
 from PySide6.QtCore import Qt, Signal, QRectF
-from PySide6.QtGui import QPainter, QColor, QFont, QBrush
+from PySide6.QtGui import QPainter, QColor, QFont, QBrush, QPen
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget
+)
+
+from frontend.styles.theme import (
+    BG_DARK,
+    SURFACE_HOVER,
+    BORDER,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+    PRIMARY,
+    PRIMARY_MUTED,
 )
 
 
@@ -17,24 +28,24 @@ from PySide6.QtWidgets import (
 # ────────────────────────────────────────────────────────────────────────────
 
 class _NavItem(QPushButton):
-    """Single navigation button with icon placeholder and label."""
+    """Navigation button with icon indicator and label."""
 
-    def __init__(self, item_id: str, label: str, parent=None):
+    def __init__(self, item_id: str, label: str, icon_str: str = "•", parent=None):
         super().__init__(parent)
         self.item_id = item_id
         self.is_active = False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFixedHeight(42)
+        self.setFixedHeight(38)
         self.setCheckable(True)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(16, 0, 16, 0)
-        layout.setSpacing(14)
+        layout.setContentsMargins(14, 0, 14, 0)
+        layout.setSpacing(12)
 
-        # Icon placeholder (small dot when inactive, filled when active)
-        self._dot = QWidget()
-        self._dot.setFixedSize(20, 20)
-        layout.addWidget(self._dot, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._icon_label = QLabel(icon_str)
+        self._icon_label.setFixedWidth(16)
+        self._icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._icon_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self._label = QLabel(label)
         layout.addWidget(self._label, 1, Qt.AlignmentFlag.AlignVCenter)
@@ -48,32 +59,35 @@ class _NavItem(QPushButton):
 
     def _update_style(self):
         if self.is_active:
-            bg = "rgba(59, 130, 246, 0.12)"
-            text_color = "#FFFFFF"
+            bg = PRIMARY_MUTED
+            text_color = PRIMARY_TEXT
             font_weight = "600"
-            dot_bg = "#3B82F6"
+            icon_color = PRIMARY
+            border_css = "border: 1px solid rgba(124, 92, 255, 0.25);"
         else:
             bg = "transparent"
-            text_color = "#9CA3AF"
+            text_color = SECONDARY_TEXT
             font_weight = "400"
-            dot_bg = "transparent"
+            icon_color = TEXT_MUTED
+            border_css = "border: 1px solid transparent;"
 
         self.setStyleSheet(f"""
             _NavItem {{
                 background-color: {bg};
-                border: none;
-                border-radius: 10px;
+                {border_css}
+                border-radius: 8px;
                 text-align: left;
             }}
             _NavItem:hover {{
                 background-color: rgba(255, 255, 255, 0.05);
+                color: #FFFFFF;
             }}
         """)
         self._label.setStyleSheet(
-            f"color: {text_color}; font-size: 14px; font-weight: {font_weight};"
+            f"color: {text_color}; font-size: 13px; font-weight: {font_weight}; border: none; background: transparent;"
         )
-        self._dot.setStyleSheet(
-            f"background-color: {dot_bg}; border-radius: 4px;"
+        self._icon_label.setStyleSheet(
+            f"color: {icon_color}; font-size: 13px; font-weight: 600; border: none; background: transparent;"
         )
 
 
@@ -82,9 +96,9 @@ class _NavItem(QPushButton):
 # ────────────────────────────────────────────────────────────────────────────
 
 class _AvatarBadge(QWidget):
-    """Circular avatar badge with initials."""
+    """Circular avatar badge with initials and subtle border."""
 
-    def __init__(self, initials: str = "PK", size: int = 34, parent=None):
+    def __init__(self, initials: str = "PK", size: int = 32, parent=None):
         super().__init__(parent)
         self.setFixedSize(size, size)
         self._initials = initials
@@ -96,19 +110,18 @@ class _AvatarBadge(QWidget):
 
         # Circle background
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(QColor("#27272A")))
+        p.setBrush(QBrush(QColor("#171923")))
         p.drawEllipse(QRectF(0, 0, s, s))
 
         # Border
-        from PySide6.QtGui import QPen
-        p.setPen(QPen(QColor(255, 255, 255, 20), 1.0))
+        p.setPen(QPen(QColor(BORDER), 1.0))
         p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawEllipse(QRectF(0.5, 0.5, s - 1, s - 1))
+        p.drawEllipse(QRectF(0.5, 0.5, s - 1.0, s - 1.0))
 
         # Initials
-        p.setPen(QColor("#D1D5DB"))
-        font = QFont("Inter", int(s * 0.28))
-        font.setWeight(QFont.Weight.DemiBold)
+        p.setPen(QColor(PRIMARY_TEXT))
+        font = QFont("Inter", int(s * 0.32))
+        font.setWeight(QFont.Weight.Bold)
         p.setFont(font)
         p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self._initials)
 
@@ -127,17 +140,17 @@ class AppSidebar(QFrame):
         self.setObjectName("AppSidebar")
         self.setFixedWidth(200)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet("""
-            QFrame#AppSidebar {
-                background-color: #0B0B0F;
-                border-right: 1px solid rgba(255, 255, 255, 0.06);
-            }
+        self.setStyleSheet(f"""
+            QFrame#AppSidebar {{
+                background-color: {BG_DARK};
+                border-right: 1px solid {BORDER};
+            }}
         """)
 
         self._items: Dict[str, _NavItem] = {}
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 12, 10, 16)
+        layout.setContentsMargins(10, 14, 10, 16)
         layout.setSpacing(4)
 
         # ── Navigation Items ────────────────────────────────────────────
@@ -145,14 +158,14 @@ class AppSidebar(QFrame):
         self._items_layout.setSpacing(4)
 
         nav_items = [
-            ("home", "Home"),
-            ("studios", "Studios"),
-            ("history", "History"),
-            ("settings", "Settings"),
+            ("home", "Home", "⌂"),
+            ("studios", "Studios", "▦"),
+            ("history", "History", "⏱"),
+            ("settings", "Settings", "⚙"),
         ]
 
-        for item_id, label in nav_items:
-            item = _NavItem(item_id, label)
+        for item_id, label, icon in nav_items:
+            item = _NavItem(item_id, label, icon)
             item.clicked.connect(lambda _, iid=item_id: self._on_click(iid))
             self._items[item_id] = item
             self._items_layout.addWidget(item)
@@ -163,31 +176,32 @@ class AppSidebar(QFrame):
         # ── User Profile ────────────────────────────────────────────────
         profile = QPushButton()
         profile.setCursor(Qt.CursorShape.PointingHandCursor)
-        profile.setFixedHeight(46)
-        profile.setStyleSheet("""
-            QPushButton {
+        profile.setFixedHeight(44)
+        profile.setStyleSheet(f"""
+            QPushButton {{
                 background: transparent;
-                border: none;
-                border-radius: 10px;
-            }
-            QPushButton:hover {
+                border: 1px solid transparent;
+                border-radius: 8px;
+            }}
+            QPushButton:hover {{
                 background: rgba(255, 255, 255, 0.04);
-            }
+                border: 1px solid {BORDER};
+            }}
         """)
 
         prof_layout = QHBoxLayout(profile)
         prof_layout.setContentsMargins(8, 0, 8, 0)
         prof_layout.setSpacing(10)
 
-        avatar = _AvatarBadge("PK", size=32)
+        avatar = _AvatarBadge("PK", size=30)
         prof_layout.addWidget(avatar, 0, Qt.AlignmentFlag.AlignVCenter)
 
         name = QLabel("Praveena K.")
-        name.setStyleSheet("color: #D1D5DB; font-size: 13px; font-weight: 500;")
+        name.setStyleSheet(f"color: {PRIMARY_TEXT}; font-size: 13px; font-weight: 500; border: none; background: transparent;")
         prof_layout.addWidget(name, 1, Qt.AlignmentFlag.AlignVCenter)
 
-        chevron = QLabel("\u2304")
-        chevron.setStyleSheet("color: #6B7280; font-size: 16px;")
+        chevron = QLabel("⌵")
+        chevron.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 13px; border: none; background: transparent;")
         prof_layout.addWidget(chevron, 0, Qt.AlignmentFlag.AlignVCenter)
 
         layout.addWidget(profile)

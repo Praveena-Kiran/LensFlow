@@ -1,3 +1,6 @@
+"""Manual webcam check: shows the recognised gesture live. Run from the repo root:
+    python -m tools.webcam_gesture_check
+Press q to quit."""
 import cv2
 from backend.gestures.google_gesture_recognizer import GoogleGestureRecognizer
 
@@ -14,10 +17,10 @@ while True:
 
     frame = cv2.flip(frame, 1)
 
-    gesture = recognizer.detect(frame)
+    gesture, confidence = recognizer.detect(frame)
 
     if gesture:
-        print(gesture)
+        print(f"{gesture} ({confidence:.2f})")
 
         cv2.putText(
             frame,

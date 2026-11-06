@@ -155,14 +155,14 @@ class GlowOrb(QWidget):
         if self._ripple_factor > 0.001:
             rip_r1 = base_r * (1.0 + 1.2 * self._ripple_factor)
             rip_alpha = int(180 * (1.0 - self._ripple_factor))
-            pen1 = QPen(QColor(96, 165, 250, rip_alpha), 2.5)
+            pen1 = QPen(QColor(91, 140, 255, rip_alpha), 2.2)
             p.setPen(pen1)
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawEllipse(QPointF(cx, cy), rip_r1, rip_r1)
 
             rip_r2 = base_r * (1.0 + 0.7 * self._ripple_factor)
             rip_alpha2 = int(140 * (1.0 - self._ripple_factor))
-            pen2 = QPen(QColor(139, 92, 246, rip_alpha2), 1.8)
+            pen2 = QPen(QColor(124, 92, 255, rip_alpha2), 1.8)
             p.setPen(pen2)
             p.drawEllipse(QPointF(cx, cy), rip_r2, rip_r2)
 
@@ -172,14 +172,14 @@ class GlowOrb(QWidget):
 
         glow = QRadialGradient(QPointF(cx, cy), glow_r)
         if self.mode == self.MODE_LISTENING:
-            glow.setColorAt(0.0, QColor(59, 130, 246, 90))
-            glow.setColorAt(0.35, QColor(168, 85, 247, 55))
-            glow.setColorAt(0.7, QColor(99, 102, 241, 20))
+            glow.setColorAt(0.0, QColor(124, 92, 255, 80))
+            glow.setColorAt(0.35, QColor(91, 140, 255, 45))
+            glow.setColorAt(0.7, QColor(139, 112, 255, 18))
             glow.setColorAt(1.0, QColor(0, 0, 0, 0))
         else:
-            glow.setColorAt(0.0, QColor(59, 130, 246, 55))
-            glow.setColorAt(0.35, QColor(139, 92, 246, 35))
-            glow.setColorAt(0.7, QColor(99, 102, 241, 12))
+            glow.setColorAt(0.0, QColor(124, 92, 255, 45))
+            glow.setColorAt(0.35, QColor(91, 140, 255, 25))
+            glow.setColorAt(0.7, QColor(139, 112, 255, 10))
             glow.setColorAt(1.0, QColor(0, 0, 0, 0))
 
         p.setPen(Qt.PenStyle.NoPen)
@@ -189,15 +189,15 @@ class GlowOrb(QWidget):
         # ── 3. Inner Orb Body Gradient ───────────────────────────────────
         orb_grad = QRadialGradient(QPointF(cx - base_r * 0.2, cy - base_r * 0.25), base_r * 1.15)
         if self.mode == self.MODE_LISTENING:
-            orb_grad.setColorAt(0.0, QColor(147, 197, 253))  # Electric bright highlight
-            orb_grad.setColorAt(0.3, QColor(59, 130, 246))
-            orb_grad.setColorAt(0.7, QColor(168, 85, 247))   # Purple wave
-            orb_grad.setColorAt(1.0, QColor(79, 70, 229))
+            orb_grad.setColorAt(0.0, QColor(196, 181, 253))  # Soft lavender highlight
+            orb_grad.setColorAt(0.3, QColor(139, 112, 255))
+            orb_grad.setColorAt(0.7, QColor(124, 92, 255))   # LensFlow brand primary
+            orb_grad.setColorAt(1.0, QColor(88, 56, 212))
         else:
-            orb_grad.setColorAt(0.0, QColor(110, 175, 255))
-            orb_grad.setColorAt(0.3, QColor(59, 130, 246))
-            orb_grad.setColorAt(0.7, QColor(99, 102, 241))
-            orb_grad.setColorAt(1.0, QColor(67, 56, 202))
+            orb_grad.setColorAt(0.0, QColor(165, 180, 252))
+            orb_grad.setColorAt(0.3, QColor(91, 140, 255))   # Secondary accent
+            orb_grad.setColorAt(0.7, QColor(124, 92, 255))   # LensFlow brand primary
+            orb_grad.setColorAt(1.0, QColor(76, 45, 190))
 
         p.setBrush(QBrush(orb_grad))
         p.drawEllipse(QRectF(cx - base_r, cy - base_r, base_r * 2, base_r * 2))

@@ -27,6 +27,8 @@ from frontend.components.hero_section import HeroSection
 from frontend.components.studio_card import StudioCard
 from frontend.components.right_panel import RightPanel
 from frontend.layouts.flow_layout import FlowLayout
+from backend.paths import user_config_path
+from frontend.styles.theme import BG_DARK, PRIMARY_TEXT, SECONDARY_TEXT, BORDER, PRIMARY, PRIMARY_HOVER
 
 
 class HomePage(QWidget):
@@ -64,10 +66,10 @@ class HomePage(QWidget):
             True
         )
 
-        self.setStyleSheet("""
-            QWidget#HomePage {
-                background-color: #0B0B0F;
-            }
+        self.setStyleSheet(f"""
+            QWidget#HomePage {{
+                background-color: {BG_DARK};
+            }}
         """)
 
         # =====================================================
@@ -257,10 +259,11 @@ class HomePage(QWidget):
             "Your Studios"
         )
 
-        title.setStyleSheet("""
-            color: white;
+        title.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
             font-size: 18px;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: -0.3px;
         """)
 
         row.addWidget(
@@ -278,25 +281,33 @@ class HomePage(QWidget):
         )
 
         create.setFixedHeight(
-            30
+            32
         )
 
         create.setCursor(
             Qt.CursorShape.PointingHandCursor
         )
 
-        create.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                color: #60A5FA;
-                border: none;
-                font-size: 13px;
+        create.setStyleSheet(f"""
+            QPushButton {{
+                background-color: rgba(255, 255, 255, 0.04);
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                font-size: 12px;
                 font-weight: 600;
-            }
+                padding: 0px 14px;
+            }}
 
-            QPushButton:hover {
-                color: #93C5FD;
-            }
+            QPushButton:hover {{
+                background-color: rgba(124, 92, 255, 0.15);
+                border: 1px solid rgba(124, 92, 255, 0.40);
+                color: {PRIMARY_HOVER};
+            }}
+
+            QPushButton:pressed {{
+                background-color: rgba(124, 92, 255, 0.25);
+            }}
         """)
 
         create.clicked.connect(
@@ -347,16 +358,7 @@ class HomePage(QWidget):
 
     def get_config_path(self):
 
-        return os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "..",
-                "backend",
-                "config",
-                "studios.json"
-            )
-        )
+        return user_config_path("studios.json")
 
     # =========================================================
     # LOAD STUDIOS
@@ -564,6 +566,9 @@ class HomePage(QWidget):
                 self.launch_specific_event
             )
 
+
+            card.studio_clicked.connect(self.launch_studio)
+
             # -------------------------------------------------
             # ADD TO FLOW LAYOUT
             # -------------------------------------------------
@@ -587,6 +592,8 @@ class HomePage(QWidget):
         self.cards_layout.activate()
 
         self.cards_container.update()
+
+        
 
         print(
             "✅ Dashboard refresh complete."
@@ -701,3 +708,12 @@ class HomePage(QWidget):
         )
 
         self._update_right_panel()
+
+    def edit_studio(self, studio_name):
+        print(
+            f"✏️ Editing studio: {studio_name}"
+        )
+
+        self.studio_selected.emit(
+            studio_name
+        )

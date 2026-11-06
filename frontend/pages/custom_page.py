@@ -16,6 +16,7 @@ import os
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QPainter, QRadialGradient, QBrush, QPen, QFont
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -30,6 +31,69 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
 )
+from backend.paths import user_config_path
+from frontend.styles.theme import (
+    BG_DARK,
+    SURFACE,
+    SURFACE_HOVER,
+    BORDER,
+    BORDER_HOVER,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_PRESSED,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+    SUCCESS,
+    WARNING,
+    ERROR,
+)
+
+
+class _EventIconBadge(QWidget):
+    """Refined circular icon badge for action types."""
+
+    ACTION_MAP = {
+        "Open Application": ("💻", "#5B8CFF"),
+        "Open File": ("📄", "#6875F5"),
+        "Open Website": ("🌐", "#5B8CFF"),
+        "Hotkey": ("⌨", "#8B70FF"),
+        "Wait": ("⏳", "#7C5CFF"),
+        "PowerPoint": ("📊", "#6875F5"),
+    }
+
+    def __init__(self, action: str = "", size: int = 38, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(size, size)
+        icon, color = self.ACTION_MAP.get(action, ("⚡", PRIMARY))
+        self._icon = icon
+        self._color = QColor(color)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        s = float(min(self.width(), self.height()))
+
+        # Background tint
+        bg = QColor(self._color)
+        bg.setAlpha(30)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(bg))
+        p.drawEllipse(0, 0, int(s), int(s))
+
+        # Border
+        border = QColor(self._color)
+        border.setAlpha(80)
+        p.setPen(QPen(border, 1.2))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawEllipse(1, 1, int(s - 2), int(s - 2))
+
+        # Icon Symbol
+        p.setPen(QColor(self._color).lighter(135))
+        font = QFont("Segoe UI Emoji", int(s * 0.36))
+        p.setFont(font)
+        p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self._icon)
 
 
 class CustomPage(QWidget):
@@ -41,6 +105,10 @@ class CustomPage(QWidget):
     back_requested = Signal()
     studio_saved = Signal()
     studio_deleted = Signal()
+
+    # Gesture control: the main window owns the camera worker.
+    gesture_control_started = Signal(dict)
+    gesture_control_stopped = Signal()
 
     # =========================================================
     # INIT
@@ -59,41 +127,46 @@ class CustomPage(QWidget):
         self.current_studio = None
         self.studio_name = ""
         self.events = []
+        self.gesture_control_running = False
 
-        self.setStyleSheet("""
-            QWidget#CustomPage {
-                background-color: #0B0B0F;
-            }
+        self.setStyleSheet(f"""
+            QWidget#CustomPage {{
+                background-color: {BG_DARK};
+            }}
 
-            QLabel {
-                color: white;
-            }
+            QLabel {{
+                color: {PRIMARY_TEXT};
+            }}
 
             QLineEdit,
-            QComboBox {
-                background-color: #15151C;
-                color: white;
-                border: 1px solid #2A2A35;
+            QComboBox {{
+                background-color: {SURFACE};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
                 border-radius: 8px;
-                padding: 8px;
-            }
+                padding: 8px 12px;
+                font-size: 13px;
+            }}
 
             QLineEdit:focus,
-            QComboBox:focus {
-                border: 1px solid #8B5CF6;
-            }
+            QComboBox:focus {{
+                border: 1px solid {PRIMARY};
+            }}
 
-            QPushButton {
-                background-color: #181820;
-                color: white;
-                border: 1px solid #2A2A35;
+            QPushButton {{
+                background-color: {SURFACE};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
                 border-radius: 8px;
-                padding: 8px 14px;
-            }
+                padding: 7px 14px;
+                font-size: 12px;
+                font-weight: 500;
+            }}
 
-            QPushButton:hover {
-                background-color: #22222D;
-            }
+            QPushButton:hover {{
+                background-color: {SURFACE_HOVER};
+                border: 1px solid rgba(255, 255, 255, 0.16);
+            }}
         """)
 
         self._build_ui()
@@ -104,16 +177,7 @@ class CustomPage(QWidget):
 
     def get_config_path(self):
 
-        return os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "..",
-                "backend",
-                "config",
-                "studios.json"
-            )
-        )
+        return user_config_path("studios.json")
 
     # =========================================================
     # LOAD ALL STUDIOS
@@ -233,14 +297,14 @@ class CustomPage(QWidget):
         )
 
         outer.setContentsMargins(
-            40,
-            30,
-            40,
-            40
+            36,
+            24,
+            36,
+            36
         )
 
         outer.setSpacing(
-            20
+            18
         )
 
         # =====================================================
@@ -252,6 +316,26 @@ class CustomPage(QWidget):
         back = QPushButton(
             "← Back"
         )
+        back.setFixedHeight(34)
+        back.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        back.setStyleSheet(f"""
+            QPushButton {{
+                background-color: rgba(255, 255, 255, 0.04);
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 0px 14px;
+                font-size: 12px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                color: #FFFFFF;
+            }}
+        """)
 
         back.clicked.connect(
             self.go_back
@@ -262,16 +346,18 @@ class CustomPage(QWidget):
         )
 
         top.addSpacing(
-            12
+            10
         )
 
         title = QLabel(
             "Custom Studio"
         )
 
-        title.setStyleSheet("""
-            font-size: 24px;
+        title.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
+            font-size: 22px;
             font-weight: 700;
+            letter-spacing: -0.4px;
         """)
 
         top.addWidget(
@@ -287,17 +373,29 @@ class CustomPage(QWidget):
         self.delete_button = QPushButton(
             "Delete Studio"
         )
+        self.delete_button.setFixedHeight(34)
+        self.delete_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        self.delete_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: rgba(239, 68, 68, 0.10);
+                color: {ERROR};
+                border: 1px solid rgba(239, 68, 68, 0.25);
+                border-radius: 8px;
+                padding: 0px 14px;
+                font-size: 12px;
+                font-weight: 600;
+            }}
 
-        self.delete_button.setStyleSheet("""
-            QPushButton {
-                background-color: #2A1518;
-                color: #F87171;
-                border: 1px solid #5A252A;
-            }
-
-            QPushButton:hover {
-                background-color: #3A1B1F;
-            }
+            QPushButton:hover {{
+                background-color: rgba(239, 68, 68, 0.20);
+                border: 1px solid rgba(239, 68, 68, 0.40);
+                color: #FCA5A5;
+            }}
+            QPushButton:pressed {{
+                background-color: rgba(239, 68, 68, 0.28);
+            }}
         """)
 
         self.delete_button.clicked.connect(
@@ -319,13 +417,14 @@ class CustomPage(QWidget):
         # =====================================================
 
         name_label = QLabel(
-            "Studio Name"
+            "STUDIO NAME"
         )
 
-        name_label.setStyleSheet("""
-            font-size: 13px;
+        name_label.setStyleSheet(f"""
+            font-size: 10px;
             font-weight: 600;
-            color: #A1A1AA;
+            color: {TEXT_MUTED};
+            letter-spacing: 0.5px;
         """)
 
         outer.addWidget(
@@ -333,9 +432,10 @@ class CustomPage(QWidget):
         )
 
         name_row = QHBoxLayout()
+        name_row.setSpacing(10)
 
         self.name_input = QLineEdit()
-
+        self.name_input.setFixedHeight(36)
         self.name_input.setPlaceholderText(
             "Enter studio name..."
         )
@@ -348,6 +448,27 @@ class CustomPage(QWidget):
         save_name = QPushButton(
             "Save Name"
         )
+        save_name.setFixedHeight(36)
+        save_name.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        save_name.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {PRIMARY};
+                color: #FFFFFF;
+                border: none;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 0px 16px;
+            }}
+            QPushButton:hover {{
+                background-color: {PRIMARY_HOVER};
+            }}
+            QPushButton:pressed {{
+                background-color: {PRIMARY_PRESSED};
+            }}
+        """)
 
         save_name.clicked.connect(
             self.save_studio_name
@@ -361,6 +482,8 @@ class CustomPage(QWidget):
             name_row
         )
 
+        outer.addSpacing(6)
+
         # =====================================================
         # EVENTS HEADER
         # =====================================================
@@ -371,9 +494,11 @@ class CustomPage(QWidget):
             "Events & Automations"
         )
 
-        events_title.setStyleSheet("""
-            font-size: 18px;
-            font-weight: 600;
+        events_title.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
         """)
 
         events_header.addWidget(
@@ -382,9 +507,54 @@ class CustomPage(QWidget):
 
         events_header.addStretch()
 
+        # -----------------------------------------------------
+        # GESTURE CONTROL TOGGLE
+        # -----------------------------------------------------
+
+        self.gesture_button = QPushButton(
+            "Start Gesture Control"
+        )
+        self.gesture_button.setFixedHeight(34)
+        self.gesture_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        self.gesture_button.setAccessibleName(
+            "Start or stop gesture control for this studio"
+        )
+        self.gesture_button.clicked.connect(
+            self.toggle_gesture_control
+        )
+
+        events_header.addWidget(
+            self.gesture_button
+        )
+
+        events_header.addSpacing(8)
+
         add_event = QPushButton(
             "+ Add Event"
         )
+        add_event.setFixedHeight(34)
+        add_event.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        add_event.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {PRIMARY};
+                color: #FFFFFF;
+                border: none;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 0px 14px;
+            }}
+            QPushButton:hover {{
+                background-color: {PRIMARY_HOVER};
+            }}
+            QPushButton:pressed {{
+                background-color: {PRIMARY_PRESSED};
+            }}
+        """)
 
         add_event.clicked.connect(
             self.add_event
@@ -397,6 +567,17 @@ class CustomPage(QWidget):
         outer.addLayout(
             events_header
         )
+
+        self.gesture_status = QLabel("")
+        self.gesture_status.setWordWrap(True)
+        self.gesture_status.setAccessibleName("Gesture control status")
+        self.gesture_status.hide()
+
+        outer.addWidget(
+            self.gesture_status
+        )
+
+        self.set_gesture_control_running(False)
 
         # =====================================================
         # EVENTS SCROLL
@@ -556,6 +737,9 @@ class CustomPage(QWidget):
             )
 
             return False
+
+        if self.gesture_control_running:
+            self.gesture_control_stopped.emit()
 
         self.current_studio = found
 
@@ -925,15 +1109,15 @@ class CustomPage(QWidget):
                 100
             )
 
-            empty.setStyleSheet("""
-                QLabel {
-                    color: #71717A;
-                    background: #111116;
-                    border: 1px solid #24242D;
+            empty.setStyleSheet(f"""
+                QLabel {{
+                    color: {TEXT_MUTED};
+                    background: {SURFACE};
+                    border: 1px solid {BORDER};
                     border-radius: 12px;
                     padding: 30px;
                     font-size: 13px;
-                }
+                }}
             """)
 
             self.events_layout.insertWidget(
@@ -952,33 +1136,65 @@ class CustomPage(QWidget):
         ):
 
             card = QFrame()
+            card.setObjectName("EventCard")
 
-            card.setStyleSheet("""
-                QFrame {
-                    background: #111116;
-                    border: 1px solid #24242D;
+            card.setStyleSheet(f"""
+                QFrame#EventCard {{
+                    background-color: {SURFACE};
+                    border: 1px solid {BORDER};
                     border-radius: 12px;
-                }
+                }}
+                QFrame#EventCard:hover {{
+                    background-color: {SURFACE_HOVER};
+                    border: 1px solid rgba(124, 92, 255, 0.35);
+                }}
             """)
 
-            card_layout = QVBoxLayout(
+            card_layout = QHBoxLayout(
                 card
             )
 
             card_layout.setContentsMargins(
-                16,
                 14,
-                16,
-                14
+                12,
+                14,
+                12
             )
 
             card_layout.setSpacing(
-                8
+                14
             )
 
             # -------------------------------------------------
-            # EVENT NAME
+            # ACTION ICON BADGE
             # -------------------------------------------------
+
+            action_type = event.get(
+                "action",
+                "Unknown"
+            )
+
+            badge = _EventIconBadge(
+                action_type,
+                size=36
+            )
+
+            card_layout.addWidget(
+                badge,
+                0,
+                Qt.AlignmentFlag.AlignVCenter
+            )
+
+            # -------------------------------------------------
+            # INFO COLUMN
+            # -------------------------------------------------
+
+            info_col = QVBoxLayout()
+            info_col.setSpacing(3)
+
+            # Top: Event Name + Gesture Tag
+            name_row = QHBoxLayout()
+            name_row.setSpacing(8)
 
             event_name = QLabel(
                 event.get(
@@ -987,22 +1203,17 @@ class CustomPage(QWidget):
                 )
             )
 
-            event_name.setStyleSheet("""
-                QLabel {
-                    color: white;
-                    font-size: 15px;
-                    font-weight: 600;
-                    border: none;
-                }
+            event_name.setStyleSheet(f"""
+                color: {PRIMARY_TEXT};
+                font-size: 14px;
+                font-weight: 600;
+                border: none;
+                background: transparent;
             """)
 
-            card_layout.addWidget(
+            name_row.addWidget(
                 event_name
             )
-
-            # -------------------------------------------------
-            # GESTURE
-            # -------------------------------------------------
 
             gesture = event.get(
                 "gesture",
@@ -1010,89 +1221,114 @@ class CustomPage(QWidget):
             )
 
             if gesture:
-
-                gesture_label = QLabel(
-                    f"Gesture: {gesture}"
+                gesture_pill = QLabel(
+                    gesture
                 )
-
-                gesture_label.setStyleSheet("""
-                    QLabel {
-                        color: #A1A1AA;
-                        font-size: 12px;
-                        border: none;
-                    }
+                gesture_pill.setStyleSheet(f"""
+                    color: {WARNING};
+                    background-color: rgba(245, 158, 11, 0.12);
+                    border: 1px solid rgba(245, 158, 11, 0.25);
+                    border-radius: 4px;
+                    font-size: 10px;
+                    font-weight: 600;
+                    padding: 1px 6px;
                 """)
-
-                card_layout.addWidget(
-                    gesture_label
+                name_row.addWidget(
+                    gesture_pill
                 )
 
-            # -------------------------------------------------
-            # ACTION
-            # -------------------------------------------------
-
-            action = QLabel(
-                f"Action: {event.get('action', 'Unknown')}"
+            name_row.addStretch()
+            info_col.addLayout(
+                name_row
             )
 
-            action.setStyleSheet("""
-                QLabel {
-                    color: #A1A1AA;
-                    font-size: 12px;
-                    border: none;
-                }
+            # Action subtitle
+            action_label = QLabel(
+                action_type
+            )
+
+            action_label.setStyleSheet(f"""
+                color: {SECONDARY_TEXT};
+                font-size: 11px;
+                font-weight: 500;
+                border: none;
+                background: transparent;
             """)
 
-            card_layout.addWidget(
-                action
+            info_col.addWidget(
+                action_label
             )
 
-            # -------------------------------------------------
-            # VALUE
-            # -------------------------------------------------
-
-            value = event.get(
-                "value",
-                ""
+            # Value with truncation & tooltip
+            value = str(
+                event.get(
+                    "value",
+                    ""
+                )
             )
 
             if value:
+                if len(value) > 50:
+                    if "/" in value or "\\" in value:
+                        parts = value.replace("\\", "/").split("/")
+                        display_val = f".../{parts[-1]}" if parts[-1] else value[:45] + "..."
+                    else:
+                        display_val = value[:45] + "..."
+                else:
+                    display_val = value
 
                 value_label = QLabel(
-                    f"Value: {value}"
+                    display_val
                 )
-
-                value_label.setWordWrap(
-                    True
+                value_label.setToolTip(
+                    value
                 )
-
-                value_label.setStyleSheet("""
-                    QLabel {
-                        color: #71717A;
-                        font-size: 12px;
-                        border: none;
-                    }
+                value_label.setStyleSheet(f"""
+                    color: {TEXT_MUTED};
+                    font-size: 11px;
+                    font-family: "Consolas", "Courier New", monospace;
+                    border: none;
+                    background: transparent;
                 """)
-
-                card_layout.addWidget(
+                info_col.addWidget(
                     value_label
                 )
 
+            card_layout.addLayout(
+                info_col,
+                1
+            )
+
             # -------------------------------------------------
-            # BUTTONS
+            # ACTION BUTTONS
             # -------------------------------------------------
 
             buttons = QHBoxLayout()
-
-            buttons.addStretch()
+            buttons.setSpacing(6)
 
             edit_button = QPushButton(
                 "Edit"
             )
-
+            edit_button.setFixedHeight(28)
             edit_button.setCursor(
                 Qt.CursorShape.PointingHandCursor
             )
+            edit_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgba(255, 255, 255, 0.04);
+                    color: {PRIMARY_TEXT};
+                    border: 1px solid {BORDER};
+                    border-radius: 6px;
+                    font-size: 11px;
+                    font-weight: 500;
+                    padding: 0px 10px;
+                }}
+                QPushButton:hover {{
+                    background-color: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    color: #FFFFFF;
+                }}
+            """)
 
             edit_button.clicked.connect(
                 lambda checked=False, i=index:
@@ -1106,21 +1342,27 @@ class CustomPage(QWidget):
             delete_button = QPushButton(
                 "Delete"
             )
-
+            delete_button.setFixedHeight(28)
             delete_button.setCursor(
                 Qt.CursorShape.PointingHandCursor
             )
 
-            delete_button.setStyleSheet("""
-                QPushButton {
-                    color: #F87171;
-                    background: transparent;
-                    border: none;
-                }
+            delete_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgba(239, 68, 68, 0.08);
+                    color: {ERROR};
+                    border: 1px solid rgba(239, 68, 68, 0.20);
+                    border-radius: 6px;
+                    font-size: 11px;
+                    font-weight: 500;
+                    padding: 0px 10px;
+                }}
 
-                QPushButton:hover {
+                QPushButton:hover {{
+                    background-color: rgba(239, 68, 68, 0.18);
+                    border: 1px solid rgba(239, 68, 68, 0.35);
                     color: #FCA5A5;
-                }
+                }}
             """)
 
             delete_button.clicked.connect(
@@ -1300,6 +1542,103 @@ class CustomPage(QWidget):
         self.back_requested.emit()
 
     # =========================================================
+    # GESTURE CONTROL
+    # =========================================================
+
+    def toggle_gesture_control(self):
+
+        if self.gesture_control_running:
+
+            self.gesture_control_stopped.emit()
+
+            return
+
+        with_gestures = [
+            event
+            for event in self.events
+            if isinstance(event, dict) and event.get("gesture")
+        ]
+
+        if not with_gestures:
+
+            QMessageBox.information(
+                self,
+                "No Gestures Yet",
+                "Edit an event and choose a gesture trigger for it, "
+                "then start gesture control."
+            )
+
+            return
+
+        # self.events is passed by reference, so events edited while
+        # gesture control is running take effect immediately.
+        self.gesture_control_started.emit({
+            "title": self.studio_name,
+            "events": self.events,
+        })
+
+    def set_gesture_control_running(self, running, message=None):
+
+        self.gesture_control_running = running
+
+        if running:
+
+            self.gesture_button.setText("Stop Gesture Control")
+
+            self.gesture_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgba(239, 68, 68, 0.10);
+                    color: {ERROR};
+                    border: 1px solid rgba(239, 68, 68, 0.25);
+                    border-radius: 8px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    padding: 0px 14px;
+                }}
+                QPushButton:hover {{
+                    background-color: rgba(239, 68, 68, 0.18);
+                }}
+            """)
+
+        else:
+
+            self.gesture_button.setText("Start Gesture Control")
+
+            self.gesture_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgba(255, 255, 255, 0.04);
+                    color: {PRIMARY_TEXT};
+                    border: 1px solid {BORDER};
+                    border-radius: 8px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    padding: 0px 14px;
+                }}
+                QPushButton:hover {{
+                    background-color: rgba(255, 255, 255, 0.08);
+                    border: 1px solid {PRIMARY};
+                }}
+            """)
+
+        if message:
+            self.show_gesture_feedback(message)
+        elif not running:
+            self.gesture_status.hide()
+
+    def show_gesture_feedback(self, message, color=None):
+
+        self.gesture_status.setText(message)
+
+        self.gesture_status.setStyleSheet(f"""
+            color: {color or SECONDARY_TEXT};
+            font-size: 13px;
+            background: transparent;
+            border: none;
+        """)
+
+        self.gesture_status.show()
+
+    # =========================================================
     # BACK
     # =========================================================
 
@@ -1325,19 +1664,60 @@ class EventDialog(QDialog):
         )
 
         self.setWindowTitle(
-            "Event"
+            "Event Configuration"
         )
 
         self.setMinimumWidth(
-            500
+            520
         )
+
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 12px;
+            }}
+
+            QLabel {{
+                color: {PRIMARY_TEXT};
+                font-size: 12px;
+                font-weight: 600;
+            }}
+
+            QLineEdit,
+            QComboBox {{
+                background-color: {BG_DARK};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 8px 12px;
+                font-size: 13px;
+            }}
+
+            QLineEdit:focus,
+            QComboBox:focus {{
+                border: 1px solid {PRIMARY};
+            }}
+
+            QComboBox::drop-down {{
+                border: none;
+                width: 24px;
+            }}
+        """)
 
         layout = QVBoxLayout(
             self
         )
 
+        layout.setContentsMargins(
+            24,
+            24,
+            24,
+            24
+        )
+
         layout.setSpacing(
-            10
+            12
         )
 
         # =====================================================
@@ -1351,7 +1731,7 @@ class EventDialog(QDialog):
         )
 
         self.name_input = QLineEdit()
-
+        self.name_input.setFixedHeight(36)
         self.name_input.setPlaceholderText(
             "Example: Open VS Code"
         )
@@ -1366,15 +1746,36 @@ class EventDialog(QDialog):
 
         layout.addWidget(
             QLabel(
-                "Gesture (Optional)"
+                "Gesture Trigger (Optional)"
             )
         )
 
-        self.gesture_input = QLineEdit()
+        # A dropdown (not free text) so a typo can't silently stop the
+        # gesture from ever matching.
+        self.gesture_input = QComboBox()
+        self.gesture_input.setFixedHeight(36)
+        self.gesture_input.setAccessibleName("Gesture trigger")
 
-        self.gesture_input.setPlaceholderText(
-            "Example: ✋ Open Palm"
-        )
+        # Built-in gestures and the user's recorded ones.
+        try:
+            from backend.gestures.custom_gestures import CustomGestureStore
+            from backend.gestures.google_gesture_recognizer import (
+                BUILTIN_GESTURE_NAMES,
+            )
+
+            suggestions = (
+                list(BUILTIN_GESTURE_NAMES)
+                + CustomGestureStore().names()
+            )
+
+        except Exception as e:
+            print(f"⚠ Could not load gesture suggestions: {e}")
+            suggestions = []
+
+        self.gesture_input.addItem("No gesture", "")
+
+        for gesture_name in suggestions:
+            self.gesture_input.addItem(gesture_name, gesture_name)
 
         layout.addWidget(
             self.gesture_input
@@ -1386,11 +1787,12 @@ class EventDialog(QDialog):
 
         layout.addWidget(
             QLabel(
-                "Action"
+                "Action Type"
             )
         )
 
         self.action_combo = QComboBox()
+        self.action_combo.setFixedHeight(36)
 
         self.action_combo.addItems([
             "Open Application",
@@ -1411,14 +1813,15 @@ class EventDialog(QDialog):
 
         layout.addWidget(
             QLabel(
-                "Value"
+                "Target Value / Path"
             )
         )
 
         value_row = QHBoxLayout()
+        value_row.setSpacing(8)
 
         self.value_input = QLineEdit()
-
+        self.value_input.setFixedHeight(36)
         self.value_input.setPlaceholderText(
             "Application path, file path, URL, hotkey, etc."
         )
@@ -1431,10 +1834,25 @@ class EventDialog(QDialog):
         self.browse_button = QPushButton(
             "📁 Browse"
         )
-
+        self.browse_button.setFixedHeight(36)
         self.browse_button.setCursor(
             Qt.CursorShape.PointingHandCursor
         )
+        self.browse_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: rgba(255, 255, 255, 0.04);
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 0px 14px;
+                font-size: 12px;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+            }}
+        """)
 
         self.browse_button.clicked.connect(
             self.browse_file
@@ -1453,36 +1871,60 @@ class EventDialog(QDialog):
         # =====================================================
 
         self.file_hint = QLabel(
-            "Browse lets you select a file or application from Windows File Explorer."
+            "Browse lets you select a file or application directly from Windows File Explorer."
         )
 
         self.file_hint.setWordWrap(
             True
         )
 
-        self.file_hint.setStyleSheet("""
-            QLabel {
-                color: #71717A;
+        self.file_hint.setStyleSheet(f"""
+            QLabel {{
+                color: {TEXT_MUTED};
                 font-size: 11px;
                 border: none;
-            }
+                background: transparent;
+            }}
         """)
 
         layout.addWidget(
             self.file_hint
         )
 
+        layout.addSpacing(6)
+
         # =====================================================
         # BUTTONS
         # =====================================================
 
         buttons = QHBoxLayout()
+        buttons.setSpacing(10)
 
         buttons.addStretch()
 
         cancel = QPushButton(
             "Cancel"
         )
+        cancel.setFixedHeight(34)
+        cancel.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        cancel.setStyleSheet(f"""
+            QPushButton {{
+                background-color: rgba(255, 255, 255, 0.04);
+                color: {SECONDARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 0px 16px;
+                font-size: 12px;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                color: {PRIMARY_TEXT};
+            }}
+        """)
 
         cancel.clicked.connect(
             self.reject
@@ -1491,16 +1933,28 @@ class EventDialog(QDialog):
         save = QPushButton(
             "Save Event"
         )
+        save.setFixedHeight(34)
+        save.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        save.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {PRIMARY};
+                color: #FFFFFF;
+                border: none;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 0px 18px;
+            }}
 
-        save.setStyleSheet("""
-            QPushButton {
-                background-color: #8B5CF6;
-                border: 1px solid #A78BFA;
-            }
+            QPushButton:hover {{
+                background-color: {PRIMARY_HOVER};
+            }}
 
-            QPushButton:hover {
-                background-color: #7C3AED;
-            }
+            QPushButton:pressed {{
+                background-color: {PRIMARY_PRESSED};
+            }}
         """)
 
         save.clicked.connect(
@@ -1532,7 +1986,7 @@ class EventDialog(QDialog):
                 )
             )
 
-            self.gesture_input.setText(
+            self.set_gesture(
                 event.get(
                     "gesture",
                     ""
@@ -1562,6 +2016,27 @@ class EventDialog(QDialog):
                     )
                 )
             )
+
+    # =========================================================
+    # GESTURE SELECTION
+    # =========================================================
+
+    def set_gesture(self, gesture):
+
+        index = self.gesture_input.findData(gesture or "")
+
+        if index < 0:
+
+            # Keep a gesture that no longer exists (e.g. a deleted custom
+            # gesture) visible instead of silently dropping it.
+            self.gesture_input.addItem(f"{gesture} (not found)", gesture)
+            index = self.gesture_input.count() - 1
+
+        self.gesture_input.setCurrentIndex(index)
+
+    def selected_gesture(self):
+
+        return self.gesture_input.currentData() or ""
 
     # =========================================================
     # BROWSE FILE
@@ -1607,8 +2082,6 @@ class EventDialog(QDialog):
 
         value = self.value_input.text().strip()
 
-        gesture = self.gesture_input.text().strip()
-
         # -----------------------------------------------------
         # VALIDATION
         # -----------------------------------------------------
@@ -1643,7 +2116,7 @@ class EventDialog(QDialog):
 
         return {
             "name": self.name_input.text().strip(),
-            "gesture": self.gesture_input.text().strip(),
+            "gesture": self.selected_gesture(),
             "action": self.action_combo.currentText(),
             "value": self.value_input.text().strip()
         }

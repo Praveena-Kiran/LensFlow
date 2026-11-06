@@ -12,7 +12,24 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.pages.studio_page import StudioPage
+from frontend.components.gesture_recorder_dialog import GestureRecorderDialog
+from frontend.components.gesture_test_dialog import GestureTestDialog
+from frontend.styles.theme import (
+    BG_DARK,
+    SURFACE,
+    SURFACE_HOVER,
+    BORDER,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_PRESSED,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+    ERROR,
+)
 from backend.profile_manager import ProfileManager
+from backend.gestures.custom_gestures import CustomGestureStore
+from backend.gestures.google_gesture_recognizer import BUILTIN_GESTURE_NAMES
 
 
 class GesturePage(StudioPage):
@@ -52,13 +69,10 @@ class GesturePage(StudioPage):
         # Supported gestures
         # -----------------------------------------
 
-        self.available_gestures = [
-            "✋ Open Palm",
-            "✊ Fist",
-            "✌️ Peace",
-            "👍 Thumbs Up",
-            "👎 Thumbs Down",
-        ]
+        self.builtin_gestures = list(BUILTIN_GESTURE_NAMES)
+
+        # The user's own recorded gestures
+        self.custom_store = CustomGestureStore()
 
         # -----------------------------------------
         # Store UI labels
@@ -73,11 +87,12 @@ class GesturePage(StudioPage):
         # -----------------------------------------
 
         intro = QLabel(
-            "Assign gestures to actions and create your own controls."
+            "Gestures for Presentation Studio. To use gestures in your own "
+            "studios, choose one for each event inside that studio."
         )
 
-        intro.setStyleSheet("""
-            color: #9CA3AF;
+        intro.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 14px;
         """)
 
@@ -111,33 +126,333 @@ class GesturePage(StudioPage):
             Qt.PointingHandCursor
         )
 
-        add_button.setStyleSheet("""
-            QPushButton {
-                background: #2563EB;
+        add_button.setStyleSheet(f"""
+            QPushButton {{
+                background: {PRIMARY};
                 color: white;
                 border: none;
                 border-radius: 10px;
                 padding: 10px 18px;
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 600;
-            }
+            }}
 
-            QPushButton:hover {
-                background: #3B82F6;
-            }
+            QPushButton:hover {{
+                background: {PRIMARY_HOVER};
+            }}
+
+            QPushButton:pressed {{
+                background: {PRIMARY_PRESSED};
+            }}
         """)
 
         add_button.clicked.connect(
             self.add_gesture
         )
 
+        test_button = QPushButton(
+            "Test Gestures"
+        )
+
+        test_button.setCursor(
+            Qt.PointingHandCursor
+        )
+
+        test_button.setAccessibleName(
+            "Test gestures with the camera"
+        )
+
+        test_button.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255, 255, 255, 0.04);
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+                padding: 10px 18px;
+                font-size: 13px;
+                font-weight: 600;
+            }}
+
+            QPushButton:hover {{
+                background: {SURFACE_HOVER};
+                border: 1px solid {PRIMARY};
+            }}
+        """)
+
+        test_button.clicked.connect(
+            self.test_gestures
+        )
+
+        button_row = QHBoxLayout()
+
+        button_row.setSpacing(10)
+
+        button_row.addWidget(add_button)
+
+        button_row.addWidget(test_button)
+
+        button_row.addStretch()
+
+        self.content_layout.addLayout(
+            button_row
+        )
+
+        # -----------------------------------------
+        # Custom gestures
+        # -----------------------------------------
+
+        self._build_custom_section()
+
+        self.content_layout.addStretch()
+
+    # ==================================================
+    # AVAILABLE GESTURES (built-in + custom)
+    # ==================================================
+
+    @property
+    def available_gestures(self):
+
+        return self.builtin_gestures + self.custom_store.names()
+
+    # ==================================================
+    # CUSTOM GESTURES SECTION
+    # ==================================================
+
+    def _build_custom_section(self):
+
+        heading = QLabel("Your gestures")
+
+        heading.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 12px;
+            border: none;
+            background: transparent;
+        """)
+
+        self.content_layout.addWidget(heading)
+
+        info = QLabel(
+            "Record any hand pose that's comfortable for you, "
+            "then assign it to an action above."
+        )
+
+        info.setWordWrap(True)
+
+        info.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
+            font-size: 14px;
+            border: none;
+            background: transparent;
+        """)
+
+        self.content_layout.addWidget(info)
+
+        self.custom_list_layout = QVBoxLayout()
+
+        self.custom_list_layout.setSpacing(10)
+
+        self.content_layout.addLayout(
+            self.custom_list_layout
+        )
+
+        record_button = QPushButton(
+            "+ Record Custom Gesture"
+        )
+
+        record_button.setCursor(
+            Qt.PointingHandCursor
+        )
+
+        record_button.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255, 255, 255, 0.04);
+                color: {PRIMARY_TEXT};
+                border: 1px solid {PRIMARY};
+                border-radius: 10px;
+                padding: 10px 18px;
+                font-size: 14px;
+                font-weight: 600;
+            }}
+
+            QPushButton:hover {{
+                background: {SURFACE_HOVER};
+            }}
+        """)
+
+        record_button.clicked.connect(
+            self.record_custom_gesture
+        )
+
         self.content_layout.addWidget(
-            add_button,
+            record_button,
             0,
             Qt.AlignLeft
         )
 
-        self.content_layout.addStretch()
+        self.refresh_custom_list()
+
+    def refresh_custom_list(self):
+
+        while self.custom_list_layout.count():
+
+            widget = self.custom_list_layout.takeAt(0).widget()
+
+            if widget:
+                widget.deleteLater()
+
+        self.custom_store.load()
+
+        if not self.custom_store.gestures:
+
+            empty = QLabel("No custom gestures yet.")
+
+            empty.setStyleSheet(f"""
+                color: {TEXT_MUTED};
+                font-size: 13px;
+                border: none;
+                background: transparent;
+        """)
+
+            self.custom_list_layout.addWidget(empty)
+
+            return
+
+        for gesture in self.custom_store.gestures:
+
+            self.create_custom_card(gesture)
+
+    def create_custom_card(self, gesture):
+
+        name = gesture["name"]
+
+        card = QFrame()
+
+        card.setStyleSheet(f"""
+            QFrame {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 12px;
+            }}
+        """)
+
+        layout = QHBoxLayout(card)
+
+        layout.setContentsMargins(18, 14, 18, 14)
+
+        name_label = QLabel(name)
+
+        name_label.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            background: transparent;
+        """)
+
+        action = self.gesture_map.get(name)
+
+        detail = (
+            f"→  {action}"
+            if action
+            else "Not assigned yet"
+        )
+
+        detail_label = QLabel(detail)
+
+        detail_label.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
+            font-size: 14px;
+            border: none;
+            background: transparent;
+        """)
+
+        delete_button = QPushButton("Delete")
+
+        delete_button.setCursor(Qt.PointingHandCursor)
+
+        delete_button.setAccessibleName(f"Delete gesture {name}")
+
+        delete_button.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255, 255, 255, 0.04);
+                color: {ERROR};
+                border: none;
+                border-radius: 8px;
+                padding: 7px 14px;
+            }}
+
+            QPushButton:hover {{
+                background: rgba(239, 68, 68, 0.12);
+            }}
+        """)
+
+        delete_button.clicked.connect(
+            lambda checked=False, n=name:
+            self.delete_custom_gesture(n)
+        )
+
+        layout.addWidget(name_label)
+        layout.addStretch()
+        layout.addWidget(detail_label)
+        layout.addStretch()
+        layout.addWidget(delete_button)
+
+        self.custom_list_layout.addWidget(card)
+
+    def test_gestures(self):
+
+        dialog = GestureTestDialog(
+            gesture_map=self.gesture_map,
+            store=self.custom_store,
+            parent=self,
+        )
+
+        dialog.exec()
+
+    def record_custom_gesture(self):
+
+        dialog = GestureRecorderDialog(
+            self.builtin_gestures,
+            store=self.custom_store,
+            parent=self,
+        )
+
+        if dialog.exec() and dialog.saved_name:
+
+            self.refresh_custom_list()
+
+            self.status_label.setText(
+                f'Status: Saved "{dialog.saved_name}". '
+                "Use + Add Gesture to assign it to an action."
+            )
+
+    def delete_custom_gesture(self, name):
+
+        assigned = name in self.gesture_map
+
+        message = f'Delete your "{name}" gesture?'
+
+        if assigned:
+            message += "\n\nIts action assignment will be removed too."
+
+        answer = QMessageBox.question(
+            self,
+            "Delete Gesture",
+            message,
+        )
+
+        if answer != QMessageBox.Yes:
+            return
+
+        self.custom_store.delete(name)
+
+        if assigned:
+            self.profile_manager.remove_gesture(name)
+            self.refresh_gesture_list()
+
+        self.refresh_custom_list()
 
     # ==================================================
     # REFRESH GESTURE LIST
@@ -178,6 +493,10 @@ class GesturePage(StudioPage):
                 action
             )
 
+        # Custom gesture cards show their assigned action, so keep them in sync.
+        if hasattr(self, "custom_list_layout"):
+            self.refresh_custom_list()
+
     # ==================================================
     # CREATE GESTURE CARD
     # ==================================================
@@ -190,11 +509,12 @@ class GesturePage(StudioPage):
 
         card = QFrame()
 
-        card.setStyleSheet("""
-            QFrame {
-                background: #20202A;
+        card.setStyleSheet(f"""
+            QFrame {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
                 border-radius: 12px;
-            }
+            }}
         """)
 
         layout = QHBoxLayout(card)
@@ -212,10 +532,12 @@ class GesturePage(StudioPage):
             gesture
         )
 
-        gesture_label.setStyleSheet("""
-            color: white;
+        gesture_label.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
             font-size: 15px;
             font-weight: 600;
+            border: none;
+            background: transparent;
         """)
 
         # Action
@@ -224,9 +546,11 @@ class GesturePage(StudioPage):
             "→  " + action
         )
 
-        action_label.setStyleSheet("""
-            color: #9CA3AF;
+        action_label.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 14px;
+            border: none;
+            background: transparent;
         """)
 
         self.action_labels[
@@ -243,18 +567,22 @@ class GesturePage(StudioPage):
             Qt.PointingHandCursor
         )
 
-        edit_button.setStyleSheet("""
-            QPushButton {
-                background: #2A2A36;
-                color: white;
-                border: none;
+        edit_button.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255, 255, 255, 0.04);
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
                 border-radius: 8px;
                 padding: 7px 14px;
-            }
+                font-size: 12px;
+                font-weight: 500;
+            }}
 
-            QPushButton:hover {
-                background: #363646;
-            }
+            QPushButton:hover {{
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                color: #FFFFFF;
+            }}
         """)
 
         edit_button.clicked.connect(
@@ -311,6 +639,38 @@ class GesturePage(StudioPage):
             220
         )
 
+        dialog.setStyleSheet(f"""
+            QDialog {{
+                background-color: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 12px;
+            }}
+            QLabel {{
+                color: {PRIMARY_TEXT};
+            }}
+            QComboBox {{
+                background-color: {BG_DARK};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 8px 12px;
+            }}
+            QComboBox:focus {{
+                border: 1px solid {PRIMARY};
+            }}
+            QDialogButtonBox QPushButton {{
+                background-color: {PRIMARY};
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 6px 16px;
+                font-weight: 600;
+            }}
+            QDialogButtonBox QPushButton:hover {{
+                background-color: {PRIMARY_HOVER};
+            }}
+        """)
+
         layout = QVBoxLayout(
             dialog
         )
@@ -321,8 +681,8 @@ class GesturePage(StudioPage):
             f"Gesture: {gesture}"
         )
 
-        gesture_label.setStyleSheet("""
-            color: white;
+        gesture_label.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
             font-size: 15px;
             font-weight: 600;
         """)
@@ -337,8 +697,8 @@ class GesturePage(StudioPage):
             "Action:"
         )
 
-        action_label.setStyleSheet("""
-            color: #9CA3AF;
+        action_label.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 13px;
         """)
 
@@ -415,6 +775,8 @@ class GesturePage(StudioPage):
                     "→  " + new_action
                 )
 
+            self.refresh_custom_list()
+
     # ==================================================
     # ADD GESTURE
     # ==================================================
@@ -432,6 +794,38 @@ class GesturePage(StudioPage):
             240
         )
 
+        dialog.setStyleSheet(f"""
+            QDialog {{
+                background-color: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 12px;
+            }}
+            QLabel {{
+                color: {PRIMARY_TEXT};
+            }}
+            QComboBox {{
+                background-color: {BG_DARK};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 8px 12px;
+            }}
+            QComboBox:focus {{
+                border: 1px solid {PRIMARY};
+            }}
+            QDialogButtonBox QPushButton {{
+                background-color: {PRIMARY};
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 6px 16px;
+                font-weight: 600;
+            }}
+            QDialogButtonBox QPushButton:hover {{
+                background-color: {PRIMARY_HOVER};
+            }}
+        """)
+
         layout = QVBoxLayout(
             dialog
         )
@@ -442,8 +836,8 @@ class GesturePage(StudioPage):
             "Gesture:"
         )
 
-        gesture_label.setStyleSheet("""
-            color: #9CA3AF;
+        gesture_label.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 13px;
         """)
 
@@ -476,8 +870,8 @@ class GesturePage(StudioPage):
             "Action:"
         )
 
-        action_label.setStyleSheet("""
-            color: #9CA3AF;
+        action_label.setStyleSheet(f"""
+            color: {SECONDARY_TEXT};
             font-size: 13px;
         """)
 
@@ -520,8 +914,10 @@ class GesturePage(StudioPage):
 
             QMessageBox.information(
                 self,
-                "No Gestures Available",
-                "All supported gestures are already configured."
+                "All Gestures Assigned",
+                "Every available gesture already has an action.\n\n"
+                "Use \"+ Record Custom Gesture\" below to teach "
+                "LensFlow a new one."
             )
 
             return

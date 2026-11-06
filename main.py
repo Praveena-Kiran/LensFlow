@@ -7,6 +7,17 @@ Main application window.
 import sys
 import os
 
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -22,6 +33,7 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import (
     Qt,
+    Slot,
     QFile,
     QTextStream,
     QThread,
@@ -37,9 +49,19 @@ from frontend.pages.presentation_page import PresentationPage
 from frontend.pages.coding_page import CodingPage
 from frontend.pages.gesture_page import GesturePage
 from frontend.pages.custom_page import CustomPage
+from frontend.styles.theme import (
+    BG_DARK,
+    SURFACE,
+    BORDER,
+    PRIMARY,
+    PRIMARY_HOVER,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+)
 
 from backend.gestures.gesture_worker import GestureWorker
 from backend.automation.action_manager import ActionManager
+from frontend.styles.theme import ERROR
 
 
 # =============================================================
@@ -105,7 +127,7 @@ class MainWindow(QMainWindow):
         )
 
         self.setStyleSheet(
-            "background-color: #0B0B0F;"
+            "background-color: #08090D;"
         )
 
         # =====================================================
@@ -237,6 +259,11 @@ class MainWindow(QMainWindow):
 
         self.gesture_worker = None
 
+        self.custom_gesture_studio = ""
+
+        # Stopped camera threads that are still shutting down.
+        self._retiring_threads = []
+
         self.action_manager = (
             ActionManager()
         )
@@ -283,6 +310,18 @@ class MainWindow(QMainWindow):
 
         self.custom_page.studio_saved.connect(
             self.refresh_home
+        )
+
+        # =====================================================
+        # CUSTOM → GESTURE CONTROL
+        # =====================================================
+
+        self.custom_page.gesture_control_started.connect(
+            self.start_custom_gesture_control
+        )
+
+        self.custom_page.gesture_control_stopped.connect(
+            self.stop_gesture_worker
         )
 
         # =====================================================
@@ -417,31 +456,41 @@ class MainWindow(QMainWindow):
             400
         )
 
-        dialog.setStyleSheet("""
-            QDialog {
-                background: #16161E;
-            }
+        dialog.setStyleSheet(f"""
+            QDialog {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+            }}
 
-            QLabel {
-                color: white;
+            QLabel {{
+                color: {PRIMARY_TEXT};
                 font-size: 13px;
-            }
+            }}
 
-            QLineEdit {
-                background: #20202A;
-                color: white;
-                border: 1px solid #363646;
+            QLineEdit {{
+                background: {BG_DARK};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
                 border-radius: 8px;
                 padding: 10px;
-            }
+            }}
 
-            QDialogButtonBox QPushButton {
-                background: #2563EB;
+            QLineEdit:focus {{
+                border: 1px solid {PRIMARY};
+            }}
+
+            QDialogButtonBox QPushButton {{
+                background: {PRIMARY};
                 color: white;
                 border: none;
                 border-radius: 8px;
                 padding: 8px 16px;
-            }
+                font-weight: 600;
+            }}
+
+            QDialogButtonBox QPushButton:hover {{
+                background: {PRIMARY_HOVER};
+            }}
         """)
 
         layout = QVBoxLayout(
@@ -713,9 +762,121 @@ class MainWindow(QMainWindow):
     # GESTURE WORKER
     # =============================================================
 
+    def start_custom_gesture_control(
+        self,
+        studio
+    ):
+
+        # Only one thing can use the camera; stop anything already running.
+        self.stop_gesture_worker()
+
+        self.custom_gesture_studio = studio.get("title", "")
+
+        self.start_gesture_worker(
+            "custom",
+            custom_studio=studio
+        )
+
+        if self.gesture_worker is None:
+            return
+
+        # Bound methods (not lambdas) so these run on the UI thread.
+        self.gesture_worker.custom_event_detected.connect(
+            self._on_custom_gesture_event
+        )
+
+        self.gesture_worker.gesture_detected.connect(
+            self._on_custom_gesture_seen
+        )
+
+        self.gesture_worker.status_changed.connect(
+            self._on_custom_gesture_status
+        )
+
+        self.gesture_worker.error.connect(
+            self._on_custom_gesture_error
+        )
+
+        self.custom_page.set_gesture_control_running(
+            True,
+            "Starting camera…"
+        )
+
+    @Slot(dict)
+    def _on_custom_gesture_event(
+        self,
+        event
+    ):
+
+        gesture = event.get("gesture", "")
+        name = event.get("name", "event")
+
+        print(
+            f"🎯 {gesture} → {name} "
+            f"({self.custom_gesture_studio})"
+        )
+
+        try:
+
+            self.action_manager.flow_manager.execute_custom_event(
+                event
+            )
+
+        except Exception as e:
+
+            print(f"❌ Event failed: {name}: {e}")
+
+            self.custom_page.show_gesture_feedback(
+                f"{gesture}  →  \"{name}\" failed: {e}",
+                ERROR
+            )
+
+            return
+
+        self.custom_page.show_gesture_feedback(
+            f"{gesture}  →  ran \"{name}\""
+        )
+
+    @Slot(str, float)
+    def _on_custom_gesture_seen(
+        self,
+        gesture,
+        confidence
+    ):
+
+        self.custom_page.show_gesture_feedback(
+            f"Saw {gesture} ({int(confidence * 100)}%)"
+        )
+
+    @Slot(str)
+    def _on_custom_gesture_status(
+        self,
+        status
+    ):
+
+        if status == "READY":
+
+            self.custom_page.show_gesture_feedback(
+                "Listening for gestures…"
+            )
+
+    @Slot(str)
+    def _on_custom_gesture_error(
+        self,
+        message
+    ):
+
+        self.stop_gesture_worker()
+
+        self.custom_page.set_gesture_control_running(
+            False,
+            f"⚠ {message}"
+        )
+
     def start_gesture_worker(
         self,
-        profile_name
+        profile_name,
+        custom_studio=None
     ):
 
         print(
@@ -737,7 +898,8 @@ class MainWindow(QMainWindow):
 
         self.gesture_worker = (
             GestureWorker(
-                profile_name
+                profile_name,
+                custom_studio=custom_studio
             )
         )
 
@@ -747,6 +909,14 @@ class MainWindow(QMainWindow):
 
         self.gesture_thread.started.connect(
             self.gesture_worker.run
+        )
+
+        # When the camera loop exits, end the thread's event loop too.
+        # Direct connection: quit() runs on the worker thread itself, so this
+        # works even while the UI thread is blocked waiting (closeEvent).
+        self.gesture_worker.finished.connect(
+            self.gesture_thread.quit,
+            Qt.ConnectionType.DirectConnection
         )
 
         self.gesture_worker.error.connect(
@@ -795,6 +965,8 @@ class MainWindow(QMainWindow):
 
         try:
 
+            # Ask the camera loop to finish. Called directly (not through a
+            # signal) because the worker's thread is busy inside run().
             self.gesture_worker.stop()
 
         except Exception as e:
@@ -803,9 +975,72 @@ class MainWindow(QMainWindow):
                 f"⚠ Could not stop gesture worker: {e}"
             )
 
+        # Don't block the UI waiting for the camera: on Windows releasing a
+        # webcam can take several seconds. Keep the old thread alive in
+        # `_retiring_threads` until it has really finished — destroying a
+        # QThread that is still running makes Qt abort the whole app (this
+        # was the Presentation Studio "Back" crash).
+        thread = self.gesture_thread
+        worker = self.gesture_worker
+
+        if thread is not None:
+
+            entry = (thread, worker)
+
+            self._retiring_threads.append(entry)
+
+            thread.finished.connect(
+                lambda e=entry: self._forget_thread(e)
+            )
+
+            if not thread.isRunning():
+                self._forget_thread(entry)
+
         self.gesture_worker = None
 
         self.gesture_thread = None
+
+        if self.custom_page.gesture_control_running:
+
+            self.custom_page.set_gesture_control_running(
+                False
+            )
+
+    def _forget_thread(
+        self,
+        entry
+    ):
+
+        if entry in self._retiring_threads:
+
+            self._retiring_threads.remove(entry)
+
+            entry[0].deleteLater()
+
+    # =============================================================
+    # WINDOW CLOSE
+    # =============================================================
+
+    def closeEvent(
+        self,
+        event
+    ):
+
+        # Let the camera thread finish before the app exits. Hide first so
+        # closing feels instant even if the webcam is slow to release.
+        self.hide()
+
+        self.stop_gesture_worker()
+
+        for thread, _worker in list(self._retiring_threads):
+
+            if not thread.wait(5000):
+
+                print(
+                    "⚠ Camera thread did not stop before exit."
+                )
+
+        super().closeEvent(event)
 
     # =============================================================
     # GESTURE ACTION

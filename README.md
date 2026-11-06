@@ -47,3 +47,48 @@ Clone the repository:
 ```bash
 git clone https://github.com/Praveena-Kiran/LensFlow.git
 cd LensFlow
+```
+
+Install the dependencies (a virtual environment is recommended):
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Run the app:
+
+```bash
+python main.py
+```
+
+### Manual hardware checks
+
+```bash
+python -m tools.webcam_gesture_check
+python -m tools.camera_preview_check
+```
+
+### Custom gestures
+
+Open **Gesture Studio → + Record Custom Gesture**, name the gesture and hold any
+comfortable hand pose for three short takes. LensFlow rejects poses that look
+like a built-in gesture or another of your gestures, so actions don't trigger by
+accident. Then use **+ Add Gesture** to assign it to an action.
+
+**Test Gestures** opens a live view showing what LensFlow recognises and what
+it would trigger, without running anything.
+
+To use gestures in your own studios, open the studio, pick a gesture for each
+event (built-in or your own), then press **Start Gesture Control**. Making the
+gesture runs that event.
+
+Your studios, settings and custom gestures are stored per user in
+`%APPDATA%\LensFlow` (Windows), so they survive app updates.
+
+### Tests
+
+```bash
+python -m unittest discover tests
+```
