@@ -8,16 +8,14 @@ from backend.gestures.google_gesture_recognizer import GoogleGestureRecognizer
 from backend.gestures.gesture_stabilizer import GestureStabilizer
 from backend.gestures.custom_gestures import CustomGestureMatcher
 from backend.profile_manager import ProfileManager
+from backend.automation.events import events_for_gesture, profile_events
 
 
 class GestureWorker(QObject):
 
     gesture_detected = Signal(str, float)
-    action_detected = Signal(str)
 
-    # NEW:
-    # Sends the complete custom event, including
-    # action + selected file path.
+    # An event to run: {"name", "gesture", "action", "value"}
     custom_event_detected = Signal(dict)
 
     status_changed = Signal(str)
@@ -48,19 +46,23 @@ class GestureWorker(QObject):
         self.custom_matcher = CustomGestureMatcher.from_store()
 
         # -----------------------------------------------------
-        # NORMAL PROFILE MODE
+        # EVENTS
         # -----------------------------------------------------
+        # A custom studio brings its own events; built-in studios use a
+        # profile, converted to the same event format. Custom studio events
+        # are the studio's own list, so edits made while running apply.
 
-        self.profile_manager = None
-        self.gesture_map = {}
+        if self.custom_studio is not None:
 
-        if self.custom_studio is None:
+            self.events = self.custom_studio.get("events", [])
 
-            self.profile_manager = ProfileManager()
-            self.profile_manager.load(profile_name)
+        else:
 
-            self.gesture_map = (
-                self.profile_manager.get_gesture_map()
+            profile_manager = ProfileManager()
+            profile_manager.load(profile_name)
+
+            self.events = profile_events(
+                profile_manager.current_profile
             )
 
     def _open_camera(self, attempts=4, delay=0.75):
@@ -182,55 +184,13 @@ class GestureWorker(QObject):
                 confidence
             )
 
-            # =================================================
-            # CUSTOM STUDIO MODE
-            # =================================================
+            # Every studio is a list of events; run the ones this
+            # gesture triggers (see backend/automation/events.py).
+            for event in events_for_gesture(self.events, confirmed_gesture):
 
-            if self.custom_studio is not None:
+                print("🎯 Event matched:", event.get("name"))
 
-                events = self.custom_studio.get(
-                    "events",
-                    []
-                )
-
-                for event in events:
-
-                    event_gesture = event.get(
-                        "gesture",
-                        ""
-                    )
-
-                    if (
-                        event_gesture
-                        == confirmed_gesture
-                    ):
-
-                        print(
-                            "🎯 Custom event matched:",
-                            event.get("name")
-                        )
-
-                        self.custom_event_detected.emit(
-                            event
-                        )
-
-                        break
-
-                continue
-
-            # =================================================
-            # NORMAL PROFILE MODE
-            # =================================================
-
-            action = self.gesture_map.get(
-                confirmed_gesture
-            )
-
-            if action:
-
-                self.action_detected.emit(
-                    action
-                )
+                self.custom_event_detected.emit(event)
 
     @Slot()
     def stop(self):

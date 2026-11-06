@@ -2,9 +2,11 @@ import json
 import os
 import subprocess
 import platform
+import time
 
 from backend.paths import user_config_path
 from backend.automation.app_launcher import launch_app
+from backend.automation.events import parse_hotkey, powerpoint_command
 
 from .actions.launch_action import LaunchAction
 from .actions.wait_action import WaitAction
@@ -68,87 +70,64 @@ class FlowManager:
                 )
 
     # =========================================================
-    # CUSTOM STUDIO EVENTS
+    # EVENTS (custom studios and converted profiles)
     # =========================================================
 
     def execute_custom_event(self, event):
+        """
+        Run one event (see backend/automation/events.py).
+        Raises an exception with a readable message if it fails.
+        """
 
         if not event:
-            print("⚠ No event supplied.")
-            return
+            raise ValueError("No event supplied.")
 
         action = event.get("action", "")
-        value = event.get("value", "")
+        value = str(event.get("value", "") or "").strip()
 
         print(
-            f"🚀 Custom Event: "
-            f"{event.get('name', 'Unnamed Event')}"
+            f"🚀 Event: {event.get('name', 'Unnamed Event')} "
+            f"[{action}: {value}]"
         )
-
-        print(f"   Action: {action}")
-        print(f"   Value: {value}")
-
-        # -----------------------------------------------------
-        # OPEN FILE
-        # -----------------------------------------------------
 
         if action == "Open File":
-
-            if not value:
-                print("❌ No file selected.")
-                return
-
             self.open_file(value)
-            return
 
-        # -----------------------------------------------------
-        # OPEN WEBSITE
-        # -----------------------------------------------------
-
-        if action == "Open Website":
-
-            if not value:
-                print("❌ No website specified.")
-                return
-
+        elif action == "Open Website":
             self.open_website(value)
-            return
 
-        # -----------------------------------------------------
-        # LAUNCH APPLICATION
-        # -----------------------------------------------------
-
-        if action in ("Launch Application", "Open Application"):
-
-            if not value:
-                print("❌ No application specified.")
-                return
-
+        elif action in ("Launch Application", "Open Application"):
             self.launch_app(value)
-            return
 
-        # -----------------------------------------------------
-        # WAIT
-        # -----------------------------------------------------
+        elif action == "Hotkey":
+            self.actions["hotkey"].execute(
+                {"keys": parse_hotkey(value)}
+            )
 
-        if action == "Wait":
+        elif action == "PowerPoint":
+            self.actions["powerpoint"].execute(
+                {"command": powerpoint_command(value)},
+                self.apps
+            )
 
+        elif action == "Run Flow":
+            if value not in self.flows:
+                raise ValueError(f'No flow called "{value}".')
+            self.execute_flow(value)
+
+        elif action == "Wait":
             try:
                 seconds = float(value)
-                print(f"⏳ Waiting {seconds} seconds...")
-                import time
-                time.sleep(seconds)
-
             except ValueError:
-                print(
-                    f"❌ Invalid wait value: {value}"
-                )
+                raise ValueError(f'"{value}" is not a number of seconds.')
+            time.sleep(seconds)
 
-            return
+        elif action == "LensFlow":
+            # Arm/disarm is handled by the gesture worker itself.
+            pass
 
-        print(
-            f"⚠ Unknown custom action: {action}"
-        )
+        else:
+            raise ValueError(f'Unknown action "{action}".')
 
     # =========================================================
     # FILE HANDLING
@@ -157,62 +136,23 @@ class FlowManager:
     def open_file(self, file_path):
 
         if not file_path:
-            print("❌ File path is empty.")
-            return
+            raise ValueError("No file selected.")
 
         file_path = os.path.abspath(file_path)
 
         if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
 
-            print(
-                f"❌ File does not exist:\n"
-                f"{file_path}"
-            )
+        system = platform.system()
 
-            return
+        if system == "Windows":
+            os.startfile(file_path)
+        elif system == "Darwin":
+            subprocess.Popen(["open", file_path])
+        else:
+            subprocess.Popen(["xdg-open", file_path])
 
-        try:
-
-            system = platform.system()
-
-            if system == "Windows":
-
-                os.startfile(file_path)
-
-            elif system == "Darwin":
-
-                subprocess.Popen(
-                    ["open", file_path]
-                )
-
-            elif system == "Linux":
-
-                subprocess.Popen(
-                    ["xdg-open", file_path]
-                )
-
-            else:
-
-                print(
-                    f"❌ Unsupported operating system: "
-                    f"{system}"
-                )
-
-                return
-
-            print(
-                f"✅ Opened file:\n"
-                f"{file_path}"
-            )
-
-        except Exception as e:
-
-            print(
-                f"❌ Could not open file:\n"
-                f"{file_path}"
-            )
-
-            print(f"   Error: {e}")
+        print(f"✅ Opened file: {file_path}")
 
     # =========================================================
     # WEBSITE HANDLING
@@ -221,25 +161,17 @@ class FlowManager:
     def open_website(self, url):
 
         if not url:
-            print("❌ Website URL is empty.")
-            return
+            raise ValueError("No website given.")
 
-        try:
+        if "://" not in url:
+            url = "https://" + url
 
-            import webbrowser
+        import webbrowser
 
-            webbrowser.open(url)
+        if not webbrowser.open(url):
+            raise RuntimeError(f"Could not open {url}")
 
-            print(
-                f"✅ Opened website: {url}"
-            )
-
-        except Exception as e:
-
-            print(
-                f"❌ Could not open website: "
-                f"{e}"
-            )
+        print(f"✅ Opened website: {url}")
 
     # =========================================================
     # APP LAUNCHING

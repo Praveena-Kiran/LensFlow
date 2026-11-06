@@ -5,6 +5,7 @@ Main application window.
 """
 
 import sys
+import time
 import os
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -260,7 +261,13 @@ class MainWindow(QMainWindow):
 
         self.gesture_worker = None
 
-        self.custom_gesture_studio = ""
+        # Which studio page started the gesture worker ("custom",
+        # "presentation", ...) and its name, for status messages.
+        self.gesture_context = None
+
+        self.gesture_studio_name = ""
+
+        self._last_event_run = {}
 
         # Stopped camera threads that are still shutting down.
         self._retiring_threads = []
@@ -768,111 +775,19 @@ class MainWindow(QMainWindow):
         studio
     ):
 
-        # Only one thing can use the camera; stop anything already running.
-        self.stop_gesture_worker()
-
-        self.custom_gesture_studio = studio.get("title", "")
-
         self.start_gesture_worker(
             "custom",
             custom_studio=studio
         )
 
-        if self.gesture_worker is None:
-            return
+    # =============================================================
+    # GESTURE WORKER
+    # =============================================================
+    # One worker for every studio. It emits events (see
+    # backend/automation/events.py); _on_gesture_event runs them and
+    # status goes to whichever studio page started the worker.
 
-        # Bound methods (not lambdas) so these run on the UI thread.
-        self.gesture_worker.custom_event_detected.connect(
-            self._on_custom_gesture_event
-        )
-
-        self.gesture_worker.gesture_detected.connect(
-            self._on_custom_gesture_seen
-        )
-
-        self.gesture_worker.status_changed.connect(
-            self._on_custom_gesture_status
-        )
-
-        self.gesture_worker.error.connect(
-            self._on_custom_gesture_error
-        )
-
-        self.custom_page.set_gesture_control_running(
-            True,
-            "Starting camera…"
-        )
-
-    @Slot(dict)
-    def _on_custom_gesture_event(
-        self,
-        event
-    ):
-
-        gesture = event.get("gesture", "")
-        name = event.get("name", "event")
-
-        print(
-            f"🎯 {gesture} → {name} "
-            f"({self.custom_gesture_studio})"
-        )
-
-        try:
-
-            self.action_manager.flow_manager.execute_custom_event(
-                event
-            )
-
-        except Exception as e:
-
-            print(f"❌ Event failed: {name}: {e}")
-
-            self.custom_page.show_gesture_feedback(
-                f"{gesture}  →  \"{name}\" failed: {e}",
-                ERROR
-            )
-
-            return
-
-        self.custom_page.show_gesture_feedback(
-            f"{gesture}  →  ran \"{name}\""
-        )
-
-    @Slot(str, float)
-    def _on_custom_gesture_seen(
-        self,
-        gesture,
-        confidence
-    ):
-
-        self.custom_page.show_gesture_feedback(
-            f"Saw {gesture} ({int(confidence * 100)}%)"
-        )
-
-    @Slot(str)
-    def _on_custom_gesture_status(
-        self,
-        status
-    ):
-
-        if status == "READY":
-
-            self.custom_page.show_gesture_feedback(
-                "Listening for gestures…"
-            )
-
-    @Slot(str)
-    def _on_custom_gesture_error(
-        self,
-        message
-    ):
-
-        self.stop_gesture_worker()
-
-        self.custom_page.set_gesture_control_running(
-            False,
-            f"⚠ {message}"
-        )
+    EVENT_COOLDOWN = 0.8   # seconds before the same event can run again
 
     def start_gesture_worker(
         self,
@@ -880,29 +795,44 @@ class MainWindow(QMainWindow):
         custom_studio=None
     ):
 
+        # Only one thing can use the camera; stop anything already running.
+        self.stop_gesture_worker()
+
         print(
-            f"🎯 Starting gesture profile: "
-            f"{profile_name}"
+            f"🎯 Starting gestures: "
+            f"{custom_studio.get('title') if custom_studio else profile_name}"
         )
 
-        if self.gesture_thread is not None:
+        self.gesture_context = (
+            "custom" if custom_studio is not None else profile_name
+        )
 
-            if self.gesture_thread.isRunning():
+        self.gesture_studio_name = (
+            custom_studio.get("title", "")
+            if custom_studio is not None
+            else profile_name.title()
+        )
 
-                print(
-                    "⚠ Gesture worker already running."
-                )
+        self._last_event_run = {}
 
-                return
+        try:
 
-        self.gesture_thread = QThread()
-
-        self.gesture_worker = (
-            GestureWorker(
+            worker = GestureWorker(
                 profile_name,
                 custom_studio=custom_studio
             )
-        )
+
+        except Exception as e:
+
+            print(f"❌ Could not start gestures: {e}")
+
+            self._gesture_feedback(f"⚠ Could not start gestures: {e}", ERROR)
+
+            return
+
+        self.gesture_thread = QThread()
+
+        self.gesture_worker = worker
 
         self.gesture_worker.moveToThread(
             self.gesture_thread
@@ -920,33 +850,138 @@ class MainWindow(QMainWindow):
             Qt.ConnectionType.DirectConnection
         )
 
-        self.gesture_worker.error.connect(
-            lambda message:
-            print(
-                f"❌ Gesture Error: {message}"
-            )
+        # Bound methods (not lambdas) so these run on the UI thread.
+        self.gesture_worker.custom_event_detected.connect(
+            self._on_gesture_event
         )
 
         self.gesture_worker.gesture_detected.connect(
-            lambda gesture, confidence:
-            print(
-                f"Detected: {gesture} | "
-                f"Confidence: {confidence:.2f}"
-            )
-        )
-
-        self.gesture_worker.action_detected.connect(
-            self.handle_gesture_action
+            self._on_gesture_seen
         )
 
         self.gesture_worker.status_changed.connect(
-            lambda status:
-            print(
-                f"Gesture Status: {status}"
-            )
+            self._on_gesture_status
         )
 
+        self.gesture_worker.error.connect(
+            self._on_gesture_error
+        )
+
+        if self.gesture_context == "custom":
+            self.custom_page.set_gesture_control_running(
+                True,
+                "Starting camera…"
+            )
+        else:
+            self._gesture_feedback("Starting camera…")
+
         self.gesture_thread.start()
+
+    def _gesture_feedback(
+        self,
+        message,
+        color=None
+    ):
+
+        context = getattr(self, "gesture_context", None)
+
+        if context == "custom":
+            self.custom_page.show_gesture_feedback(message, color)
+
+        elif context == "presentation":
+            if color:
+                self.presentation_page._set_status(message, color)
+            else:
+                self.presentation_page._set_status(message)
+
+    @Slot(dict)
+    def _on_gesture_event(
+        self,
+        event
+    ):
+
+        gesture = event.get("gesture", "")
+        name = event.get("name", "event")
+
+        now = time.monotonic()
+
+        if now - self._last_event_run.get(name, 0) < self.EVENT_COOLDOWN:
+            return
+
+        self._last_event_run[name] = now
+
+        print(
+            f"🎯 {gesture} → {name} "
+            f"({self.gesture_studio_name})"
+        )
+
+        try:
+
+            self.action_manager.flow_manager.execute_custom_event(
+                event
+            )
+
+        except Exception as e:
+
+            print(f"❌ Event failed: {name}: {e}")
+
+            self._gesture_feedback(
+                f"{gesture}  →  {name} failed: {e}",
+                ERROR
+            )
+
+            return
+
+        self._gesture_feedback(
+            f"{gesture}  →  {name}"
+        )
+
+    @Slot(str, float)
+    def _on_gesture_seen(
+        self,
+        gesture,
+        confidence
+    ):
+
+        print(
+            f"Detected: {gesture} | "
+            f"Confidence: {confidence:.2f}"
+        )
+
+        if self.gesture_context == "custom":
+            self._gesture_feedback(
+                f"Saw {gesture} ({int(confidence * 100)}%)"
+            )
+
+    @Slot(str)
+    def _on_gesture_status(
+        self,
+        status
+    ):
+
+        if status == "READY":
+            self._gesture_feedback("Listening for gestures…")
+
+    @Slot(str)
+    def _on_gesture_error(
+        self,
+        message
+    ):
+
+        print(f"❌ Gesture Error: {message}")
+
+        context = self.gesture_context
+
+        self.stop_gesture_worker()
+
+        if context == "custom":
+            self.custom_page.set_gesture_control_running(
+                False,
+                f"⚠ {message}"
+            )
+        else:
+            self.gesture_context = context
+            self._gesture_feedback(f"⚠ {message}", ERROR)
 
     # =============================================================
     # STOP GESTURE WORKER
@@ -1001,6 +1036,8 @@ class MainWindow(QMainWindow):
 
         self.gesture_thread = None
 
+        self.gesture_context = None
+
         if self.custom_page.gesture_control_running:
 
             self.custom_page.set_gesture_control_running(
@@ -1043,23 +1080,6 @@ class MainWindow(QMainWindow):
 
         super().closeEvent(event)
 
-    # =============================================================
-    # GESTURE ACTION
-    # =============================================================
-
-    def handle_gesture_action(
-        self,
-        action
-    ):
-
-        print(
-            f"🎯 Gesture action: {action}"
-        )
-
-        self.action_manager.execute(
-            "",
-            action
-        )
 
 
 # =============================================================
