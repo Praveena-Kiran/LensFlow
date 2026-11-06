@@ -15,6 +15,8 @@ stays responsive. Only one thing can use the webcam at a time, so a studio
 that is already running must be stopped first.
 """
 
+import time
+
 import cv2
 
 from PySide6.QtCore import QObject, QThread, QTimer, Qt, Signal, Slot
@@ -47,6 +49,7 @@ from frontend.styles.theme import (
     TEXT_MUTED,
     WARNING,
 )
+from backend.gestures.motions import palm_point
 from backend.gestures.custom_gestures import (
     CustomGestureStore,
     normalize_landmarks,
@@ -84,6 +87,10 @@ class CameraPreviewWorker(QObject):
     # QImage for the preview, normalised pose (or None),
     # built-in gesture name (or None), built-in confidence
     frame_ready = Signal(QImage, object, object, float)
+
+    # Time (monotonic seconds) and palm sample (x, y, size) or None, for
+    # motion gestures. Emitted just before frame_ready.
+    hand_sample = Signal(float, object)
     error = Signal(str)
     finished = Signal()
 
@@ -130,6 +137,13 @@ class CameraPreviewWorker(QObject):
             frame = cv2.flip(frame, 1)
 
             builtin, confidence = recognizer.detect(frame)
+
+            h, w = frame.shape[:2]
+
+            self.hand_sample.emit(
+                time.monotonic(),
+                palm_point(recognizer.last_image_landmarks, w / h),
+            )
 
             vector = normalize_landmarks(
                 recognizer.last_landmarks,

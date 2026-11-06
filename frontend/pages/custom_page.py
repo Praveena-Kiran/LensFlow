@@ -1763,9 +1763,16 @@ class EventDialog(QDialog):
                 BUILTIN_GESTURE_NAMES,
             )
 
+            from backend.gestures.motions import (
+                BUILTIN_MOTION_NAMES,
+                MotionStore,
+            )
+
             suggestions = (
                 list(BUILTIN_GESTURE_NAMES)
                 + CustomGestureStore().names()
+                + list(BUILTIN_MOTION_NAMES)
+                + MotionStore().names()
             )
 
         except Exception as e:
