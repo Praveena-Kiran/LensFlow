@@ -40,6 +40,7 @@ from backend.paths import user_data_dir
 from backend.settings.settings_manager import SettingsManager
 from backend.settings import gesture_settings
 from backend.settings.gesture_settings import ARM_TIMEOUT_CHOICES, HOLD_TIME_CHOICES
+from backend.app_info import APP_NAME
 
 
 class SettingsPage(StudioPage):
@@ -54,7 +55,7 @@ class SettingsPage(StudioPage):
 
         super().__init__(
             title="Settings",
-            subtitle="Make LensFlow work the way you move.",
+            subtitle=f"Make {APP_NAME} work the way you move.",
             parent=parent,
         )
 
@@ -193,7 +194,75 @@ class SettingsPage(StudioPage):
             data_button,
         )
 
+        self._build_about()
+
         self.content_layout.addStretch()
+
+    # -----------------------------------------------------
+    # ABOUT
+    # -----------------------------------------------------
+
+    def _small_button(self, text, handler):
+        button = QPushButton(text)
+        button.setCursor(Qt.PointingHandCursor)
+        button.setStyleSheet(f"""
+            QPushButton {{
+                background: {OVERLAY_1}; color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER}; border-radius: 10px;
+                padding: 9px 16px; font-size: 13px; font-weight: 600;
+            }}
+            QPushButton:hover {{ border: 1px solid {PRIMARY}; }}
+        """)
+        button.clicked.connect(handler)
+        return button
+
+    def _build_about(self):
+
+        from backend.app_info import APP_NAME, VERSION
+
+        self._section("About")
+
+        self._row(
+            f"{APP_NAME} {VERSION}",
+            "Your camera is processed on this computer and never recorded or "
+            "uploaded. Gestures, notes and activity are stored only in your "
+            "data folder above.",
+            QWidget(),
+        )
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(10)
+        buttons.addWidget(self._small_button("Open log", self._open_log))
+        buttons.addWidget(self._small_button("Report a problem", self._report_problem))
+        buttons.addStretch()
+
+        self._row(
+            None,
+            "If something isn't working, the log helps explain why. Reporting "
+            "opens a GitHub issue; attach the log if you can.",
+            buttons,
+        )
+
+    def _open_log(self):
+        from backend.app_log import log_path
+        path = log_path()
+        if not os.path.exists(path):
+            open(path, "a").close()
+        self._open_path(path)
+
+    def _report_problem(self):
+        from urllib.parse import urlencode
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        from backend.app_info import APP_NAME, ISSUES_URL, VERSION
+
+        body = (
+            "**What happened?**\n\n\n"
+            "**What did you expect?**\n\n\n"
+            f"---\n{APP_NAME} {VERSION} on {platform.system()} {platform.release()}\n"
+            "(Settings → About → Open log, and attach lensflow.log if you can.)"
+        )
+        QDesktopServices.openUrl(QUrl(ISSUES_URL + "?" + urlencode({"body": body})))
 
     # -----------------------------------------------------
     # YOU
@@ -292,7 +361,7 @@ class SettingsPage(StudioPage):
 
         self.restart_row = QHBoxLayout()
 
-        self.restart_note = QLabel("Restart LensFlow to apply the new theme.")
+        self.restart_note = QLabel(f"Restart {APP_NAME} to apply the new theme.")
         self.restart_note.setStyleSheet(
             f"color: {SECONDARY_TEXT}; font-size: 13px; background: transparent;"
         )
@@ -431,7 +500,9 @@ class SettingsPage(StudioPage):
         self.arm_timeout.setEnabled(checked)
 
     def _open_data_folder(self):
-        path = user_data_dir()
+        self._open_path(user_data_dir())
+
+    def _open_path(self, path):
         if platform.system() == "Windows":
             os.startfile(path)
         elif platform.system() == "Darwin":

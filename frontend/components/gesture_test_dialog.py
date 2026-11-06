@@ -42,6 +42,7 @@ from frontend.styles.theme import (
 from backend.gestures.custom_gestures import CustomGestureMatcher, CustomGestureStore
 from backend.gestures.gesture_stabilizer import GestureStabilizer
 from backend.gestures.motions import MotionRecognizer
+from backend.app_info import APP_NAME
 
 
 MAX_LOG_ENTRIES = 5
@@ -108,7 +109,7 @@ class GestureTestDialog(QDialog):
         layout.addWidget(title)
 
         intro = QLabel(
-            "Make a gesture to see what LensFlow recognises. "
+            f"Make a gesture to see what {APP_NAME} recognises. "
             "Nothing runs here, so it's safe to experiment."
         )
         intro.setWordWrap(True)

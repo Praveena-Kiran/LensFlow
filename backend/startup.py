@@ -9,10 +9,11 @@ Other systems: not supported (the option is disabled in the UI).
 
 import os
 import sys
+from backend.app_info import APP_NAME
 
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
-VALUE_NAME = "LensFlow"
+VALUE_NAME = APP_NAME
 
 
 def is_supported():

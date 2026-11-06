@@ -47,6 +47,7 @@ from frontend.styles.theme import (
 from backend.paths import user_config_path
 from backend.routines import ActivityLog, RoutineStore, parse_time
 from backend.settings.user import display_name
+from backend.app_info import APP_NAME
 
 
 # Built-in studios and what they actually do. Shown instead of the saved
@@ -370,7 +371,7 @@ class HomePage(QWidget):
             when = "today" if at.date() == datetime.now().date() else at.strftime("%A")
             self.next_routine.setText(f"{verb} {r['target']} at {r['time']}, {when}")
         else:
-            self.next_routine.setText("None yet. LensFlow will suggest one when it spots a habit.")
+            self.next_routine.setText(f"None yet. {APP_NAME} will suggest one when it spots a habit.")
 
         while self.recent_layout.count():
             w = self.recent_layout.takeAt(0).widget()

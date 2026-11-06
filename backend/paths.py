@@ -23,6 +23,8 @@ import os
 import shutil
 import sys
 
+from backend.app_info import DATA_FOLDER
+
 
 APP_DIR = getattr(sys, "_MEIPASS", None) or os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
@@ -42,15 +44,15 @@ def _default_user_data_dir():
 
     if sys.platform == "win32":
         base = os.environ.get("APPDATA") or os.path.expanduser("~")
-        return os.path.join(base, "LensFlow")
+        return os.path.join(base, DATA_FOLDER)
 
     if sys.platform == "darwin":
         return os.path.expanduser(
-            "~/Library/Application Support/LensFlow"
+            f"~/Library/Application Support/{DATA_FOLDER}"
         )
 
     base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-    return os.path.join(base, "lensflow")
+    return os.path.join(base, DATA_FOLDER.lower())
 
 
 def user_data_dir():

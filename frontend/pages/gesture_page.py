@@ -37,6 +37,7 @@ from frontend.styles.theme import (
 from backend.profile_manager import ProfileManager
 from backend.gestures.custom_gestures import CustomGestureStore
 from backend.gestures.google_gesture_recognizer import BUILTIN_GESTURE_NAMES
+from backend.app_info import APP_NAME
 
 
 class GesturePage(StudioPage):
@@ -1002,7 +1003,7 @@ class GesturePage(StudioPage):
                 "All Gestures Assigned",
                 "Every available gesture already has an action.\n\n"
                 "Use \"+ Record Custom Gesture\" below to teach "
-                "LensFlow a new one."
+                f"{APP_NAME} a new one."
             )
 
             return

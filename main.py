@@ -38,9 +38,11 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import (
     Qt,
+    Signal,
     Slot,
     QFile,
     QTextStream,
+    QObject,
     QProcess,
     QThread,
     QTimer,
@@ -84,6 +86,9 @@ from backend.automation.action_manager import ActionManager
 from frontend.styles.theme import BG_DARK, ERROR, PRIMARY, global_stylesheet
 from frontend.components.backdrop import BackdropWidget
 from backend.paths import APP_DIR
+from backend import app_log
+from backend.app_info import VERSION
+from backend.app_info import APP_NAME
 
 
 # =============================================================
@@ -105,7 +110,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle(
-            "LensFlow"
+            APP_NAME
         )
 
         # =====================================================
@@ -1241,7 +1246,7 @@ class MainWindow(QMainWindow):
             if not self._told_about_tray:
                 self._told_about_tray = True
                 self.tray.showMessage(
-                    "LensFlow is still running",
+                    f"{APP_NAME} is still running",
                     "Your routines will run on time. Right-click the tray "
                     "icon to quit.",
                     QSystemTrayIcon.MessageIcon.Information,
@@ -1387,8 +1392,8 @@ class MainWindow(QMainWindow):
 
             answer = QMessageBox.question(
                 self,
-                "Keep LensFlow running?",
-                "Automations only run while LensFlow is open. Keep it running "
+                f"Keep {APP_NAME} running?",
+                f"Automations only run while {APP_NAME} is open. Keep it running "
                 "in the system tray when you close the window?",
             )
 
@@ -1441,7 +1446,7 @@ class MainWindow(QMainWindow):
 
             if self.tray is not None:
                 self.tray.showMessage(
-                    "LensFlow routine",
+                    f"{APP_NAME} routine",
                     f"Done: {routine['kind'].replace('studio', 'opened')} "
                     f"{routine['target']} ({routine['time']})",
                     QSystemTrayIcon.MessageIcon.Information,
@@ -1468,11 +1473,11 @@ class MainWindow(QMainWindow):
             return
 
         self.tray = QSystemTrayIcon(_app_icon(), self)
-        self.tray.setToolTip("LensFlow")
+        self.tray.setToolTip(APP_NAME)
 
         menu = QMenu(self)
 
-        open_action = QAction("Open LensFlow", self)
+        open_action = QAction(f"Open {APP_NAME}", self)
         open_action.triggered.connect(self.show_from_tray)
         menu.addAction(open_action)
 
@@ -1530,6 +1535,38 @@ def _load_stylesheet(
 
 
 # =============================================================
+# CRASH NOTICE
+# =============================================================
+
+class _CrashNotifier(QObject):
+    """Carries an uncaught error (from any thread) to the UI thread."""
+
+    crashed = Signal(object)
+
+    def __init__(self):
+        super().__init__()
+        self._shown = False
+        self.crashed.connect(self._show)
+
+    @Slot(object)
+    def _show(self, error):
+
+        if self._shown:
+            return
+
+        self._shown = True
+
+        QMessageBox.warning(
+            None,
+            f"{APP_NAME} hit a problem",
+            f"Something went wrong: {error}\n\n"
+            f"{APP_NAME} will keep running, but if things look wrong, "
+            "restart it. Details were saved to the log "
+            "(Settings → About → Open log).",
+        )
+
+
+# =============================================================
 # APP ICON
 # =============================================================
 
@@ -1567,6 +1604,16 @@ def main():
     app = QApplication(
         sys.argv
     )
+
+    app.setApplicationName(APP_NAME)
+    app.setApplicationVersion(VERSION)
+
+    # The packaged app has no console: keep a log, and tell the user (once)
+    # if something unexpected goes wrong instead of silently misbehaving.
+    # Kept on the app object so it lives as long as the app does.
+    app.crash_notifier = _CrashNotifier()
+    log_file = app_log.install(on_crash=app.crash_notifier.crashed.emit)
+    print(f"📝 Logging to {log_file}")
 
     app.setFont(
         QFont(

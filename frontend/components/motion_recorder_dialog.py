@@ -49,6 +49,7 @@ from backend.gestures.motions import (
     normalize_trajectory,
     review_motion,
 )
+from backend.app_info import APP_NAME
 
 
 TAKES_REQUIRED = 3
@@ -117,7 +118,7 @@ class MotionRecorderDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(14)
 
-        title = QLabel("Teach LensFlow a movement")
+        title = QLabel(f"Teach {APP_NAME} a movement")
         title.setStyleSheet(f"color: {PRIMARY_TEXT}; font-size: 20px; font-weight: 700;")
         layout.addWidget(title)
 
@@ -307,7 +308,7 @@ class MotionRecorderDialog(QDialog):
 
         self.state = "idle"
         self._set_status(
-            "LensFlow didn't see a movement. Keep your hand in view and "
+            f"{APP_NAME} didn't see a movement. Keep your hand in view and "
             "move a bit further or faster.",
             WARNING,
         )

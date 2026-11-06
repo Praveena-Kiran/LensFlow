@@ -25,6 +25,7 @@ from frontend.styles.theme import (
     TEXT_MUTED,
 )
 from backend.routines import ActivityLog
+from backend.app_info import APP_NAME
 
 
 RECENT_LIMIT = 50
@@ -48,7 +49,7 @@ class ActivityPage(StudioPage):
 
         super().__init__(
             title="History",
-            subtitle="What LensFlow has done. Stored only on this computer, for up to 90 days.",
+            subtitle=f"What {APP_NAME} has done. Stored only on this computer, for up to 90 days.",
             parent=parent,
         )
 
@@ -141,7 +142,7 @@ class ActivityPage(StudioPage):
         answer = QMessageBox.question(
             self,
             "Clear History",
-            "Delete everything LensFlow has recorded about what you open and "
+            f"Delete everything {APP_NAME} has recorded about what you open and "
             "when? Your automations are kept.",
         )
         if answer == QMessageBox.Yes:

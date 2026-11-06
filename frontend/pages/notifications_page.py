@@ -29,6 +29,7 @@ from frontend.styles.theme import (
 from backend import startup
 from backend.routines import ActivityLog, RoutineStore, describe_days, suggest_routines
 from backend.settings.settings_manager import SettingsManager
+from backend.app_info import APP_NAME
 
 
 def routine_text(routine):
@@ -50,7 +51,7 @@ class NotificationsPage(StudioPage):
 
         super().__init__(
             title="Notifications",
-            subtitle="Suggestions and the things LensFlow does for you.",
+            subtitle=f"Suggestions and the things {APP_NAME} does for you.",
             parent=parent,
         )
 
@@ -77,18 +78,18 @@ class NotificationsPage(StudioPage):
 
         self._heading("Running on time")
 
-        self.background = QCheckBox("Keep LensFlow running in the system tray when I close it")
+        self.background = QCheckBox(f"Keep {APP_NAME} running in the system tray when I close it")
         self.background.toggled.connect(
             lambda on: SettingsManager().set_setting("run_in_background", bool(on))
         )
         self.content_layout.addWidget(self.background)
 
-        self.at_login = QCheckBox("Start LensFlow when I sign in to Windows")
+        self.at_login = QCheckBox(f"Start {APP_NAME} when I sign in to Windows")
         self.at_login.setEnabled(startup.is_supported())
         self.at_login.toggled.connect(self._on_at_login)
         self.content_layout.addWidget(self.at_login)
 
-        note = QLabel("Automations only run while LensFlow is open, so keep one of these on.")
+        note = QLabel(f"Automations only run while {APP_NAME} is open, so keep one of these on.")
         note.setWordWrap(True)
         note.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 12px; background: transparent;")
         self.content_layout.addWidget(note)
@@ -168,7 +169,7 @@ class NotificationsPage(StudioPage):
         if not suggestions:
             self.suggestions_layout.addWidget(self._muted(
                 "Nothing new. When you do the same thing around the same time "
-                "on most days, LensFlow will offer to do it for you."
+                f"on most days, {APP_NAME} will offer to do it for you."
             ))
 
         for s in suggestions:
