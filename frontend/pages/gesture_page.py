@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
 from frontend.pages.studio_page import StudioPage
 from frontend.components.gesture_recorder_dialog import GestureRecorderDialog
 from frontend.components.gesture_test_dialog import GestureTestDialog
+from frontend.components.motion_recorder_dialog import MotionRecorderDialog
+from backend.gestures.motions import BUILTIN_MOTION_NAMES, MotionStore
 from frontend.styles.theme import (
     BG_DARK,
     SURFACE,
@@ -73,6 +75,9 @@ class GesturePage(StudioPage):
 
         # The user's own recorded gestures
         self.custom_store = CustomGestureStore()
+
+        # The user's own recorded motions
+        self.motion_store = MotionStore()
 
         # -----------------------------------------
         # Store UI labels
@@ -212,15 +217,58 @@ class GesturePage(StudioPage):
     @property
     def available_gestures(self):
 
-        return self.builtin_gestures + self.custom_store.names()
+        return (
+            self.builtin_gestures
+            + list(BUILTIN_MOTION_NAMES)
+            + self.custom_store.names()
+            + self.motion_store.names()
+        )
 
     # ==================================================
     # CUSTOM GESTURES SECTION
     # ==================================================
 
+    # The two kinds of user-recorded triggers shown on this page.
+    SECTIONS = {
+        "gesture": {
+            "title": "Your gestures",
+            "info": "Record any hand pose that's comfortable for you, "
+                    "then assign it to an action above.",
+            "button": "+ Record Custom Gesture",
+            "empty": "No custom gestures yet.",
+            "noun": "gesture",
+        },
+        "motion": {
+            "title": "Your motions",
+            "info": "Swipe left, right, up and down are built in. Record "
+                    "your own movements, like a wave or a circle.",
+            "button": "+ Record Custom Motion",
+            "empty": "No custom motions yet.",
+            "noun": "motion",
+        },
+    }
+
+    def _store(self, kind):
+        return self.custom_store if kind == "gesture" else self.motion_store
+
+    def _entries(self, kind):
+        store = self._store(kind)
+        return store.gestures if kind == "gesture" else store.motions
+
     def _build_custom_section(self):
 
-        heading = QLabel("Your gestures")
+        self.section_lists = {}
+
+        for kind in ("gesture", "motion"):
+            self._build_section(kind)
+
+        self.refresh_custom_list()
+
+    def _build_section(self, kind):
+
+        config = self.SECTIONS[kind]
+
+        heading = QLabel(config["title"])
 
         heading.setStyleSheet(f"""
             color: {PRIMARY_TEXT};
@@ -233,10 +281,7 @@ class GesturePage(StudioPage):
 
         self.content_layout.addWidget(heading)
 
-        info = QLabel(
-            "Record any hand pose that's comfortable for you, "
-            "then assign it to an action above."
-        )
+        info = QLabel(config["info"])
 
         info.setWordWrap(True)
 
@@ -249,21 +294,21 @@ class GesturePage(StudioPage):
 
         self.content_layout.addWidget(info)
 
-        self.custom_list_layout = QVBoxLayout()
+        list_layout = QVBoxLayout()
 
-        self.custom_list_layout.setSpacing(10)
+        list_layout.setSpacing(10)
 
-        self.content_layout.addLayout(
-            self.custom_list_layout
-        )
+        self.content_layout.addLayout(list_layout)
 
-        record_button = QPushButton(
-            "+ Record Custom Gesture"
-        )
+        self.section_lists[kind] = list_layout
 
-        record_button.setCursor(
-            Qt.PointingHandCursor
-        )
+        if kind == "gesture":
+            # Older code refers to this name.
+            self.custom_list_layout = list_layout
+
+        record_button = QPushButton(config["button"])
+
+        record_button.setCursor(Qt.PointingHandCursor)
 
         record_button.setStyleSheet(f"""
             QPushButton {{
@@ -283,49 +328,48 @@ class GesturePage(StudioPage):
 
         record_button.clicked.connect(
             self.record_custom_gesture
+            if kind == "gesture"
+            else self.record_custom_motion
         )
 
-        self.content_layout.addWidget(
-            record_button,
-            0,
-            Qt.AlignLeft
-        )
-
-        self.refresh_custom_list()
+        self.content_layout.addWidget(record_button, 0, Qt.AlignLeft)
 
     def refresh_custom_list(self):
 
-        while self.custom_list_layout.count():
+        for kind, list_layout in self.section_lists.items():
 
-            widget = self.custom_list_layout.takeAt(0).widget()
+            while list_layout.count():
 
-            if widget:
-                widget.deleteLater()
+                widget = list_layout.takeAt(0).widget()
 
-        self.custom_store.load()
+                if widget:
+                    widget.deleteLater()
 
-        if not self.custom_store.gestures:
+            self._store(kind).load()
 
-            empty = QLabel("No custom gestures yet.")
+            entries = self._entries(kind)
 
-            empty.setStyleSheet(f"""
-                color: {TEXT_MUTED};
-                font-size: 13px;
-                border: none;
-                background: transparent;
-        """)
+            if not entries:
 
-            self.custom_list_layout.addWidget(empty)
+                empty = QLabel(self.SECTIONS[kind]["empty"])
 
-            return
+                empty.setStyleSheet(f"""
+                    color: {TEXT_MUTED};
+                    font-size: 13px;
+                    border: none;
+                    background: transparent;
+                """)
 
-        for gesture in self.custom_store.gestures:
+                list_layout.addWidget(empty)
 
-            self.create_custom_card(gesture)
+                continue
 
-    def create_custom_card(self, gesture):
+            for entry in entries:
+                self.create_custom_card(entry, kind)
 
-        name = gesture["name"]
+    def create_custom_card(self, entry, kind="gesture"):
+
+        name = entry["name"]
 
         card = QFrame()
 
@@ -353,13 +397,9 @@ class GesturePage(StudioPage):
 
         action = self.gesture_map.get(name)
 
-        detail = (
-            f"→  {action}"
-            if action
-            else "Not assigned yet"
+        detail_label = QLabel(
+            f"→  {action}" if action else "Not assigned yet"
         )
-
-        detail_label = QLabel(detail)
 
         detail_label.setStyleSheet(f"""
             color: {SECONDARY_TEXT};
@@ -372,7 +412,9 @@ class GesturePage(StudioPage):
 
         delete_button.setCursor(Qt.PointingHandCursor)
 
-        delete_button.setAccessibleName(f"Delete gesture {name}")
+        delete_button.setAccessibleName(
+            f"Delete {self.SECTIONS[kind]['noun']} {name}"
+        )
 
         delete_button.setStyleSheet(f"""
             QPushButton {{
@@ -389,8 +431,8 @@ class GesturePage(StudioPage):
         """)
 
         delete_button.clicked.connect(
-            lambda checked=False, n=name:
-            self.delete_custom_gesture(n)
+            lambda checked=False, n=name, k=kind:
+            self.delete_custom(k, n)
         )
 
         layout.addWidget(name_label)
@@ -399,7 +441,7 @@ class GesturePage(StudioPage):
         layout.addStretch()
         layout.addWidget(delete_button)
 
-        self.custom_list_layout.addWidget(card)
+        self.section_lists[kind].addWidget(card)
 
     def test_gestures(self):
 
@@ -411,13 +453,46 @@ class GesturePage(StudioPage):
 
         dialog.exec()
 
+    def _taken_names(self):
+        """Names a new gesture or motion can't use."""
+        return (
+            self.builtin_gestures
+            + list(BUILTIN_MOTION_NAMES)
+            + self.custom_store.names()
+            + self.motion_store.names()
+        )
+
     def record_custom_gesture(self):
 
+        taken = [
+            n for n in self._taken_names()
+            if n not in self.custom_store.names()  # re-recording is allowed
+        ]
+
         dialog = GestureRecorderDialog(
-            self.builtin_gestures,
+            taken,
             store=self.custom_store,
             parent=self,
         )
+
+        self._after_recording(dialog)
+
+    def record_custom_motion(self):
+
+        taken = [
+            n for n in self._taken_names()
+            if n not in self.motion_store.names()
+        ]
+
+        dialog = MotionRecorderDialog(
+            taken_names=taken,
+            store=self.motion_store,
+            parent=self,
+        )
+
+        self._after_recording(dialog)
+
+    def _after_recording(self, dialog):
 
         if dialog.exec() and dialog.saved_name:
 
@@ -429,24 +504,29 @@ class GesturePage(StudioPage):
             )
 
     def delete_custom_gesture(self, name):
+        self.delete_custom("gesture", name)
+
+    def delete_custom(self, kind, name):
+
+        noun = self.SECTIONS[kind]["noun"]
 
         assigned = name in self.gesture_map
 
-        message = f'Delete your "{name}" gesture?'
+        message = f'Delete your "{name}" {noun}?'
 
         if assigned:
             message += "\n\nIts action assignment will be removed too."
 
         answer = QMessageBox.question(
             self,
-            "Delete Gesture",
+            f"Delete {noun.title()}",
             message,
         )
 
         if answer != QMessageBox.Yes:
             return
 
-        self.custom_store.delete(name)
+        self._store(kind).delete(name)
 
         if assigned:
             self.profile_manager.remove_gesture(name)
@@ -494,7 +574,7 @@ class GesturePage(StudioPage):
             )
 
         # Custom gesture cards show their assigned action, so keep them in sync.
-        if hasattr(self, "custom_list_layout"):
+        if hasattr(self, "section_lists"):
             self.refresh_custom_list()
 
     # ==================================================
