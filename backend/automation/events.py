@@ -17,6 +17,8 @@ Triggers are read through trigger_of(), so new kinds (motions, schedules)
 can be added in one place.
 """
 
+from backend.app_info import APP_NAME
+
 
 # Actions an event can run (shown in the event editor).
 ACTION_TYPES = [
@@ -64,8 +66,8 @@ PROFILE_ACTIONS = {
     "presentation_start": ("Start presentation", "PowerPoint", "start"),
     "presentation_end": ("End presentation", "PowerPoint", "end"),
     # Arming LensFlow with a gesture; see the accessibility settings.
-    "ACTIVATE": ("Activate LensFlow", "LensFlow", "activate"),
-    "DEACTIVATE": ("Deactivate LensFlow", "LensFlow", "deactivate"),
+    "ACTIVATE": (f"Activate {APP_NAME}", "LensFlow", "activate"),
+    "DEACTIVATE": (f"Deactivate {APP_NAME}", "LensFlow", "deactivate"),
 }
 
 

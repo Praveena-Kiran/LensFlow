@@ -26,6 +26,7 @@ from frontend.styles.theme import (
     SECONDARY_ACCENT,
     ERROR,
 )
+from backend.app_info import APP_NAME
 
 
 class WindowControlButton(QPushButton):
@@ -90,7 +91,7 @@ class TitleBar(QWidget):
         layout.addSpacing(10)
 
         # ── Title Brand Label ───────────────────────────────────────────
-        brand = QLabel("LensFlow")
+        brand = QLabel(APP_NAME)
         brand.setStyleSheet(f"""
             color: {PRIMARY_TEXT};
             font-size: 13px;

@@ -17,6 +17,7 @@ from frontend.styles.theme import (
     SECONDARY_TEXT,
     TEXT_MUTED,
 )
+from backend.app_info import APP_NAME
 
 
 class SuggestionDialog(QDialog):
@@ -51,7 +52,7 @@ class SuggestionDialog(QDialog):
 
         detail = QLabel(
             f"Spotted on {suggestion['hits']} of the last {suggestion['of']} days you "
-            "used LensFlow. What LensFlow learns stays on this computer."
+            f"used {APP_NAME}. What {APP_NAME} learns stays on this computer."
         )
         detail.setWordWrap(True)
         detail.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 12px;")

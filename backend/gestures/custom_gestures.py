@@ -30,6 +30,7 @@ import math
 import time
 
 from backend.paths import user_config_path
+from backend.app_info import APP_NAME
 
 
 NUM_LANDMARKS = 21
@@ -331,7 +332,7 @@ def review_recording(
 
     if builtin_hits / len(samples) > max_builtin_ratio:
         return False, (
-            "This pose looks like one of LensFlow's built-in gestures, so "
+            f"This pose looks like one of {APP_NAME}'s built-in gestures, so "
             "it could trigger the wrong action. Try a different pose."
         )
 

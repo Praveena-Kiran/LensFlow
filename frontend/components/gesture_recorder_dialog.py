@@ -56,6 +56,7 @@ from backend.gestures.custom_gestures import (
     normalize_landmarks,
     review_recording,
 )
+from backend.app_info import APP_NAME
 
 
 TAKES_REQUIRED = 3
@@ -282,7 +283,7 @@ class GestureRecorderDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(14)
 
-        title = QLabel("Teach LensFlow a new gesture")
+        title = QLabel(f"Teach {APP_NAME} a new gesture")
         title.setStyleSheet(f"color: {PRIMARY_TEXT}; font-size: 20px; font-weight: 700;")
         layout.addWidget(title)
 
