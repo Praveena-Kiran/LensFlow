@@ -51,6 +51,7 @@ from frontend.styles.theme import (
     WARNING,
 )
 from backend.gestures.motions import palm_point
+from backend.gestures.frame_pacer import FramePacer
 from backend.gestures.custom_gestures import (
     CustomGestureStore,
     normalize_landmarks,
@@ -143,7 +144,12 @@ class CameraPreviewWorker(QObject):
 
         self.running = True
 
+        pacer = FramePacer()
+
         while not self._stop_requested:
+
+            # Slow down while no hand is in view (saves CPU).
+            pacer.wait(recognizer.last_image_landmarks is not None)
 
             ok, frame = camera.read()
 
