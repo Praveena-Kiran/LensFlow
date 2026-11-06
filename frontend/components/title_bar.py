@@ -12,6 +12,11 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.styles.theme import (
+    PAGE_BG,
+    ON_PRIMARY,
+    OVERLAY_2,
+    OVERLAY_BORDER,
+    TEXT_STRONG,
     BG_DARK,
     BORDER,
     PRIMARY_TEXT,
@@ -38,8 +43,9 @@ class WindowControlButton(QPushButton):
         self.setText(symbol)
 
     def _apply_style(self):
-        hover_bg = ERROR if self.is_close else "rgba(255, 255, 255, 0.08)"
-        hover_fg = "#FFFFFF"
+        hover_bg = ERROR if self.is_close else OVERLAY_2
+        # White on the red close button; the theme's strongest text otherwise.
+        hover_fg = "#FFFFFF" if self.is_close else TEXT_STRONG
 
         self.setStyleSheet(f"""
             QPushButton {{
@@ -55,7 +61,7 @@ class WindowControlButton(QPushButton):
                 color: {hover_fg};
             }}
             QPushButton:pressed {{
-                background-color: {"#DC2626" if self.is_close else "rgba(255, 255, 255, 0.15)"};
+                background-color: {"#DC2626" if self.is_close else OVERLAY_BORDER};
             }}
         """)
 
@@ -69,7 +75,7 @@ class TitleBar(QWidget):
         self.setObjectName("TitleBar")
         self.setStyleSheet(f"""
             QWidget#TitleBar {{
-                background-color: {BG_DARK};
+                background-color: {PAGE_BG};
                 border-bottom: 1px solid {BORDER};
             }}
         """)
@@ -163,7 +169,7 @@ class _LFBadge(QWidget):
         p.setBrush(QBrush(grad))
         p.drawRoundedRect(0, 0, int(w), int(h), 6, 6)
 
-        p.setPen(QColor("#FFFFFF"))
+        p.setPen(QColor(ON_PRIMARY))
         font = QFont("Inter", 8)
         font.setWeight(QFont.Weight.Bold)
         p.setFont(font)

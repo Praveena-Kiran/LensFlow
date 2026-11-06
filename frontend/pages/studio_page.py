@@ -12,6 +12,11 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.styles.theme import (
+    PAGE_BG,
+    OVERLAY_1,
+    OVERLAY_2,
+    OVERLAY_BORDER,
+    TEXT_STRONG,
     BG_DARK,
     SURFACE,
     BORDER,
@@ -38,7 +43,7 @@ class StudioPage(QWidget):
 
         self.setStyleSheet(f"""
         QWidget#StudioPage {{
-            background-color: {BG_DARK};
+            background-color: {PAGE_BG};
         }}
 
         QFrame#ContentFrame {{
@@ -65,7 +70,7 @@ class StudioPage(QWidget):
 
         self.back_btn.setStyleSheet(f"""
         QPushButton {{
-            background: rgba(255, 255, 255, 0.04);
+            background: {OVERLAY_1};
             border: 1px solid {BORDER};
             border-radius: 8px;
             color: {PRIMARY_TEXT};
@@ -75,9 +80,9 @@ class StudioPage(QWidget):
         }}
 
         QPushButton:hover {{
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            color: #FFFFFF;
+            background: {OVERLAY_2};
+            border: 1px solid {OVERLAY_BORDER};
+            color: {TEXT_STRONG};
         }}
         """)
 

@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.styles.theme import (
+    ON_PRIMARY,
     BG_DARK,
     BORDER,
     ERROR,
@@ -243,7 +244,7 @@ class GestureRecorderDialog(QDialog):
             }}
             QPushButton:hover {{ background: {SURFACE_ACTIVE}; }}
             QPushButton:disabled {{ background: {SURFACE}; color: {TEXT_DISABLED}; }}
-            QPushButton#Primary {{ background: {PRIMARY}; border: none; color: white; }}
+            QPushButton#Primary {{ background: {PRIMARY}; border: none; color: {ON_PRIMARY}; }}
             QPushButton#Primary:hover {{ background: {PRIMARY_HOVER}; }}
             QPushButton#Primary:pressed {{ background: {PRIMARY_PRESSED}; }}
             QPushButton#Primary:disabled {{ background: {PRIMARY_MUTED}; color: {TEXT_MUTED}; }}

@@ -102,6 +102,12 @@ Activity is kept on this computer only, for at most 90 days.
 Routines need LensFlow to be running: on the History page, turn on *Keep LensFlow
 running in the system tray* and/or *Start LensFlow when I sign in to Windows*.
 
+### Themes
+
+**Settings → Appearance** offers Dark, Light, Jungle and Galaxy. Jungle and
+Galaxy paint a backdrop of leaves or stars behind the app. Every theme's text
+passes WCAG AA contrast (checked by `tests/test_themes.py`).
+
 ### Accessibility settings
 
 **Settings** (sidebar) adjusts recognition to how you move:

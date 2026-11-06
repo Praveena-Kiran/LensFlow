@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
 
 from frontend.pages.studio_page import StudioPage
 from frontend.styles.theme import (
+    ON_PRIMARY,
+    OVERLAY_2,
     SURFACE,
     SURFACE_HOVER,
     BORDER,
@@ -133,7 +135,7 @@ class CodingPage(StudioPage):
         self.launch_button.setStyleSheet(f"""
             QPushButton {{
                 background-color: {PRIMARY};
-                color: white;
+                color: {ON_PRIMARY};
                 border: none;
                 border-radius: 9px;
                 padding: 0 20px;
@@ -150,7 +152,7 @@ class CodingPage(StudioPage):
             }}
 
             QPushButton:disabled {{
-                background-color: rgba(255, 255, 255, 0.06);
+                background-color: {OVERLAY_2};
                 color: {TEXT_MUTED};
             }}
         """)

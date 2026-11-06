@@ -29,7 +29,7 @@ from frontend.components.right_panel import RightPanel
 from frontend.components.suggestion_banner import SuggestionBanner
 from frontend.layouts.flow_layout import FlowLayout
 from backend.paths import user_config_path
-from frontend.styles.theme import BG_DARK, PRIMARY_TEXT, SECONDARY_TEXT, BORDER, PRIMARY, PRIMARY_HOVER
+from frontend.styles.theme import BG_DARK, PRIMARY_TEXT, SECONDARY_TEXT, BORDER, PRIMARY, PRIMARY_HOVER, PAGE_BG
 
 
 class HomePage(QWidget):
@@ -69,7 +69,7 @@ class HomePage(QWidget):
 
         self.setStyleSheet(f"""
             QWidget#HomePage {{
-                background-color: {BG_DARK};
+                background-color: {PAGE_BG};
             }}
         """)
 
