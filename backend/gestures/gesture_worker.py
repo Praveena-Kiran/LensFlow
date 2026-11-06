@@ -6,6 +6,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 
 from backend.gestures.google_gesture_recognizer import GoogleGestureRecognizer
 from backend.gestures.gesture_stabilizer import GestureStabilizer
+from backend.gestures.frame_pacer import FramePacer
 from backend.gestures.custom_gestures import CustomGestureMatcher
 from backend.gestures.motions import MotionMatcher, MotionRecognizer, palm_point
 from backend.settings import gesture_settings
@@ -158,7 +159,12 @@ class GestureWorker(QObject):
 
         self.status_changed.emit("READY")
 
+        pacer = FramePacer()
+
         while not self._stop_requested:
+
+            # Slow down while no hand is in view (saves CPU).
+            pacer.wait(self.recognizer.last_image_landmarks is not None)
 
             success, frame = camera.read()
 
