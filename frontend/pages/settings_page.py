@@ -8,8 +8,9 @@ import os
 import platform
 import subprocess
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QHBoxLayout,
@@ -22,20 +23,28 @@ from PySide6.QtWidgets import (
 
 from frontend.pages.studio_page import StudioPage
 from frontend.styles.theme import (
+    OVERLAY_1,
     BORDER,
+    ON_PRIMARY,
     PRIMARY,
+    PRIMARY_HOVER,
     PRIMARY_TEXT,
     SECONDARY_TEXT,
     SURFACE,
     SURFACE_HOVER,
     TEXT_MUTED,
 )
+from frontend.styles import theme as theme_module
 from backend.paths import user_data_dir
+from backend.settings.settings_manager import SettingsManager
 from backend.settings import gesture_settings
 from backend.settings.gesture_settings import ARM_TIMEOUT_CHOICES, HOLD_TIME_CHOICES
 
 
 class SettingsPage(StudioPage):
+
+    # The main window restarts the app (themes apply at startup).
+    restart_requested = Signal()
 
     def __init__(self, parent=None):
 
@@ -72,6 +81,8 @@ class SettingsPage(StudioPage):
                 border-radius: 9px; background: white;
             }}
         """)
+
+        self._build_appearance()
 
         self._section("Recognition")
 
@@ -162,7 +173,7 @@ class SettingsPage(StudioPage):
         data_button.setCursor(Qt.PointingHandCursor)
         data_button.setStyleSheet(f"""
             QPushButton {{
-                background: rgba(255, 255, 255, 0.04); color: {PRIMARY_TEXT};
+                background: {OVERLAY_1}; color: {PRIMARY_TEXT};
                 border: 1px solid {BORDER}; border-radius: 10px;
                 padding: 9px 16px; font-size: 13px; font-weight: 600;
             }}
@@ -177,6 +188,103 @@ class SettingsPage(StudioPage):
         )
 
         self.content_layout.addStretch()
+
+    # -----------------------------------------------------
+    # APPEARANCE
+    # -----------------------------------------------------
+
+    def _build_appearance(self):
+
+        self._section("Appearance")
+
+        row = QHBoxLayout()
+        row.setSpacing(12)
+
+        self.theme_group = QButtonGroup(self)
+        self.theme_group.setExclusive(True)
+
+        saved = SettingsManager().get_setting(theme_module.SETTING_KEY) or theme_module.DEFAULT_THEME
+
+        for name, palette in theme_module.THEMES.items():
+
+            button = QPushButton(palette["label"])
+            button.setCheckable(True)
+            button.setChecked(name == saved)
+            button.setCursor(Qt.PointingHandCursor)
+            button.setAccessibleName(f"{palette['label']} theme")
+            button.setFixedSize(132, 84)
+            # Each swatch is drawn in its own theme's colours.
+            button.setStyleSheet(f"""
+                QPushButton {{
+                    background: {palette['BG_DARK']};
+                    color: {palette['PRIMARY_TEXT']};
+                    border: 2px solid {palette['BORDER']};
+                    border-radius: 14px;
+                    font-size: 13px; font-weight: 600;
+                    padding-top: 34px;
+                }}
+                QPushButton:hover {{ border: 2px solid {palette['PRIMARY_HOVER']}; }}
+                QPushButton:checked {{ border: 2px solid {palette['PRIMARY']}; }}
+            """)
+
+            dot = QLabel(button)
+            dot.setGeometry(14, 14, 22, 22)
+            dot.setStyleSheet(
+                f"background: {palette['PRIMARY']}; border-radius: 11px; border: none;"
+            )
+            surface = QLabel(button)
+            surface.setGeometry(42, 14, 76, 22)
+            surface.setStyleSheet(
+                f"background: {palette['SURFACE']}; border-radius: 7px; "
+                f"border: 1px solid {palette['BORDER']};"
+            )
+
+            button.clicked.connect(lambda checked=False, n=name: self._on_theme(n))
+            self.theme_group.addButton(button)
+            row.addWidget(button)
+
+        row.addStretch()
+
+        box = self._row(
+            "Theme",
+            "Galaxy and Jungle add a little scenery behind the app.",
+            row,
+        )
+
+        self.restart_row = QHBoxLayout()
+
+        self.restart_note = QLabel("Restart LensFlow to apply the new theme.")
+        self.restart_note.setStyleSheet(
+            f"color: {SECONDARY_TEXT}; font-size: 13px; background: transparent;"
+        )
+
+        self.restart_button = QPushButton("Restart now")
+        self.restart_button.setCursor(Qt.PointingHandCursor)
+        self.restart_button.setStyleSheet(f"""
+            QPushButton {{
+                background: {PRIMARY}; color: {ON_PRIMARY}; border: none;
+                border-radius: 10px; padding: 9px 16px;
+                font-size: 13px; font-weight: 600;
+            }}
+            QPushButton:hover {{ background: {PRIMARY_HOVER}; }}
+        """)
+        self.restart_button.clicked.connect(self.restart_requested.emit)
+
+        self.restart_row.addWidget(self.restart_note)
+        self.restart_row.addWidget(self.restart_button)
+        self.restart_row.addStretch()
+        box.layout().addLayout(self.restart_row)
+
+        self._show_restart(saved != theme_module.THEME_NAME)
+
+    def _show_restart(self, visible):
+        self.restart_note.setVisible(visible)
+        self.restart_button.setVisible(visible)
+
+    def _on_theme(self, name):
+        SettingsManager().set_setting(theme_module.SETTING_KEY, name)
+        self._show_restart(name != theme_module.THEME_NAME)
+        self.status_label.setText(f"Status: {theme_module.THEMES[name]['label']} theme saved.")
 
     # -----------------------------------------------------
     # LAYOUT HELPERS

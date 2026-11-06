@@ -7,6 +7,10 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 from frontend.styles.theme import (
+    ON_PRIMARY,
+    OVERLAY_1,
+    OVERLAY_2,
+    OVERLAY_BORDER,
     SURFACE,
     BORDER,
     PRIMARY,
@@ -50,7 +54,7 @@ class PresentationControls(QFrame):
             }}
 
             QPushButton {{
-                background-color: rgba(255, 255, 255, 0.04);
+                background-color: {OVERLAY_1};
                 color: {PRIMARY_TEXT};
                 border: 1px solid {BORDER};
                 border-radius: 10px;
@@ -60,17 +64,17 @@ class PresentationControls(QFrame):
             }}
 
             QPushButton:hover {{
-                background-color: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.16);
+                background-color: {OVERLAY_2};
+                border: 1px solid {OVERLAY_BORDER};
             }}
 
             QPushButton:pressed {{
-                background-color: rgba(255, 255, 255, 0.03);
+                background-color: {OVERLAY_1};
             }}
 
             QPushButton#StartButton {{
                 background-color: {PRIMARY};
-                color: white;
+                color: {ON_PRIMARY};
                 border: none;
             }}
 

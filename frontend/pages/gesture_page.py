@@ -17,6 +17,11 @@ from frontend.components.gesture_test_dialog import GestureTestDialog
 from frontend.components.motion_recorder_dialog import MotionRecorderDialog
 from backend.gestures.motions import BUILTIN_MOTION_NAMES, MotionStore
 from frontend.styles.theme import (
+    ON_PRIMARY,
+    OVERLAY_1,
+    OVERLAY_2,
+    OVERLAY_BORDER,
+    TEXT_STRONG,
     BG_DARK,
     SURFACE,
     SURFACE_HOVER,
@@ -134,7 +139,7 @@ class GesturePage(StudioPage):
         add_button.setStyleSheet(f"""
             QPushButton {{
                 background: {PRIMARY};
-                color: white;
+                color: {ON_PRIMARY};
                 border: none;
                 border-radius: 10px;
                 padding: 10px 18px;
@@ -169,7 +174,7 @@ class GesturePage(StudioPage):
 
         test_button.setStyleSheet(f"""
             QPushButton {{
-                background: rgba(255, 255, 255, 0.04);
+                background: {OVERLAY_1};
                 color: {PRIMARY_TEXT};
                 border: 1px solid {BORDER};
                 border-radius: 10px;
@@ -312,7 +317,7 @@ class GesturePage(StudioPage):
 
         record_button.setStyleSheet(f"""
             QPushButton {{
-                background: rgba(255, 255, 255, 0.04);
+                background: {OVERLAY_1};
                 color: {PRIMARY_TEXT};
                 border: 1px solid {PRIMARY};
                 border-radius: 10px;
@@ -418,7 +423,7 @@ class GesturePage(StudioPage):
 
         delete_button.setStyleSheet(f"""
             QPushButton {{
-                background: rgba(255, 255, 255, 0.04);
+                background: {OVERLAY_1};
                 color: {ERROR};
                 border: none;
                 border-radius: 8px;
@@ -649,7 +654,7 @@ class GesturePage(StudioPage):
 
         edit_button.setStyleSheet(f"""
             QPushButton {{
-                background: rgba(255, 255, 255, 0.04);
+                background: {OVERLAY_1};
                 color: {PRIMARY_TEXT};
                 border: 1px solid {BORDER};
                 border-radius: 8px;
@@ -659,9 +664,9 @@ class GesturePage(StudioPage):
             }}
 
             QPushButton:hover {{
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.16);
-                color: #FFFFFF;
+                background: {OVERLAY_2};
+                border: 1px solid {OVERLAY_BORDER};
+                color: {TEXT_STRONG};
             }}
         """)
 
@@ -740,7 +745,7 @@ class GesturePage(StudioPage):
             }}
             QDialogButtonBox QPushButton {{
                 background-color: {PRIMARY};
-                color: white;
+                color: {ON_PRIMARY};
                 border: none;
                 border-radius: 8px;
                 padding: 6px 16px;
@@ -895,7 +900,7 @@ class GesturePage(StudioPage):
             }}
             QDialogButtonBox QPushButton {{
                 background-color: {PRIMARY};
-                color: white;
+                color: {ON_PRIMARY};
                 border: none;
                 border-radius: 8px;
                 padding: 6px 16px;
