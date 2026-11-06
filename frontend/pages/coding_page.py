@@ -222,10 +222,11 @@ class CodingPage(StudioPage):
         # Applications
         # ---------------------------------------------------------
 
+        # Matches coding_flow in backend/config/flows.json.
         applications = [
             ("VS Code", "Code editor"),
-            ("Terminal", "Command line"),
-            ("Git", "Version control"),
+            ("Terminal", "Windows Terminal, or Command Prompt"),
+            ("GitHub", "Opens in your browser"),
         ]
 
         for name, description_text in applications:
@@ -354,8 +355,10 @@ class CodingPage(StudioPage):
             # -----------------------------------------------------
 
             self.status_label.setText(
-                "Status: Launch failed"
+                f"Status: Some apps didn't open. {e}"
             )
+
+            self.status_label.setWordWrap(True)
 
             self.status_label.setStyleSheet(f"""
                 color: {ERROR};

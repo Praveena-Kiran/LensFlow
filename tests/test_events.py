@@ -119,6 +119,22 @@ class RunnerTests(unittest.TestCase):
             self.run_event("Open Website", "github.com")
         open_.assert_called_once_with("https://github.com")
 
+    def test_flow_keeps_going_and_reports_failures(self):
+        ran = []
+        ok = mock.Mock(execute=lambda step, apps: ran.append(step["label"]))
+        bad = mock.Mock(execute=mock.Mock(side_effect=RuntimeError("not installed")))
+        self.fm.actions = {"ok": ok, "bad": bad}
+        self.fm.flows = {"f": {"name": "F", "actions": [
+            {"type": "bad", "label": "VS Code"},
+            {"type": "ok", "label": "GitHub"},
+        ]}}
+        with self.assertRaises(RuntimeError) as ctx:
+            self.fm.execute_flow("f")
+        self.assertEqual(ran, ["GitHub"])
+        self.assertIn("VS Code: not installed", str(ctx.exception))
+        with self.assertRaises(ValueError):
+            self.fm.execute_flow("missing")
+
     def test_lensflow_action_is_a_noop(self):
         self.run_event("LensFlow", "activate")
 
