@@ -61,6 +61,14 @@ ALIASES = {
     "vscode": "code",
     "vs code": "code",
     "visual studio code": "code",
+    "terminal": "wt",
+    "windows terminal": "wt",
+}
+
+# Tried in order if an app can't be opened (Windows Terminal isn't on
+# every PC; Command Prompt is).
+FALLBACKS = {
+    "wt": ["cmd"],
 }
 
 
@@ -98,9 +106,10 @@ def resolve_windows_app(value, app_aliases=None, exists=os.path.isfile):
         if exists(expanded):
             return expanded
 
-    # Let Windows try (App Paths registry, PATH). "chrome" -> "chrome.exe".
-    if not os.path.splitext(raw)[1] and " " not in raw:
-        return raw + ".exe"
+    # Let Windows try (App Paths registry, PATH) with the real program name:
+    # "chrome" -> "chrome.exe", "Terminal" (an alias) -> "wt.exe".
+    if " " not in key and not os.path.splitext(key)[1]:
+        return key + ".exe"
 
     return raw
 
@@ -115,17 +124,21 @@ def launch_app(value, app_aliases=None):
 
     if system == "Windows":
 
-        target = resolve_windows_app(value, app_aliases)
+        candidates = [value] + FALLBACKS.get(_normalise(value), [])
+        last_error = None
 
-        try:
-            os.startfile(target)
-        except OSError as e:
-            raise AppLaunchError(
-                f'Couldn\'t find "{value}". Edit the event and use Browse '
-                "to pick the app's .exe file."
-            ) from e
+        for candidate in candidates:
+            target = resolve_windows_app(candidate, app_aliases)
+            try:
+                os.startfile(target)
+                return target
+            except OSError as e:
+                last_error = e
 
-        return target
+        raise AppLaunchError(
+            f'Couldn\'t find "{value}". Edit the event and use Browse '
+            "to pick the app's .exe file."
+        ) from last_error
 
     if system == "Darwin":
 

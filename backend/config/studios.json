@@ -16,7 +16,7 @@
         "apps": [
             "VS Code",
             "Terminal",
-            "Git"
+            "GitHub"
         ],
         "icon_symbol": "</>",
         "accent": "#10B981",
@@ -32,18 +32,6 @@
         ],
         "icon_symbol": "✋",
         "accent": "#F59E0B",
-        "type": "builtin"
-    },
-    {
-        "title": "Automation Studio",
-        "description": "Build your own gesture-triggered automations.",
-        "apps": [
-            "Flows",
-            "Apps",
-            "Actions"
-        ],
-        "icon_symbol": "⚡",
-        "accent": "#8B5CF6",
         "type": "builtin"
     },
     {

@@ -4,7 +4,7 @@ import subprocess
 import platform
 import time
 
-from backend.paths import user_config_path
+from backend.paths import DEFAULT_CONFIG_DIR, user_config_path
 from backend.automation.app_launcher import launch_app
 from backend.automation.events import parse_hotkey, powerpoint_command
 
@@ -42,32 +42,81 @@ class FlowManager:
         ) as f:
             self.flows = json.load(f)
 
+        self._upgrade_default_flows()
+
+    # Older versions shipped a coding_flow that didn't match the Coding
+    # Studio page (Chrome, a UI-freezing wait, File Explorer). If the user's
+    # copy is still exactly that default, replace it; edited flows are kept.
+    OLD_CODING_FLOW = [
+        {"type": "launch", "target": "chrome"},
+        {"type": "wait", "duration": 2},
+        {"type": "website", "url": "https://github.com"},
+        {"type": "hotkey", "keys": ["win", "e"]},
+    ]
+
+    def _upgrade_default_flows(self):
+
+        current = self.flows.get("coding_flow", {})
+
+        if current.get("actions") != self.OLD_CODING_FLOW:
+            return
+
+        try:
+            with open(os.path.join(DEFAULT_CONFIG_DIR, "flows.json"), encoding="utf-8") as f:
+                new = json.load(f).get("coding_flow")
+        except (OSError, ValueError):
+            return
+
+        if not new:
+            return
+
+        self.flows["coding_flow"] = new
+
+        try:
+            with open(user_config_path("flows.json"), "w", encoding="utf-8") as f:
+                json.dump(self.flows, f, indent=4, ensure_ascii=False)
+            print("🔄 Updated coding_flow to the current default.")
+        except OSError as e:
+            print(f"⚠ Could not save updated flows: {e}")
+
     # =========================================================
     # OLD FLOW SYSTEM
     # =========================================================
 
     def execute_flow(self, flow_name):
+        """
+        Run every step of a flow. A step that fails doesn't stop the rest;
+        afterwards a RuntimeError lists what didn't work.
+        """
 
         flow = self.flows.get(flow_name)
 
         if not flow:
-            print(f"❌ Flow '{flow_name}' not found.")
-            return
+            raise ValueError(f'No flow called "{flow_name}".')
 
         print(f"🚀 Executing Flow: {flow['name']}")
+
+        failures = []
 
         for step in flow["actions"]:
 
             action_type = step.get("type")
             action = self.actions.get(action_type)
+            label = step.get("label") or step.get("target") or step.get("url") or action_type
 
-            if action:
+            try:
+                if action is None:
+                    raise ValueError(f"unknown step type {action_type!r}")
                 action.execute(step, self.apps)
+            except Exception as e:
+                print(f"❌ Flow step failed ({label}): {e}")
+                failures.append(f"{label}: {e}")
 
-            else:
-                print(
-                    f"❌ Unknown action type: {action_type}"
-                )
+        if failures:
+            raise RuntimeError(
+                f"{len(failures)} of {len(flow['actions'])} steps didn't work. "
+                + " ".join(failures)
+            )
 
     # =========================================================
     # EVENTS (custom studios and converted profiles)

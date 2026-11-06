@@ -78,6 +78,19 @@ class LaunchTests(unittest.TestCase):
             self.assertEqual(launch_app("notepad"), "notepad.exe")
         startfile.assert_called_once_with("notepad.exe")
 
+    @mock.patch.object(app_launcher.platform, "system", return_value="Windows")
+    def test_terminal_falls_back_to_command_prompt(self, _system):
+        opened = []
+
+        def startfile(target):
+            if target == "wt.exe":
+                raise FileNotFoundError(target)
+            opened.append(target)
+
+        with mock.patch.object(app_launcher.os, "startfile", create=True, side_effect=startfile):
+            self.assertEqual(launch_app("Terminal"), "cmd.exe")
+        self.assertEqual(opened, ["cmd.exe"])
+
     @mock.patch.object(app_launcher.platform, "system", return_value="Linux")
     def test_linux_missing_app(self, _system):
         with mock.patch.object(app_launcher.shutil, "which", return_value=None):

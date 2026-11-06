@@ -56,8 +56,11 @@ BUILT_IN_DESCRIPTIONS = {
     "Presentation Studio": "Control PowerPoint slides with gestures and swipes.",
     "Coding Studio": "Open your development workspace in one go.",
     "Gesture Studio": "Record, test and assign your gestures and motions.",
-    "Automation Studio": "Build your own gesture-triggered automations.",
 }
+
+# Older versions shipped an empty "Automation Studio" that duplicated
+# "+ New studio". Hide it unless the user has added events to it.
+HIDE_WHEN_EMPTY = {"Automation Studio"}
 
 BUILT_IN_STUDIOS = set(BUILT_IN_DESCRIPTIONS)
 
@@ -459,6 +462,8 @@ class HomePage(QWidget):
         last_used = self._last_used()
 
         for studio in self.load_studios():
+            if studio["title"] in HIDE_WHEN_EMPTY and not studio.get("events"):
+                continue
             self.studios_layout.addWidget(self._studio_row(studio, last_used.get(studio["title"])))
 
     def _studio_row(self, studio, last_used):
