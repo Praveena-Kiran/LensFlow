@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QSlider,
     QVBoxLayout,
@@ -45,6 +46,9 @@ class SettingsPage(StudioPage):
 
     # The main window restarts the app (themes apply at startup).
     restart_requested = Signal()
+
+    # The display name changed (greeting and sidebar update).
+    name_changed = Signal()
 
     def __init__(self, parent=None):
 
@@ -81,6 +85,8 @@ class SettingsPage(StudioPage):
                 border-radius: 9px; background: white;
             }}
         """)
+
+        self._build_you()
 
         self._build_appearance()
 
@@ -188,6 +194,39 @@ class SettingsPage(StudioPage):
         )
 
         self.content_layout.addStretch()
+
+    # -----------------------------------------------------
+    # YOU
+    # -----------------------------------------------------
+
+    def _build_you(self):
+
+        from backend.settings.user import display_name
+
+        self._section("You")
+
+        self.name_input = QLineEdit(display_name())
+        self.name_input.setPlaceholderText("Your name")
+        self.name_input.setAccessibleName("Your name")
+        self.name_input.setMaxLength(40)
+        self.name_input.setFixedWidth(280)
+        self.name_input.setStyleSheet(f"""
+            QLineEdit {{
+                background: {SURFACE}; color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER}; border-radius: 8px;
+                padding: 8px 10px; font-size: 14px;
+            }}
+            QLineEdit:focus {{ border: 1px solid {PRIMARY}; }}
+        """)
+        self.name_input.editingFinished.connect(self._on_name)
+
+        self._row("Your name", "Used in the greeting on Home.", self.name_input)
+
+    def _on_name(self):
+        from backend.settings.user import set_display_name
+        set_display_name(self.name_input.text())
+        self.status_label.setText("Status: Saved.")
+        self.name_changed.emit()
 
     # -----------------------------------------------------
     # APPEARANCE
