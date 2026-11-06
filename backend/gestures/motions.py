@@ -292,7 +292,11 @@ def straightness(trajectory):
     return math.hypot(trajectory[-2], trajectory[-1])
 
 
-def classify_swipe(trajectory):
+def classify_swipe(
+    trajectory,
+    min_straightness=SWIPE_MIN_STRAIGHTNESS,
+    max_angle=SWIPE_MAX_ANGLE,
+):
     """(swipe name, confidence) for a normalised trajectory, or (None, 0.0)."""
 
     if trajectory is None:
@@ -300,17 +304,17 @@ def classify_swipe(trajectory):
 
     s = straightness(trajectory)
 
-    if s < SWIPE_MIN_STRAIGHTNESS:
+    if s < min_straightness:
         return None, 0.0
 
     angle = math.degrees(math.atan2(trajectory[-1], trajectory[-2])) % 360
 
     for name, direction in SWIPE_DIRECTIONS.items():
         off = abs((angle - direction + 180) % 360 - 180)
-        if off <= SWIPE_MAX_ANGLE:
+        if off <= max_angle:
             confidence = MIN_MATCH_CONFIDENCE + (1 - MIN_MATCH_CONFIDENCE) * min(
-                (s - SWIPE_MIN_STRAIGHTNESS) / (1 - SWIPE_MIN_STRAIGHTNESS),
-                1 - off / SWIPE_MAX_ANGLE,
+                (s - min_straightness) / max(1 - min_straightness, 1e-6),
+                1 - off / max_angle,
             )
             return name, confidence
 
@@ -386,10 +390,14 @@ class MotionMatcher:
         include_builtin=True,
         max_distance=DEFAULT_MAX_DISTANCE,
         min_margin=DEFAULT_MIN_MARGIN,
+        swipe_min_straightness=SWIPE_MIN_STRAIGHTNESS,
+        swipe_max_angle=SWIPE_MAX_ANGLE,
     ):
         self.max_distance = max_distance
         self.min_margin = min_margin
         self.include_builtin = include_builtin
+        self.swipe_min_straightness = swipe_min_straightness
+        self.swipe_max_angle = swipe_max_angle
 
         self.templates = []
 
@@ -419,7 +427,11 @@ class MotionMatcher:
         # Straight strokes are swipes; the user's motions must be curvier
         # (review_motion enforces that), so check swipes first.
         if self.include_builtin:
-            name, confidence = classify_swipe(trajectory)
+            name, confidence = classify_swipe(
+                trajectory,
+                self.swipe_min_straightness,
+                self.swipe_max_angle,
+            )
             if name:
                 return name, confidence
 

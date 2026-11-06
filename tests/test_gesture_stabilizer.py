@@ -27,5 +27,39 @@ class StabilizerTests(unittest.TestCase):
         self.assertIsNone(GestureStabilizer().update("👍 Thumbs Up", 0.3))
 
 
+class HoldTimeTests(unittest.TestCase):
+
+    def make(self, hold):
+        self.now = 0.0
+        return GestureStabilizer(hold_time=hold, clock=lambda: self.now)
+
+    def step(self, s, gesture, dt=0.1):
+        self.now += dt
+        return s.update(gesture, 0.9 if gesture else 0.0)
+
+    def test_must_hold_before_triggering(self):
+        s = self.make(0.5)
+        results = [self.step(s, "Point") for _ in range(8)]   # 0.1 .. 0.8 s
+        self.assertEqual(results.count("Point"), 1)
+        self.assertEqual(results.index("Point"), 5)           # held 0.5 s
+
+    def test_letting_go_restarts_the_hold(self):
+        s = self.make(0.5)
+        for _ in range(3):
+            self.assertIsNone(self.step(s, "Point"))
+        self.assertIsNone(self.step(s, None))
+        for _ in range(5):   # held 0.0 .. 0.4 s
+            self.assertIsNone(self.step(s, "Point"))
+        self.assertEqual(self.step(s, "Point"), "Point")
+
+    def test_switching_gesture_restarts_the_hold(self):
+        s = self.make(0.3)
+        self.step(s, "A"); self.step(s, "A")
+        self.assertIsNone(self.step(s, "B"))
+        self.assertIsNone(self.step(s, "B"))
+        self.assertIsNone(self.step(s, "B"))
+        self.assertEqual(self.step(s, "B"), "B")
+
+
 if __name__ == "__main__":
     unittest.main()
