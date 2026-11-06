@@ -1,5 +1,11 @@
 import time
-import win32com.client
+
+# PowerPoint control uses Windows COM. Import lazily-tolerant so the rest of
+# LensFlow still runs on other systems (and in tests); connect() reports it.
+try:
+    import win32com.client
+except ImportError:  # not Windows, or pywin32 missing
+    win32com = None
 
 
 class PowerPointController:
@@ -10,6 +16,11 @@ class PowerPointController:
         self.slideshow = None
 
     def connect(self):
+
+        if win32com is None:
+            print("❌ PowerPoint control needs Windows with pywin32 installed.")
+            return False
+
         try:
             self.app = win32com.client.GetActiveObject(
                 "PowerPoint.Application"
