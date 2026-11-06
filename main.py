@@ -50,6 +50,7 @@ from frontend.pages.presentation_page import PresentationPage
 from frontend.pages.coding_page import CodingPage
 from frontend.pages.gesture_page import GesturePage
 from frontend.pages.custom_page import CustomPage
+from frontend.pages.settings_page import SettingsPage
 from frontend.styles.theme import (
     BG_DARK,
     SURFACE,
@@ -224,12 +225,18 @@ class MainWindow(QMainWindow):
             CustomPage()
         )
 
+        self.settings_page = SettingsPage()
+
         # =====================================================
         # ADD PAGES
         # =====================================================
 
         self.stack.addWidget(
             self.home_page
+        )
+
+        self.stack.addWidget(
+            self.settings_page
         )
 
         self.stack.addWidget(
@@ -356,6 +363,18 @@ class MainWindow(QMainWindow):
             self.go_home
         )
 
+        self.settings_page.back_requested.connect(
+            self.go_home
+        )
+
+        # =====================================================
+        # SIDEBAR NAVIGATION
+        # =====================================================
+
+        self.sidebar.item_selected.connect(
+            self._on_sidebar
+        )
+
         # =====================================================
         # FINISH ROOT LAYOUT
         # =====================================================
@@ -403,6 +422,27 @@ class MainWindow(QMainWindow):
         )
 
     # =============================================================
+    # SIDEBAR
+    # =============================================================
+
+    def _on_sidebar(
+        self,
+        item_id
+    ):
+
+        if item_id == "settings":
+            self.stop_gesture_worker()
+            self.stack.setCurrentWidget(self.settings_page)
+
+        elif item_id == "history" and hasattr(self, "activity_page"):
+            self.stop_gesture_worker()
+            self.stack.setCurrentWidget(self.activity_page)
+
+        else:
+            # Home and Studios both show the dashboard of studios.
+            self.go_home()
+
+    # =============================================================
     # GO HOME
     # =============================================================
 
@@ -415,6 +455,8 @@ class MainWindow(QMainWindow):
         )
 
         self.stop_gesture_worker()
+
+        self.sidebar.set_active("home")
 
         self.home_page.refresh_studios()
 
@@ -959,8 +1001,22 @@ class MainWindow(QMainWindow):
         status
     ):
 
+        worker = self.gesture_worker
+
+        arm_hint = (
+            f"Make {worker.arm_gesture} to activate gestures"
+            if worker is not None and worker.require_arm
+            else None
+        )
+
         if status == "READY":
-            self._gesture_feedback("Listening for gestures…")
+            self._gesture_feedback(arm_hint or "Listening for gestures…")
+
+        elif status == "ARMED":
+            self._gesture_feedback("Gestures active")
+
+        elif status == "DISARMED" and arm_hint:
+            self._gesture_feedback(f"Paused. {arm_hint}")
 
     @Slot(str)
     def _on_gesture_error(
