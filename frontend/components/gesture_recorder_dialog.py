@@ -92,13 +92,19 @@ class CameraPreviewWorker(QObject):
     # Time (monotonic seconds) and palm sample (x, y, size) or None, for
     # motion gestures. Emitted just before frame_ready.
     hand_sample = Signal(float, object)
+
+    # The hand's 21 image landmarks as (x, y) tuples in 0..1, or None.
+    hand_landmarks = Signal(object)
     error = Signal(str)
     finished = Signal()
 
-    def __init__(self, camera_index=0):
+    def __init__(self, camera_index=0, draw_skeleton=True):
         super().__init__()
         self.camera_index = camera_index
+        self.draw_skeleton = draw_skeleton
         self.running = False
+        # Separate from `running` so stop() before run() starts still counts.
+        self._stop_requested = False
 
     @Slot()
     def run(self):
@@ -115,7 +121,16 @@ class CameraPreviewWorker(QObject):
             self.finished.emit()
             return
 
+        if self._stop_requested:
+            self.finished.emit()
+            return
+
         camera = cv2.VideoCapture(self.camera_index)
+
+        if self._stop_requested:
+            camera.release()
+            self.finished.emit()
+            return
 
         if not camera.isOpened():
             self.error.emit(
@@ -127,7 +142,7 @@ class CameraPreviewWorker(QObject):
 
         self.running = True
 
-        while self.running:
+        while not self._stop_requested:
 
             ok, frame = camera.read()
 
@@ -151,8 +166,15 @@ class CameraPreviewWorker(QObject):
                 recognizer.last_handedness,
             )
 
-            if recognizer.last_image_landmarks is not None:
-                draw_hand(frame, recognizer.last_image_landmarks)
+            landmarks = recognizer.last_image_landmarks
+
+            self.hand_landmarks.emit(
+                None if landmarks is None
+                else [(lm.x, lm.y) for lm in landmarks]
+            )
+
+            if landmarks is not None and self.draw_skeleton:
+                draw_hand(frame, landmarks)
 
             if confidence < BUILTIN_CONFIDENCE:
                 builtin = None
@@ -166,6 +188,7 @@ class CameraPreviewWorker(QObject):
 
     @Slot()
     def stop(self):
+        self._stop_requested = True
         self.running = False
 
 

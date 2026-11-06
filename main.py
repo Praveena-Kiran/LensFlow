@@ -58,6 +58,8 @@ from frontend.pages.gesture_page import GesturePage
 from frontend.pages.custom_page import CustomPage
 from frontend.pages.settings_page import SettingsPage
 from frontend.pages.activity_page import ActivityPage
+from frontend.pages.notifications_page import NotificationsPage
+from frontend.components.suggestion_dialog import SuggestionDialog
 from backend import startup
 from backend.routines import (
     ActivityLog,
@@ -248,6 +250,8 @@ class MainWindow(QMainWindow):
 
         self.activity_page = ActivityPage()
 
+        self.notifications_page = NotificationsPage()
+
         # =====================================================
         # ADD PAGES
         # =====================================================
@@ -262,6 +266,10 @@ class MainWindow(QMainWindow):
 
         self.stack.addWidget(
             self.activity_page
+        )
+
+        self.stack.addWidget(
+            self.notifications_page
         )
 
         self.stack.addWidget(
@@ -400,6 +408,26 @@ class MainWindow(QMainWindow):
             self.go_home
         )
 
+        self.notifications_page.back_requested.connect(
+            self.go_home
+        )
+
+        self.notifications_page.changed.connect(
+            self._refresh_suggestion
+        )
+
+        self.notifications_page.suggestion_accepted.connect(
+            self._after_accept
+        )
+
+        self.home_page.history_requested.connect(
+            lambda: self._on_sidebar("history")
+        )
+
+        self.settings_page.name_changed.connect(
+            self._on_name_changed
+        )
+
         # =====================================================
         # ROUTINES
         # =====================================================
@@ -479,13 +507,25 @@ class MainWindow(QMainWindow):
             self.stop_gesture_worker()
             self.stack.setCurrentWidget(self.settings_page)
 
-        elif item_id == "history" and hasattr(self, "activity_page"):
+        elif item_id == "history":
             self.stop_gesture_worker()
+            self.sidebar.set_active("history")
             self.stack.setCurrentWidget(self.activity_page)
 
-        else:
-            # Home and Studios both show the dashboard of studios.
+        elif item_id == "notifications":
+            self.stop_gesture_worker()
+            self.sidebar.set_active("notifications")
+            self.stack.setCurrentWidget(self.notifications_page)
+
+        elif item_id == "studios":
+            # Studios live on Home: go there and scroll to the list.
             self.go_home()
+            self.sidebar.set_active("studios")
+            self.home_page.show_studios()
+
+        else:
+            self.go_home()
+            self.home_page.show_top()
 
     # =============================================================
     # GO HOME
@@ -1224,6 +1264,10 @@ class MainWindow(QMainWindow):
                     "⚠ Camera thread did not stop before exit."
                 )
 
+        # The foggy window on Home has its own camera thread.
+        self.home_page.fog.stop_camera()
+        self.home_page.fog.wait_for_camera()
+
         if self.tray is not None:
             self.tray.hide()
 
@@ -1251,14 +1295,6 @@ class MainWindow(QMainWindow):
         except OSError:
             pass
 
-        self.home_page.suggestion_banner.accepted.connect(
-            self._accept_suggestion
-        )
-
-        self.home_page.suggestion_banner.declined.connect(
-            self._decline_suggestion
-        )
-
         self.routine_timer = QTimer(self)
         self.routine_timer.timeout.connect(self._run_due_routines)
         self.routine_timer.start(self.ROUTINE_CHECK_MS)
@@ -1266,6 +1302,9 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(3000, self._run_due_routines)
 
         self._refresh_suggestion()
+
+        # Ask about a new routine shortly after LensFlow opens.
+        QTimer.singleShot(1200, self._show_suggestion_popup)
 
     def _record(
         self,
@@ -1284,28 +1323,63 @@ class MainWindow(QMainWindow):
             event=event,
         )
 
-    def _refresh_suggestion(self):
+    def _pending_suggestions(self):
 
         try:
-            suggestions = suggest_routines(
+            self.routine_store.load()
+            return suggest_routines(
                 self.activity_log.entries(),
                 self.routine_store,
             )
         except Exception as e:
             print(f"⚠ Could not check for routines: {e}")
-            suggestions = []
+            return []
 
-        self.home_page.suggestion_banner.show_suggestion(
-            suggestions[0] if suggestions else None
+    def _refresh_suggestion(self):
+        """Update the Notifications count (suggestions waiting for an answer)."""
+
+        self.sidebar.set_badge(
+            "notifications",
+            len(self._pending_suggestions())
         )
 
-    @Slot(dict)
+    def _show_suggestion_popup(self):
+        """When LensFlow opens: offer the top new suggestion, once a day."""
+
+        if not self.isVisible():
+            return  # started in the tray; the badge waits for them
+
+        for suggestion in self._pending_suggestions():
+
+            if self.routine_store.was_prompted_today(suggestion):
+                continue
+
+            self.routine_store.mark_prompted(suggestion)
+
+            dialog = SuggestionDialog(suggestion, self)
+
+            if dialog.exec():
+                self._accept_suggestion(suggestion)
+
+            # "Not now": it stays in Notifications.
+            break
+
+        self._refresh_suggestion()
+
     def _accept_suggestion(
         self,
         suggestion
     ):
 
         self.routine_store.add(suggestion)
+
+        self._after_accept(suggestion)
+
+    @Slot(dict)
+    def _after_accept(
+        self,
+        suggestion
+    ):
 
         settings = SettingsManager()
 
@@ -1314,7 +1388,7 @@ class MainWindow(QMainWindow):
             answer = QMessageBox.question(
                 self,
                 "Keep LensFlow running?",
-                "Routines only run while LensFlow is open. Keep it running "
+                "Automations only run while LensFlow is open. Keep it running "
                 "in the system tray when you close the window?",
             )
 
@@ -1323,15 +1397,11 @@ class MainWindow(QMainWindow):
 
         self._refresh_suggestion()
 
-    @Slot(dict)
-    def _decline_suggestion(
-        self,
-        suggestion
-    ):
+        self.home_page.refresh_studios()
 
-        self.routine_store.decline(suggestion)
-
-        self._refresh_suggestion()
+    def _on_name_changed(self):
+        self.sidebar.refresh_user()
+        self.home_page.refresh_studios()
 
     def _run_due_routines(self):
 
@@ -1380,6 +1450,9 @@ class MainWindow(QMainWindow):
 
         if self.stack.currentWidget() is self.activity_page:
             self.activity_page.refresh()
+
+        if self.stack.currentWidget() is self.notifications_page:
+            self.notifications_page.refresh()
 
     # =============================================================
     # SYSTEM TRAY
