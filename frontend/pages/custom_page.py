@@ -1794,14 +1794,9 @@ class EventDialog(QDialog):
         self.action_combo = QComboBox()
         self.action_combo.setFixedHeight(36)
 
-        self.action_combo.addItems([
-            "Open Application",
-            "Open File",
-            "Open Website",
-            "Hotkey",
-            "Wait",
-            "PowerPoint"
-        ])
+        from backend.automation.events import ACTION_TYPES
+
+        self.action_combo.addItems(ACTION_TYPES)
 
         layout.addWidget(
             self.action_combo
@@ -1856,6 +1851,10 @@ class EventDialog(QDialog):
 
         self.browse_button.clicked.connect(
             self.browse_file
+        )
+
+        self.action_combo.currentTextChanged.connect(
+            self.update_value_hint
         )
 
         value_row.addWidget(
@@ -2016,6 +2015,27 @@ class EventDialog(QDialog):
                     )
                 )
             )
+
+        self.update_value_hint()
+
+    # =========================================================
+    # VALUE HINT
+    # =========================================================
+
+    def update_value_hint(self, action=None):
+
+        from backend.automation.events import ACTION_HINTS
+
+        action = action or self.action_combo.currentText()
+
+        self.value_input.setPlaceholderText(
+            ACTION_HINTS.get(action, "")
+        )
+
+        # Browse only makes sense for files and apps.
+        self.browse_button.setVisible(
+            action in ("Open File", "Open Application")
+        )
 
     # =========================================================
     # GESTURE SELECTION
