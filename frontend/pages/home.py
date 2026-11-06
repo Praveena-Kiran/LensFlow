@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 from frontend.components.hero_section import HeroSection
 from frontend.components.studio_card import StudioCard
 from frontend.components.right_panel import RightPanel
+from frontend.components.suggestion_banner import SuggestionBanner
 from frontend.layouts.flow_layout import FlowLayout
 from backend.paths import user_config_path
 from frontend.styles.theme import BG_DARK, PRIMARY_TEXT, SECONDARY_TEXT, BORDER, PRIMARY, PRIMARY_HOVER
@@ -179,6 +180,20 @@ class HomePage(QWidget):
 
         main.addSpacing(
             8
+        )
+
+        # =====================================================
+        # ROUTINE SUGGESTION (hidden until there is one)
+        # =====================================================
+
+        self.suggestion_banner = SuggestionBanner()
+
+        main.addWidget(
+            self.suggestion_banner
+        )
+
+        main.addSpacing(
+            16
         )
 
         # =====================================================
