@@ -5,6 +5,7 @@ Main application window.
 """
 
 import sys
+import datetime
 import time
 import os
 
@@ -30,6 +31,9 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QDialogButtonBox,
+    QMenu,
+    QMessageBox,
+    QSystemTrayIcon,
 )
 
 from PySide6.QtCore import (
@@ -38,9 +42,10 @@ from PySide6.QtCore import (
     QFile,
     QTextStream,
     QThread,
+    QTimer,
 )
 
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPen, QPixmap
 
 from frontend.components.title_bar import TitleBar
 from frontend.components.sidebar import AppSidebar
@@ -51,6 +56,15 @@ from frontend.pages.coding_page import CodingPage
 from frontend.pages.gesture_page import GesturePage
 from frontend.pages.custom_page import CustomPage
 from frontend.pages.settings_page import SettingsPage
+from frontend.pages.activity_page import ActivityPage
+from backend import startup
+from backend.routines import (
+    ActivityLog,
+    RoutineStore,
+    due_routines,
+    suggest_routines,
+)
+from backend.settings.settings_manager import SettingsManager
 from frontend.styles.theme import (
     BG_DARK,
     SURFACE,
@@ -227,6 +241,8 @@ class MainWindow(QMainWindow):
 
         self.settings_page = SettingsPage()
 
+        self.activity_page = ActivityPage()
+
         # =====================================================
         # ADD PAGES
         # =====================================================
@@ -237,6 +253,10 @@ class MainWindow(QMainWindow):
 
         self.stack.addWidget(
             self.settings_page
+        )
+
+        self.stack.addWidget(
+            self.activity_page
         )
 
         self.stack.addWidget(
@@ -367,6 +387,22 @@ class MainWindow(QMainWindow):
             self.go_home
         )
 
+        self.activity_page.back_requested.connect(
+            self.go_home
+        )
+
+        # =====================================================
+        # ROUTINES
+        # =====================================================
+
+        self._setup_routines()
+
+        # =====================================================
+        # SYSTEM TRAY
+        # =====================================================
+
+        self._setup_tray()
+
         # =====================================================
         # SIDEBAR NAVIGATION
         # =====================================================
@@ -459,6 +495,8 @@ class MainWindow(QMainWindow):
         self.sidebar.set_active("home")
 
         self.home_page.refresh_studios()
+
+        self._refresh_suggestion()
 
         self.stack.setCurrentWidget(
             self.home_page
@@ -642,6 +680,10 @@ class MainWindow(QMainWindow):
             studio_name
         )
 
+        # Gesture Studio is a settings area, not something to automate.
+        if studio_name != "Gesture Studio":
+            self._record("studio", studio_name, studio=studio_name)
+
         # =====================================================
         # PRESENTATION
         # =====================================================
@@ -709,6 +751,8 @@ class MainWindow(QMainWindow):
     def launch_all_events(self, studio_name):
         print(f"🚀 Launching ALL events: {studio_name}")
 
+        self._record("launch", studio_name, studio=studio_name)
+
         studios = self.home_page.load_studios()
 
         studio = next(
@@ -756,6 +800,9 @@ class MainWindow(QMainWindow):
             if isinstance(event, dict)
             else "Invalid Event"
         )
+
+        if isinstance(event, dict):
+            self._record("event", event_name, studio=studio_name, event=event)
 
         print(
             ""
@@ -957,6 +1004,14 @@ class MainWindow(QMainWindow):
             f"({self.gesture_studio_name})"
         )
 
+        self._record(
+            "event",
+            name,
+            studio=self.gesture_studio_name,
+            event=event,
+            trigger="gesture",
+        )
+
         try:
 
             self.action_manager.flow_manager.execute_custom_event(
@@ -1120,6 +1175,32 @@ class MainWindow(QMainWindow):
         event
     ):
 
+        # Keep running in the tray (so routines can fire) if the user chose
+        # that, unless they picked Quit.
+        if (
+            not self._quitting
+            and self.tray is not None
+            and SettingsManager().get_setting("run_in_background")
+        ):
+
+            event.ignore()
+
+            self.stop_gesture_worker()
+
+            self.hide()
+
+            if not self._told_about_tray:
+                self._told_about_tray = True
+                self.tray.showMessage(
+                    "LensFlow is still running",
+                    "Your routines will run on time. Right-click the tray "
+                    "icon to quit.",
+                    QSystemTrayIcon.MessageIcon.Information,
+                    4000,
+                )
+
+            return
+
         # Let the camera thread finish before the app exits. Hide first so
         # closing feels instant even if the webcam is slow to release.
         self.hide()
@@ -1134,7 +1215,209 @@ class MainWindow(QMainWindow):
                     "⚠ Camera thread did not stop before exit."
                 )
 
+        if self.tray is not None:
+            self.tray.hide()
+
         super().closeEvent(event)
+
+        QApplication.instance().quit()
+
+    # =============================================================
+    # ROUTINES
+    # =============================================================
+
+    ROUTINE_CHECK_MS = 30_000
+
+    def _setup_routines(self):
+
+        self.activity_log = ActivityLog()
+        self.routine_store = RoutineStore()
+
+        # How the next recorded action was started ("click", "gesture",
+        # "routine"). Routine runs are logged but never learned from.
+        self._trigger_source = "click"
+
+        try:
+            self.activity_log.prune()
+        except OSError:
+            pass
+
+        self.home_page.suggestion_banner.accepted.connect(
+            self._accept_suggestion
+        )
+
+        self.home_page.suggestion_banner.declined.connect(
+            self._decline_suggestion
+        )
+
+        self.routine_timer = QTimer(self)
+        self.routine_timer.timeout.connect(self._run_due_routines)
+        self.routine_timer.start(self.ROUTINE_CHECK_MS)
+
+        QTimer.singleShot(3000, self._run_due_routines)
+
+        self._refresh_suggestion()
+
+    def _record(
+        self,
+        kind,
+        target,
+        studio=None,
+        event=None,
+        trigger=None
+    ):
+
+        self.activity_log.record(
+            kind,
+            target,
+            studio=studio,
+            trigger=trigger or self._trigger_source,
+            event=event,
+        )
+
+    def _refresh_suggestion(self):
+
+        try:
+            suggestions = suggest_routines(
+                self.activity_log.entries(),
+                self.routine_store,
+            )
+        except Exception as e:
+            print(f"⚠ Could not check for routines: {e}")
+            suggestions = []
+
+        self.home_page.suggestion_banner.show_suggestion(
+            suggestions[0] if suggestions else None
+        )
+
+    @Slot(dict)
+    def _accept_suggestion(
+        self,
+        suggestion
+    ):
+
+        self.routine_store.add(suggestion)
+
+        settings = SettingsManager()
+
+        if not settings.get_setting("run_in_background") and not startup.is_enabled():
+
+            answer = QMessageBox.question(
+                self,
+                "Keep LensFlow running?",
+                "Routines only run while LensFlow is open. Keep it running "
+                "in the system tray when you close the window?",
+            )
+
+            if answer == QMessageBox.Yes:
+                settings.set_setting("run_in_background", True)
+
+        self._refresh_suggestion()
+
+    @Slot(dict)
+    def _decline_suggestion(
+        self,
+        suggestion
+    ):
+
+        self.routine_store.decline(suggestion)
+
+        self._refresh_suggestion()
+
+    def _run_due_routines(self):
+
+        self.routine_store.load()
+
+        for routine in due_routines(self.routine_store.routines):
+
+            print(f"⏰ Routine: {routine['kind']} {routine['target']}")
+
+            self._trigger_source = "routine"
+
+            try:
+
+                if routine["kind"] == "studio":
+                    self.show_from_tray()
+                    self.open_live_workspace(routine["target"])
+
+                elif routine["kind"] == "launch":
+                    self.launch_all_events(routine["target"])
+
+                elif routine.get("event"):
+                    self.launch_specific_event(
+                        routine.get("studio") or "",
+                        routine["event"],
+                    )
+
+            except Exception as e:
+                print(f"❌ Routine failed: {e}")
+
+            finally:
+                self._trigger_source = "click"
+
+            self.routine_store.mark_run(
+                routine["id"],
+                datetime.date.today(),
+            )
+
+            if self.tray is not None:
+                self.tray.showMessage(
+                    "LensFlow routine",
+                    f"Done: {routine['kind'].replace('studio', 'opened')} "
+                    f"{routine['target']} ({routine['time']})",
+                    QSystemTrayIcon.MessageIcon.Information,
+                    3000,
+                )
+
+        if self.stack.currentWidget() is self.activity_page:
+            self.activity_page.refresh()
+
+    # =============================================================
+    # SYSTEM TRAY
+    # =============================================================
+
+    def _setup_tray(self):
+
+        self._quitting = False
+        self._told_about_tray = False
+        self.tray = None
+
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+
+        self.tray = QSystemTrayIcon(_app_icon(), self)
+        self.tray.setToolTip("LensFlow")
+
+        menu = QMenu(self)
+
+        open_action = QAction("Open LensFlow", self)
+        open_action.triggered.connect(self.show_from_tray)
+        menu.addAction(open_action)
+
+        quit_action = QAction("Quit", self)
+        quit_action.triggered.connect(self.quit_app)
+        menu.addAction(quit_action)
+
+        self.tray.setContextMenu(menu)
+
+        self.tray.activated.connect(
+            lambda reason: self.show_from_tray()
+            if reason == QSystemTrayIcon.ActivationReason.Trigger
+            else None
+        )
+
+        self.tray.show()
+
+    def show_from_tray(self):
+
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
+    def quit_app(self):
+
+        self._quitting = True
+        self.close()
 
 
 
@@ -1175,6 +1458,31 @@ def _load_stylesheet(
 
 
 # =============================================================
+# APP ICON
+# =============================================================
+
+def _app_icon():
+    """A simple lens mark, drawn in code (no image files needed)."""
+
+    pixmap = QPixmap(64, 64)
+    pixmap.fill(QColor(0, 0, 0, 0))
+
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setBrush(QColor("#7C5CFF"))
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.drawRoundedRect(4, 4, 56, 56, 16, 16)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    painter.setPen(QPen(QColor("#0A0A0D"), 5))
+    painter.drawEllipse(17, 17, 30, 30)
+    painter.setBrush(QColor("#0A0A0D"))
+    painter.drawEllipse(28, 28, 8, 8)
+    painter.end()
+
+    return QIcon(pixmap)
+
+
+# =============================================================
 # MAIN
 # =============================================================
 
@@ -1199,11 +1507,19 @@ def main():
         app
     )
 
+    # Closing the window may only hide it (tray); quit explicitly instead.
+    app.setQuitOnLastWindowClosed(False)
+
+    app.setWindowIcon(_app_icon())
+
     window = MainWindow()
 
-    window.show()
-
-    window._center_on_screen()
+    if "--background" in sys.argv and window.tray is not None:
+        # Started at sign-in: stay in the tray until the user opens it.
+        pass
+    else:
+        window.show()
+        window._center_on_screen()
 
     sys.exit(
         app.exec()

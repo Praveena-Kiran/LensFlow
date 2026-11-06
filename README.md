@@ -91,6 +91,17 @@ they change slides). Record your own movements, like a wave or a circle, under
 any gesture. Bringing your hand back after a swipe is ignored, so it doesn't
 trigger the opposite swipe.
 
+### Routines
+
+LensFlow notices when you do the same thing around the same time on most days
+(for example, launching a studio at 10:00) and offers to do it for you. Nothing
+is automated until you click **Automate**. **History** (sidebar) lists your
+routines (pause or delete them) and your recent activity, which you can clear.
+Activity is kept on this computer only, for at most 90 days.
+
+Routines need LensFlow to be running: on the History page, turn on *Keep LensFlow
+running in the system tray* and/or *Start LensFlow when I sign in to Windows*.
+
 ### Accessibility settings
 
 **Settings** (sidebar) adjusts recognition to how you move:
