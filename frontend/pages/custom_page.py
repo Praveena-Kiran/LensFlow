@@ -33,6 +33,12 @@ from PySide6.QtWidgets import (
 )
 from backend.paths import user_config_path
 from frontend.styles.theme import (
+    PAGE_BG,
+    ON_PRIMARY,
+    OVERLAY_1,
+    OVERLAY_2,
+    TEXT_STRONG,
+    OVERLAY_BORDER,
     BG_DARK,
     SURFACE,
     SURFACE_HOVER,
@@ -131,7 +137,7 @@ class CustomPage(QWidget):
 
         self.setStyleSheet(f"""
             QWidget#CustomPage {{
-                background-color: {BG_DARK};
+                background-color: {PAGE_BG};
             }}
 
             QLabel {{
@@ -165,7 +171,7 @@ class CustomPage(QWidget):
 
             QPushButton:hover {{
                 background-color: {SURFACE_HOVER};
-                border: 1px solid rgba(255, 255, 255, 0.16);
+                border: 1px solid {OVERLAY_BORDER};
             }}
         """)
 
@@ -322,7 +328,7 @@ class CustomPage(QWidget):
         )
         back.setStyleSheet(f"""
             QPushButton {{
-                background-color: rgba(255, 255, 255, 0.04);
+                background-color: {OVERLAY_1};
                 color: {PRIMARY_TEXT};
                 border: 1px solid {BORDER};
                 border-radius: 8px;
@@ -331,9 +337,9 @@ class CustomPage(QWidget):
                 font-weight: 600;
             }}
             QPushButton:hover {{
-                background-color: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.16);
-                color: #FFFFFF;
+                background-color: {OVERLAY_2};
+                border: 1px solid {OVERLAY_BORDER};
+                color: {TEXT_STRONG};
             }}
         """)
 
@@ -455,7 +461,7 @@ class CustomPage(QWidget):
         save_name.setStyleSheet(f"""
             QPushButton {{
                 background-color: {PRIMARY};
-                color: #FFFFFF;
+                color: {ON_PRIMARY};
                 border: none;
                 border-radius: 8px;
                 font-size: 12px;
@@ -541,7 +547,7 @@ class CustomPage(QWidget):
         add_event.setStyleSheet(f"""
             QPushButton {{
                 background-color: {PRIMARY};
-                color: #FFFFFF;
+                color: {ON_PRIMARY};
                 border: none;
                 border-radius: 8px;
                 font-size: 12px;
@@ -1315,7 +1321,7 @@ class CustomPage(QWidget):
             )
             edit_button.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: rgba(255, 255, 255, 0.04);
+                    background-color: {OVERLAY_1};
                     color: {PRIMARY_TEXT};
                     border: 1px solid {BORDER};
                     border-radius: 6px;
@@ -1324,9 +1330,9 @@ class CustomPage(QWidget):
                     padding: 0px 10px;
                 }}
                 QPushButton:hover {{
-                    background-color: rgba(255, 255, 255, 0.08);
-                    border: 1px solid rgba(255, 255, 255, 0.16);
-                    color: #FFFFFF;
+                    background-color: {OVERLAY_2};
+                    border: 1px solid {OVERLAY_BORDER};
+                    color: {TEXT_STRONG};
                 }}
             """)
 
@@ -1606,7 +1612,7 @@ class CustomPage(QWidget):
 
             self.gesture_button.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: rgba(255, 255, 255, 0.04);
+                    background-color: {OVERLAY_1};
                     color: {PRIMARY_TEXT};
                     border: 1px solid {BORDER};
                     border-radius: 8px;
@@ -1615,7 +1621,7 @@ class CustomPage(QWidget):
                     padding: 0px 14px;
                 }}
                 QPushButton:hover {{
-                    background-color: rgba(255, 255, 255, 0.08);
+                    background-color: {OVERLAY_2};
                     border: 1px solid {PRIMARY};
                 }}
             """)
@@ -1842,7 +1848,7 @@ class EventDialog(QDialog):
         )
         self.browse_button.setStyleSheet(f"""
             QPushButton {{
-                background-color: rgba(255, 255, 255, 0.04);
+                background-color: {OVERLAY_1};
                 color: {PRIMARY_TEXT};
                 border: 1px solid {BORDER};
                 border-radius: 8px;
@@ -1851,8 +1857,8 @@ class EventDialog(QDialog):
                 font-weight: 500;
             }}
             QPushButton:hover {{
-                background-color: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.16);
+                background-color: {OVERLAY_2};
+                border: 1px solid {OVERLAY_BORDER};
             }}
         """)
 
@@ -1917,7 +1923,7 @@ class EventDialog(QDialog):
         )
         cancel.setStyleSheet(f"""
             QPushButton {{
-                background-color: rgba(255, 255, 255, 0.04);
+                background-color: {OVERLAY_1};
                 color: {SECONDARY_TEXT};
                 border: 1px solid {BORDER};
                 border-radius: 8px;
@@ -1926,8 +1932,8 @@ class EventDialog(QDialog):
                 font-weight: 500;
             }}
             QPushButton:hover {{
-                background-color: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.16);
+                background-color: {OVERLAY_2};
+                border: 1px solid {OVERLAY_BORDER};
                 color: {PRIMARY_TEXT};
             }}
         """)
@@ -1946,7 +1952,7 @@ class EventDialog(QDialog):
         save.setStyleSheet(f"""
             QPushButton {{
                 background-color: {PRIMARY};
-                color: #FFFFFF;
+                color: {ON_PRIMARY};
                 border: none;
                 border-radius: 8px;
                 font-size: 12px;

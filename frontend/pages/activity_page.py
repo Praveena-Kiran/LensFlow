@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from frontend.pages.studio_page import StudioPage
 from frontend.styles.theme import (
+    OVERLAY_1,
     BORDER,
     ERROR,
     PRIMARY,
@@ -139,7 +140,7 @@ class ActivityPage(StudioPage):
     def _button_style(color=PRIMARY_TEXT):
         return f"""
             QPushButton {{
-                background: rgba(255, 255, 255, 0.04); color: {color};
+                background: {OVERLAY_1}; color: {color};
                 border: 1px solid {BORDER}; border-radius: 8px;
                 padding: 7px 14px; font-size: 12px; font-weight: 600;
             }}

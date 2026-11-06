@@ -41,6 +41,7 @@ from PySide6.QtCore import (
     Slot,
     QFile,
     QTextStream,
+    QProcess,
     QThread,
     QTimer,
 )
@@ -66,6 +67,7 @@ from backend.routines import (
 )
 from backend.settings.settings_manager import SettingsManager
 from frontend.styles.theme import (
+    ON_PRIMARY,
     BG_DARK,
     SURFACE,
     BORDER,
@@ -77,7 +79,8 @@ from frontend.styles.theme import (
 
 from backend.gestures.gesture_worker import GestureWorker
 from backend.automation.action_manager import ActionManager
-from frontend.styles.theme import ERROR
+from frontend.styles.theme import BG_DARK, ERROR, PRIMARY, global_stylesheet
+from frontend.components.backdrop import BackdropWidget
 from backend.paths import APP_DIR
 
 
@@ -143,15 +146,17 @@ class MainWindow(QMainWindow):
             False
         )
 
+        # Scoped to the window: an unscoped rule here would cascade to
+        # every widget and hide the theme's backdrop.
         self.setStyleSheet(
-            "background-color: #08090D;"
+            f"QMainWindow {{ background-color: {BG_DARK}; }}"
         )
 
         # =====================================================
-        # ROOT
+        # ROOT (paints the theme background: plain, stars or leaves)
         # =====================================================
 
-        root = QWidget()
+        root = BackdropWidget()
 
         self.setCentralWidget(
             root
@@ -387,6 +392,10 @@ class MainWindow(QMainWindow):
             self.go_home
         )
 
+        self.settings_page.restart_requested.connect(
+            self.restart_app
+        )
+
         self.activity_page.back_requested.connect(
             self.go_home
         )
@@ -569,7 +578,7 @@ class MainWindow(QMainWindow):
 
             QDialogButtonBox QPushButton {{
                 background: {PRIMARY};
-                color: white;
+                color: {ON_PRIMARY};
                 border: none;
                 border-radius: 8px;
                 padding: 8px 16px;
@@ -1414,6 +1423,18 @@ class MainWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
 
+    def restart_app(self):
+        """Start a fresh LensFlow (themes apply at startup), then quit."""
+
+        args = [a for a in sys.argv if a != "--background"]
+
+        if getattr(sys, "frozen", False):
+            QProcess.startDetached(sys.executable, args[1:])
+        else:
+            QProcess.startDetached(sys.executable, args)
+
+        self.quit_app()
+
     def quit_app(self):
 
         self._quitting = True
@@ -1429,32 +1450,10 @@ def _load_stylesheet(
     app
 ):
 
-    # APP_DIR also works inside the packaged .exe.
-    qss_path = os.path.join(
-        APP_DIR,
-        "frontend",
-        "styles",
-        "theme.qss"
+    # theme.qss mapped to the theme chosen in Settings.
+    app.setStyleSheet(
+        global_stylesheet()
     )
-
-    file = QFile(
-        qss_path
-    )
-
-    if file.open(
-        QFile.OpenModeFlag.ReadOnly
-        | QFile.OpenModeFlag.Text
-    ):
-
-        stream = QTextStream(
-            file
-        )
-
-        app.setStyleSheet(
-            stream.readAll()
-        )
-
-        file.close()
 
 
 # =============================================================
@@ -1469,7 +1468,7 @@ def _app_icon():
 
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setBrush(QColor("#7C5CFF"))
+    painter.setBrush(QColor(PRIMARY))
     painter.setPen(Qt.PenStyle.NoPen)
     painter.drawRoundedRect(4, 4, 56, 56, 16, 16)
     painter.setBrush(Qt.BrushStyle.NoBrush)

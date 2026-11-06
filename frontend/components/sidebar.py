@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.styles.theme import (
+    PAGE_BG,
     BG_DARK,
     SURFACE_HOVER,
     BORDER,
@@ -142,7 +143,7 @@ class AppSidebar(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(f"""
             QFrame#AppSidebar {{
-                background-color: {BG_DARK};
+                background-color: {PAGE_BG};
                 border-right: 1px solid {BORDER};
             }}
         """)
