@@ -130,11 +130,18 @@ class RoutineStore:
 
         self.routines = data.get("routines", [])
         self.declined = data.get("declined", [])
+        # {"kind|target": "YYYY-MM-DD"}: when a suggestion last popped up
+        self.prompted = data.get("prompted", {})
 
     def save(self):
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump(
-                {"version": 1, "routines": self.routines, "declined": self.declined},
+                {
+                    "version": 1,
+                    "routines": self.routines,
+                    "declined": self.declined,
+                    "prompted": self.prompted,
+                },
                 f, indent=2, ensure_ascii=False,
             )
 
@@ -182,6 +189,15 @@ class RoutineStore:
         for r in self.routines:
             if r["id"] == routine_id:
                 r["last_run"] = day.isoformat()
+        self.save()
+
+    def was_prompted_today(self, suggestion, now=None):
+        today = (now or datetime.now()).date().isoformat()
+        return self.prompted.get(f"{suggestion['kind']}|{suggestion['target']}") == today
+
+    def mark_prompted(self, suggestion, now=None):
+        today = (now or datetime.now()).date().isoformat()
+        self.prompted[f"{suggestion['kind']}|{suggestion['target']}"] = today
         self.save()
 
     def is_declined(self, kind, target, now=None):

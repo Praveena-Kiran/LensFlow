@@ -1,56 +1,47 @@
 [
     {
         "title": "Presentation Studio",
-        "time_ago": "Today",
-        "description": "Control PowerPoint presentations using gestures and voice.",
+        "description": "Control PowerPoint slides with gestures and swipes.",
         "apps": [
             "PowerPoint",
-            "Camera",
-            "Microphone"
+            "Camera"
         ],
-        "last_used": "Today • 2:41 PM",
         "icon_symbol": "Pr",
         "accent": "#3B82F6",
         "type": "builtin"
     },
     {
         "title": "Coding Studio",
-        "time_ago": "Yesterday",
-        "description": "Launch your development workspace and AI coding tools.",
+        "description": "Open your development workspace in one go.",
         "apps": [
             "VS Code",
             "Terminal",
             "Git"
         ],
-        "last_used": "Yesterday • 6:30 PM",
         "icon_symbol": "</>",
         "accent": "#10B981",
         "type": "builtin"
     },
     {
         "title": "Gesture Studio",
-        "time_ago": "3 days ago",
-        "description": "Train, test and customize gesture recognition models.",
+        "description": "Record, test and assign your gestures and motions.",
         "apps": [
             "MediaPipe",
             "Camera",
             "Models"
         ],
-        "last_used": "3 days ago • 11:20 AM",
         "icon_symbol": "✋",
         "accent": "#F59E0B",
         "type": "builtin"
     },
     {
         "title": "Automation Studio",
-        "time_ago": "Never",
-        "description": "Create automation flows triggered by gestures.",
+        "description": "Build your own gesture-triggered automations.",
         "apps": [
             "Flows",
             "Apps",
             "Actions"
         ],
-        "last_used": "Not yet",
         "icon_symbol": "⚡",
         "accent": "#8B5CF6",
         "type": "builtin"

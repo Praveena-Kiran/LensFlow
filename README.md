@@ -91,16 +91,25 @@ they change slides). Record your own movements, like a wave or a circle, under
 any gesture. Bringing your hand back after a swipe is ignored, so it doesn't
 trigger the opposite swipe.
 
+### Your window
+
+Home shows your camera through a foggy pane. **Point** your index finger to
+write on it, make a **fist** to pause, and hold an **open palm** for a second to
+wipe it. **Save note** keeps your writing, so it greets you next time. Only
+the writing is saved, never a camera image. Filters: Fog, Clear, Mono.
+
 ### Routines
 
 LensFlow notices when you do the same thing around the same time on most days
-(for example, launching a studio at 10:00) and offers to do it for you. Nothing
-is automated until you click **Automate**. **History** (sidebar) lists your
-routines (pause or delete them) and your recent activity, which you can clear.
-Activity is kept on this computer only, for at most 90 days.
+(for example, launching a studio at 10:00) and asks, when you open it, whether
+to do it for you. Nothing is automated until you click **Automate**. **Not now**
+keeps the suggestion in **Notifications**, which also lists your automations
+(pause or delete them). **History** shows recent activity, which you can clear.
+Activity stays on this computer only, for at most 90 days.
 
-Routines need LensFlow to be running: on the History page, turn on *Keep LensFlow
-running in the system tray* and/or *Start LensFlow when I sign in to Windows*.
+Automations need LensFlow to be running: in Notifications, turn on *Keep
+LensFlow running in the system tray* and/or *Start LensFlow when I sign in to
+Windows*.
 
 ### Themes
 

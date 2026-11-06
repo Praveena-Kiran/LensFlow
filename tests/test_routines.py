@@ -76,6 +76,13 @@ class SuggestTests(Base):
         self.store.add(s)
         self.assertEqual(self.suggestions(now=NOW + timedelta(days=31)), [])
 
+    def test_prompted_once_a_day(self):
+        s = {"kind": "launch", "target": "Test Studio"}
+        self.assertFalse(self.store.was_prompted_today(s, NOW))
+        self.store.mark_prompted(s, NOW)
+        self.assertTrue(RoutineStore(self.store.path).was_prompted_today(s, NOW))
+        self.assertFalse(self.store.was_prompted_today(s, NOW + timedelta(days=1)))
+
     def test_routine_runs_are_ignored(self):
         for offset in range(1, 8):
             self.open_studio(offset, 10, 0, trigger="routine")
