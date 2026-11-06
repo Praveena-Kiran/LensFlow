@@ -91,6 +91,17 @@ they change slides). Record your own movements, like a wave or a circle, under
 any gesture. Bringing your hand back after a swipe is ignored, so it doesn't
 trigger the opposite swipe.
 
+### Accessibility settings
+
+**Settings** (sidebar) adjusts recognition to how you move:
+
+- **Sensitivity**: from strict to forgiving. Forgiving accepts less exact poses
+  and movements, which helps with tremor or limited range of motion.
+- **Hold to trigger**: a pose must be held (up to 1.5 s) before it does anything.
+- **Activation gesture**: LensFlow ignores gestures until you make a chosen
+  gesture, then switches off again after a few idle seconds, so everyday hand
+  movement doesn't trigger anything.
+
 **Test Gestures** opens a live view showing what LensFlow recognises and what
 it would trigger, without running anything.
 

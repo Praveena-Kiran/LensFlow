@@ -210,9 +210,13 @@ class AppSidebar(QFrame):
         self._on_click("home")
 
     def _on_click(self, item_id: str):
+        self.set_active(item_id)
+        self.item_selected.emit(item_id)
+
+    def set_active(self, item_id: str):
+        """Highlight an item without emitting item_selected."""
         for iid, item in self._items.items():
             item.set_active(iid == item_id)
-        self.item_selected.emit(item_id)
 
     def select(self, item_id: str):
         """Programmatically select a sidebar item."""
