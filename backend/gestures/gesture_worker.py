@@ -7,6 +7,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 from backend.gestures.google_gesture_recognizer import GoogleGestureRecognizer
 from backend.gestures.gesture_stabilizer import GestureStabilizer
 from backend.gestures.custom_gestures import CustomGestureMatcher
+from backend.gestures.motions import MotionRecognizer, palm_point
 from backend.profile_manager import ProfileManager
 from backend.automation.events import events_for_gesture, profile_events
 
@@ -44,6 +45,9 @@ class GestureWorker(QObject):
 
         # The user's own recorded gestures (see Gesture Studio).
         self.custom_matcher = CustomGestureMatcher.from_store()
+
+        # Motions: built-in swipes plus the user's recorded movements.
+        self.motions = MotionRecognizer()
 
         # -----------------------------------------------------
         # EVENTS
@@ -150,6 +154,26 @@ class GestureWorker(QObject):
                 self.recognizer.detect(frame)
             )
 
+            # -------------------------------------------------
+            # MOTIONS (swipes, waves...)
+            # -------------------------------------------------
+
+            h, w = frame.shape[:2]
+
+            motion = self.motions.update(
+                time.monotonic(),
+                palm_point(self.recognizer.last_image_landmarks, w / h)
+            )
+
+            if motion:
+                self._handle_motion(*motion)
+
+            # While the hand is moving, ignore poses so a swipe can't
+            # trigger "open palm" half way through.
+            if self.motions.active:
+                self.stabilizer.update(None, 0.0)
+                continue
+
             # A recorded custom gesture takes priority. Recording rejects
             # poses that look like built-in gestures, so the two don't clash.
             if self.custom_matcher.has_gestures():
@@ -191,6 +215,16 @@ class GestureWorker(QObject):
                 print("🎯 Event matched:", event.get("name"))
 
                 self.custom_event_detected.emit(event)
+
+    def _handle_motion(self, motion, confidence):
+
+        self.gesture_detected.emit(motion, confidence)
+
+        for event in events_for_gesture(self.events, motion):
+
+            print("🎯 Event matched:", event.get("name"))
+
+            self.custom_event_detected.emit(event)
 
     @Slot()
     def stop(self):

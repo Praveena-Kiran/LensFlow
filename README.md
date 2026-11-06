@@ -83,6 +83,14 @@ comfortable hand pose for three short takes. LensFlow rejects poses that look
 like a built-in gesture or another of your gestures, so actions don't trigger by
 accident. Then use **+ Add Gesture** to assign it to an action.
 
+### Motions
+
+Swipe left, right, up and down work out of the box (in Presentation Studio
+they change slides). Record your own movements, like a wave or a circle, under
+**Gesture Studio → + Record Custom Motion**, then pick them as a trigger like
+any gesture. Bringing your hand back after a swipe is ignored, so it doesn't
+trigger the opposite swipe.
+
 **Test Gestures** opens a live view showing what LensFlow recognises and what
 it would trigger, without running anything.
 

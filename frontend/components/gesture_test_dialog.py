@@ -41,6 +41,7 @@ from frontend.styles.theme import (
 )
 from backend.gestures.custom_gestures import CustomGestureMatcher, CustomGestureStore
 from backend.gestures.gesture_stabilizer import GestureStabilizer
+from backend.gestures.motions import MotionRecognizer
 
 
 MAX_LOG_ENTRIES = 5
@@ -58,6 +59,9 @@ class GestureTestDialog(QDialog):
         store = store or CustomGestureStore()
         self.matcher = CustomGestureMatcher(store.gestures)
         self.stabilizer = GestureStabilizer()
+
+        self.motions = MotionRecognizer()
+        self._motion_shown_until = 0.0
 
         self.log = []
 
@@ -172,6 +176,7 @@ class GestureTestDialog(QDialog):
 
         self.thread.started.connect(self.worker.run)
         self.worker.frame_ready.connect(self._on_frame)
+        self.worker.hand_sample.connect(self._on_hand_sample)
         self.worker.error.connect(self._on_camera_error)
         self.worker.finished.connect(self.thread.quit)
 
@@ -221,6 +226,12 @@ class GestureTestDialog(QDialog):
             )
         )
 
+        if self.motions.active or time.monotonic() < self._motion_shown_until:
+            # Mid-movement (same rule as a running studio: poses paused), or
+            # a motion was just recognised and is still on screen.
+            self.stabilizer.update(None, 0.0)
+            return
+
         gesture, confidence, kind = self.classify(
             vector, builtin, builtin_confidence
         )
@@ -252,6 +263,20 @@ class GestureTestDialog(QDialog):
 
         if triggered:
             self._add_log(triggered)
+
+    @Slot(float, object)
+    def _on_hand_sample(self, t, sample):
+
+        result = self.motions.update(t, sample)
+
+        if result:
+            motion, confidence = result
+            self._motion_shown_until = time.monotonic() + 1.5
+            self.seeing.setText(motion)
+            action = self.gesture_map.get(motion)
+            suffix = f"  ·  would run: {action}" if action else ""
+            self.detail.setText(f"motion · {int(confidence * 100)}%{suffix}")
+            self._add_log(motion)
 
     def _closest_hint(self, vector):
         """Explain near-misses so users know whether to re-record."""

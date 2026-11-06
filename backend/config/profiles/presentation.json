@@ -5,6 +5,8 @@
         "✊ Fist": "presentation_end",
         "✌️ Peace": "presentation_start",
         "👍 Thumbs Up": "presentation_next",
-        "👎 Thumbs Down": "presentation_previous"
+        "👎 Thumbs Down": "presentation_previous",
+        "Swipe right": "presentation_next",
+        "Swipe left": "presentation_previous"
     }
 }
