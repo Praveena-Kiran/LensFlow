@@ -32,7 +32,13 @@ LensFlow is organized into separate components for gesture recognition, action h
 - MediaPipe
 - PySide6
 
-## 🚀 Installation
+## ⬇️ Download
+
+Get the latest **LensFlow-windows.zip** from the
+[Releases page](https://github.com/Praveena-Kiran/LensFlow/releases), extract it
+and run `LensFlow\LensFlow.exe`. No Python needed. Requires Windows 10/11 and a webcam.
+
+## 🚀 Installation (from source)
 
 ### Requirements
 
@@ -86,6 +92,25 @@ gesture runs that event.
 
 Your studios, settings and custom gestures are stored per user in
 `%APPDATA%\LensFlow` (Windows), so they survive app updates.
+
+### Building the Windows app
+
+GitHub Actions builds it automatically (`.github/workflows/build.yml`): every
+pull request builds and self-tests `LensFlow.exe`, and pushing a version tag
+publishes a release:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+To build locally instead:
+
+```bash
+pip install -r requirements.txt pyinstaller
+pyinstaller LensFlow.spec --noconfirm
+dist\LensFlow\LensFlow.exe --self-test
+```
 
 ### Tests
 

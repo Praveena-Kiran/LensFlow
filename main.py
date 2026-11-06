@@ -62,6 +62,7 @@ from frontend.styles.theme import (
 from backend.gestures.gesture_worker import GestureWorker
 from backend.automation.action_manager import ActionManager
 from frontend.styles.theme import ERROR
+from backend.paths import APP_DIR
 
 
 # =============================================================
@@ -1069,10 +1070,9 @@ def _load_stylesheet(
     app
 ):
 
+    # APP_DIR also works inside the packaged .exe.
     qss_path = os.path.join(
-        os.path.dirname(
-            os.path.abspath(__file__)
-        ),
+        APP_DIR,
         "frontend",
         "styles",
         "theme.qss"
@@ -1103,6 +1103,10 @@ def _load_stylesheet(
 # =============================================================
 
 def main():
+
+    if "--self-test" in sys.argv:
+        from backend.self_test import run
+        sys.exit(run())
 
     app = QApplication(
         sys.argv
