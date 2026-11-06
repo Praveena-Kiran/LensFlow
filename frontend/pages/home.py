@@ -14,7 +14,7 @@ Public API used by main.py (unchanged from the previous Home):
 import json
 from datetime import datetime, timedelta
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -165,6 +165,7 @@ class HomePage(QWidget):
         """)
 
         scroll = QScrollArea(self)
+        self.scroll = scroll
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -399,7 +400,12 @@ class HomePage(QWidget):
 
     def _build_studios(self):
 
-        header = QHBoxLayout()
+        # A widget (not just a layout) so the sidebar's Studios item can
+        # scroll to it.
+        self.studios_anchor = QWidget()
+        self.studios_anchor.setStyleSheet("background: transparent;")
+        header = QHBoxLayout(self.studios_anchor)
+        header.setContentsMargins(0, 0, 0, 0)
         header.addWidget(_label("Studios", PRIMARY_TEXT, 18, 600))
         header.addStretch()
 
@@ -407,7 +413,7 @@ class HomePage(QWidget):
         new.clicked.connect(self.create_studio_requested.emit)
         header.addWidget(new)
 
-        self.main.addLayout(header)
+        self.main.addWidget(self.studios_anchor)
 
         self.studios_layout = QVBoxLayout()
         self.studios_layout.setSpacing(0)
@@ -509,6 +515,28 @@ class HomePage(QWidget):
         layout.addWidget(open_button)
 
         return row
+
+    # -----------------------------------------------------
+    # SCROLLING (sidebar: Home = top, Studios = the list)
+    # -----------------------------------------------------
+
+    def show_studios(self):
+        # After layout, so the anchor's position is known.
+        QTimer.singleShot(0, lambda: self._scroll_to(self.studios_anchor.y() - 12))
+
+    def show_top(self):
+        QTimer.singleShot(0, lambda: self._scroll_to(0))
+
+    def _scroll_to(self, y):
+        bar = self.scroll.verticalScrollBar()
+        target = max(0, min(int(y), bar.maximum()))
+
+        self._scroll_animation = QPropertyAnimation(bar, b"value", self)
+        self._scroll_animation.setDuration(380)
+        self._scroll_animation.setEasingCurve(QEasingCurve.OutCubic)
+        self._scroll_animation.setStartValue(bar.value())
+        self._scroll_animation.setEndValue(target)
+        self._scroll_animation.start()
 
     # -----------------------------------------------------
     # Compatibility with the previous Home API

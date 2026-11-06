@@ -517,9 +517,15 @@ class MainWindow(QMainWindow):
             self.sidebar.set_active("notifications")
             self.stack.setCurrentWidget(self.notifications_page)
 
-        else:
-            # Home and Studios both show the dashboard of studios.
+        elif item_id == "studios":
+            # Studios live on Home: go there and scroll to the list.
             self.go_home()
+            self.sidebar.set_active("studios")
+            self.home_page.show_studios()
+
+        else:
+            self.go_home()
+            self.home_page.show_top()
 
     # =============================================================
     # GO HOME
