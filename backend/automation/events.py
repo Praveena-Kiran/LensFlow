@@ -71,6 +71,11 @@ PROFILE_ACTIONS = {
 }
 
 
+def friendly_action(code):
+    """A profile action code as people read it: "presentation_next" -> "Next slide"."""
+    return PROFILE_ACTIONS.get(code, (code,))[0]
+
+
 def trigger_of(event):
     """
     Normalised trigger of an event:

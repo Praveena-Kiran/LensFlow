@@ -35,6 +35,7 @@ from frontend.styles.theme import (
     ERROR,
 )
 from backend.profile_manager import ProfileManager
+from backend.automation.events import friendly_action
 from backend.gestures.custom_gestures import CustomGestureStore
 from backend.gestures.google_gesture_recognizer import BUILTIN_GESTURE_NAMES
 from backend.app_info import APP_NAME
@@ -404,7 +405,7 @@ class GesturePage(StudioPage):
         action = self.gesture_map.get(name)
 
         detail_label = QLabel(
-            f"→  {action}" if action else "Not assigned yet"
+            f"→  {friendly_action(action)}" if action else "Not assigned yet"
         )
 
         detail_label.setStyleSheet(f"""
@@ -629,7 +630,7 @@ class GesturePage(StudioPage):
         # Action
 
         action_label = QLabel(
-            "→  " + action
+            "→  " + friendly_action(action)
         )
 
         action_label.setStyleSheet(f"""
@@ -796,11 +797,10 @@ class GesturePage(StudioPage):
 
         action_box = QComboBox()
 
-        action_box.addItems(
-            self.available_actions
-        )
+        for code in self.available_actions:
+            action_box.addItem(friendly_action(code), code)
 
-        index = action_box.findText(
+        index = action_box.findData(
             current_action
         )
 
@@ -838,7 +838,7 @@ class GesturePage(StudioPage):
         if dialog.exec():
 
             new_action = (
-                action_box.currentText()
+                action_box.currentData()
             )
 
             self.profile_manager.update_gesture(
@@ -858,7 +858,7 @@ class GesturePage(StudioPage):
                 self.action_labels[
                     gesture
                 ].setText(
-                    "→  " + new_action
+                    "→  " + friendly_action(new_action)
                 )
 
             self.refresh_custom_list()
@@ -967,9 +967,8 @@ class GesturePage(StudioPage):
 
         action_box = QComboBox()
 
-        action_box.addItems(
-            self.available_actions
-        )
+        for code in self.available_actions:
+            action_box.addItem(friendly_action(code), code)
 
         layout.addWidget(
             action_box
@@ -1017,7 +1016,7 @@ class GesturePage(StudioPage):
             )
 
             action = (
-                action_box.currentText()
+                action_box.currentData()
             )
 
             # Safety check

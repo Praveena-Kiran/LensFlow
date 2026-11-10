@@ -1,8 +1,8 @@
-# LensFlow Vision
+# Wield Vision
 
 ## Mission
 
-LensFlow is an AI-powered desktop accessibility platform that enables users to interact with their computers using customizable hand gestures through a standard webcam.
+Wield is an AI-powered desktop accessibility platform that enables users to interact with their computers using customizable hand gestures through a standard webcam.
 
 Our goal is to provide an intuitive, hands-free experience for users with mobility challenges while also improving productivity for anyone seeking a faster way to interact with their computer.
 

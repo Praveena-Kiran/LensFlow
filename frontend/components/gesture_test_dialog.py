@@ -41,6 +41,7 @@ from frontend.styles.theme import (
 )
 from backend.gestures.custom_gestures import CustomGestureMatcher, CustomGestureStore
 from backend.gestures.gesture_stabilizer import GestureStabilizer
+from backend.automation.events import friendly_action
 from backend.gestures.motions import MotionRecognizer
 from backend.app_info import APP_NAME
 
@@ -257,7 +258,7 @@ class GestureTestDialog(QDialog):
                 f"color: {PRIMARY_TEXT}; font-size: 22px; font-weight: 700;"
             )
             action = self.gesture_map.get(gesture)
-            suffix = f"  ·  would run: {action}" if action else ""
+            suffix = f"  ·  would run: {friendly_action(action)}" if action else ""
             self.detail.setText(f"{kind} · {int(confidence * 100)}%{suffix}")
 
         triggered = self.stabilizer.update(gesture, confidence)
@@ -275,7 +276,7 @@ class GestureTestDialog(QDialog):
             self._motion_shown_until = time.monotonic() + 1.5
             self.seeing.setText(motion)
             action = self.gesture_map.get(motion)
-            suffix = f"  ·  would run: {action}" if action else ""
+            suffix = f"  ·  would run: {friendly_action(action)}" if action else ""
             self.detail.setText(f"motion · {int(confidence * 100)}%{suffix}")
             self._add_log(motion)
 
@@ -296,7 +297,7 @@ class GestureTestDialog(QDialog):
 
         stamp = time.strftime("%H:%M:%S")
         action = self.gesture_map.get(gesture)
-        entry = f"{stamp}   {gesture}" + (f"  →  {action}" if action else "")
+        entry = f"{stamp}   {gesture}" + (f"  →  {friendly_action(action)}" if action else "")
 
         self.log.insert(0, entry)
         del self.log[MAX_LOG_ENTRIES:]

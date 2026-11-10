@@ -1,4 +1,4 @@
-# LensFlow Product Bible
+# Wield Product Bible
 
 Version: 1.0
 
@@ -10,13 +10,13 @@ Author: Praveena Kiran
 
 # Vision
 
-LensFlow is a premium desktop workspace operating system that helps users instantly launch personalized workspaces using intuitive hand gestures.
+Wield is a premium desktop workspace operating system that helps users instantly launch personalized workspaces using intuitive hand gestures.
 
-Instead of manually opening applications, arranging windows, and preparing a workspace every time they sit down to work, LensFlow prepares everything automatically with a single action.
+Instead of manually opening applications, arranging windows, and preparing a workspace every time they sit down to work, Wield prepares everything automatically with a single action.
 
 Our goal is to make starting work feel effortless, organized, and enjoyable.
 
-LensFlow should feel less like software and more like your personal workspace companion.
+Wield should feel less like software and more like your personal workspace companion.
 
 ---
 
@@ -80,13 +80,13 @@ People waste time every day opening applications, arranging their workspace, nav
 
 Current solutions require multiple clicks and repetitive actions.
 
-LensFlow removes this repetitive setup process by allowing users to prepare an entire workspace instantly.
+Wield removes this repetitive setup process by allowing users to prepare an entire workspace instantly.
 
 ---
 
 # Solution
 
-LensFlow introduces the concept of "Studios."
+Wield introduces the concept of "Studios."
 
 A Studio is a personalized workspace containing:
 
@@ -119,7 +119,7 @@ Provide a beautiful interface users enjoy opening every day.
 
 Product Name
 
-LensFlow
+Wield
 
 Category
 
@@ -145,17 +145,17 @@ Your workspace. One gesture away.
 
 # User Journey
 
-1. Open LensFlow
+1. Open Wield
 
 2. Select or create a Studio
 
 3. Perform the activation gesture
 
-4. LensFlow launches applications and workflows
+4. Wield launches applications and workflows
 
 5. User begins working immediately
 
-6. LensFlow stays quietly in the background
+6. Wield stays quietly in the background
 
 The user should never think about the technology.
 
@@ -163,7 +163,7 @@ The user should only think about their work.
 
 # Design Philosophy
 
-LensFlow should never feel like engineering software.
+Wield should never feel like engineering software.
 
 It should feel calm.
 
@@ -237,4 +237,4 @@ Never distracting
 
 Build software people enjoy opening every morning.
 
-If a feature does not improve the user's daily experience, it does not belong in LensFlow.
+If a feature does not improve the user's daily experience, it does not belong in Wield.
