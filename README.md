@@ -35,7 +35,7 @@ Wield is organized into separate components for gesture recognition, action hand
 ## ⬇️ Download
 
 Get the latest **Wield-windows.zip** from the
-[Releases page](https://github.com/Praveena-Kiran/LensFlow/releases), extract it
+[Releases page](https://github.com/Praveena-Kiran/Wield/releases), extract it
 and run `Wield\Wield.exe`. No Python needed. Requires Windows 10/11 and a webcam.
 
 ## 🚀 Installation (from source)
@@ -51,7 +51,7 @@ and run `Wield\Wield.exe`. No Python needed. Requires Windows 10/11 and a webcam
 Clone the repository:
 
 ```bash
-git clone https://github.com/Praveena-Kiran/LensFlow.git
+git clone https://github.com/Praveena-Kiran/Wield.git
 cd Wield
 ```
 
