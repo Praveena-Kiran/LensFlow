@@ -62,6 +62,7 @@ from frontend.pages.settings_page import SettingsPage
 from frontend.pages.activity_page import ActivityPage
 from frontend.pages.notifications_page import NotificationsPage
 from frontend.components.suggestion_dialog import SuggestionDialog
+from frontend.components.welcome_dialog import WelcomeDialog, needs_welcome
 from backend import startup
 from backend.routines import (
     ActivityLog,
@@ -431,6 +432,10 @@ class MainWindow(QMainWindow):
 
         self.settings_page.name_changed.connect(
             self._on_name_changed
+        )
+
+        self.settings_page.welcome_requested.connect(
+            self.show_welcome
         )
 
         # =====================================================
@@ -1314,7 +1319,11 @@ class MainWindow(QMainWindow):
 
         self._refresh_suggestion()
 
-        # Ask about a new routine shortly after Wield opens.
+        # First run: the welcome. Then (later) any routine suggestion.
+        self._welcome_open = False
+        QTimer.singleShot(300, self._maybe_welcome)
+
+        # Ask about a new routine shortly after the app opens.
         QTimer.singleShot(1200, self._show_suggestion_popup)
 
     def _record(
@@ -1359,6 +1368,9 @@ class MainWindow(QMainWindow):
 
         if not self.isVisible():
             return  # started in the tray; the badge waits for them
+
+        if self._welcome_open or needs_welcome():
+            return  # not on top of (or before) the welcome
 
         for suggestion in self._pending_suggestions():
 
@@ -1409,6 +1421,26 @@ class MainWindow(QMainWindow):
         self._refresh_suggestion()
 
         self.home_page.refresh_studios()
+
+    def _maybe_welcome(self):
+        if self.isVisible() and needs_welcome():
+            self.show_welcome()
+
+    def show_welcome(self):
+
+        self._welcome_open = True
+
+        dialog = WelcomeDialog(self)
+        dialog.exec()
+
+        self._welcome_open = False
+
+        self.sidebar.refresh_user()
+        self.home_page.refresh_studios()
+
+        if dialog.theme_changed:
+            # Themes apply at startup.
+            self.restart_app()
 
     def _on_name_changed(self):
         self.sidebar.refresh_user()
