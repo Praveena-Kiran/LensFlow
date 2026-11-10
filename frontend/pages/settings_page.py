@@ -51,6 +51,9 @@ class SettingsPage(StudioPage):
     # The display name changed (greeting and sidebar update).
     name_changed = Signal()
 
+    # "Show welcome again" (About section).
+    welcome_requested = Signal()
+
     def __init__(self, parent=None):
 
         super().__init__(
@@ -234,6 +237,7 @@ class SettingsPage(StudioPage):
         buttons.setSpacing(10)
         buttons.addWidget(self._small_button("Open log", self._open_log))
         buttons.addWidget(self._small_button("Report a problem", self._report_problem))
+        buttons.addWidget(self._small_button("Show welcome again", self.welcome_requested.emit))
         buttons.addStretch()
 
         self._row(
