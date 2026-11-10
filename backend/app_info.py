@@ -16,6 +16,6 @@ DATA_FOLDER = "Wield"
 # Earlier name(s): data folders / sign-in entries migrated on first run.
 LEGACY_NAMES = ["LensFlow"]
 
-# GitHub redirects the old repository address after a rename.
-REPO_URL = "https://github.com/Praveena-Kiran/LensFlow"
+# The repository (renamed from LensFlow; GitHub redirects the old address).
+REPO_URL = "https://github.com/Praveena-Kiran/Wield"
 ISSUES_URL = REPO_URL + "/issues/new"
