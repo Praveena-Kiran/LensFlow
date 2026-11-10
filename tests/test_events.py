@@ -43,7 +43,7 @@ class ProfileTests(unittest.TestCase):
         events = {e["gesture"]: e for e in profile_events(profile)}
         self.assertEqual(events["👍 Thumbs Up"]["action"], "PowerPoint")
         self.assertEqual(events["👍 Thumbs Up"]["value"], "next")
-        self.assertEqual(events["✋ Open Palm"]["action"], "LensFlow")
+        self.assertEqual(events["✋ Open Palm"]["action"], "App")
         self.assertEqual(events["✌️ Peace"], {
             "name": "coding_flow", "gesture": "✌️ Peace",
             "action": "Run Flow", "value": "coding_flow",
@@ -74,7 +74,7 @@ class RunnerTests(unittest.TestCase):
         import os, tempfile
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        patcher = mock.patch.dict(os.environ, {"LENSFLOW_DATA_DIR": self.tmp.name})
+        patcher = mock.patch.dict(os.environ, {"WIELD_DATA_DIR": self.tmp.name})
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -135,8 +135,8 @@ class RunnerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.fm.execute_flow("missing")
 
-    def test_lensflow_action_is_a_noop(self):
-        self.run_event("LensFlow", "activate")
+    def test_app_action_is_a_noop(self):
+        self.run_event("App", "activate")
 
 
 if __name__ == "__main__":

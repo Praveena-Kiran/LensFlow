@@ -1,15 +1,15 @@
 """
-"Start LensFlow when I sign in to Windows".
+"Start Wield when I sign in to Windows".
 
 Uses the per-user Run key in the registry (no admin rights needed):
     HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run
-LensFlow starts with --background, i.e. straight into the system tray.
+Wield starts with --background, i.e. straight into the system tray.
 Other systems: not supported (the option is disabled in the UI).
 """
 
 import os
 import sys
-from backend.app_info import APP_NAME
+from backend.app_info import APP_NAME, LEGACY_NAMES
 
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
@@ -24,7 +24,7 @@ def launch_command():
     """The command Windows should run at sign-in."""
 
     if getattr(sys, "frozen", False):
-        # The packaged LensFlow.exe
+        # The packaged Wield.exe
         return f'"{sys.executable}" --background'
 
     # Running from source: pythonw avoids a console window.
@@ -37,6 +37,15 @@ def launch_command():
     return f'"{python}" "{main}" --background'
 
 
+def _has_value(key, name):
+    import winreg
+    try:
+        winreg.QueryValueEx(key, name)
+        return True
+    except OSError:
+        return False
+
+
 def is_enabled():
 
     if not is_supported():
@@ -46,10 +55,30 @@ def is_enabled():
 
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
-            winreg.QueryValueEx(key, VALUE_NAME)
-            return True
+            return any(_has_value(key, n) for n in [VALUE_NAME] + LEGACY_NAMES)
     except OSError:
         return False
+
+
+def migrate_legacy():
+    """
+    If start-at-sign-in was turned on under the old app name, re-register it
+    under the new name (pointing at this install) and remove the old entry.
+    """
+
+    if not is_supported():
+        return
+
+    import winreg
+
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
+            had_legacy = any(_has_value(key, n) for n in LEGACY_NAMES)
+    except OSError:
+        return
+
+    if had_legacy:
+        set_enabled(True)
 
 
 def set_enabled(enabled):
@@ -67,5 +96,12 @@ def set_enabled(enabled):
         else:
             try:
                 winreg.DeleteValue(key, VALUE_NAME)
+            except FileNotFoundError:
+                pass
+
+        # Old entries from before the rename are always removed.
+        for name in LEGACY_NAMES:
+            try:
+                winreg.DeleteValue(key, name)
             except FileNotFoundError:
                 pass

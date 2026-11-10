@@ -4,10 +4,10 @@ Record a custom gesture from the webcam.
 Flow for the user:
     1. Type a name.
     2. Press "Record". A short countdown gives them time to get into the pose,
-       then LensFlow captures the hand for a couple of seconds.
+       then Wield captures the hand for a couple of seconds.
     3. Repeat for TAKES_REQUIRED takes (small variations make recognition
        more forgiving).
-    4. LensFlow checks the recording (enough frames, not a built-in pose,
+    4. Wield checks the recording (enough frames, not a built-in pose,
        not too close to another custom gesture) and the user saves it.
 
 The camera runs on a background thread (CameraPreviewWorker) so the dialog

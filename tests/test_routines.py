@@ -53,7 +53,7 @@ class SuggestTests(Base):
             self.open_studio(offset, 10, 0)
         self.assertEqual(self.suggestions(), [])
 
-    def test_days_without_lensflow_do_not_count_against_a_habit(self):
+    def test_days_without_the_app_do_not_count_against_a_habit(self):
         # Used only 4 days in the last two weeks, always at 10:00.
         for offset in (1, 4, 9, 13):
             self.open_studio(offset, 10, 0)

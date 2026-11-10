@@ -1,4 +1,4 @@
-"""LensFlow navigation sidebar.
+"""Wield navigation sidebar.
 
 Line icons are drawn in code (no image files or emoji), so they take the
 theme's colours. Items: Home, Studios, Notifications (with a count badge),

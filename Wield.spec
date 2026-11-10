@@ -1,11 +1,11 @@
-# PyInstaller build recipe for LensFlow.
+# PyInstaller build recipe for Wield.
 #
 # Build (from the repo root):
 #     pip install -r requirements.txt pyinstaller
-#     pyinstaller LensFlow.spec --noconfirm
+#     pyinstaller Wield.spec --noconfirm
 #
-# Output: dist/LensFlow/LensFlow(.exe) plus its support files. Ship the whole
-# dist/LensFlow folder (the GitHub workflow zips it).
+# Output: dist/Wield/Wield(.exe) plus its support files. Ship the whole
+# dist/Wield folder (the GitHub workflow zips it).
 
 from PyInstaller.utils.hooks import collect_all
 
@@ -14,6 +14,7 @@ datas = [
     ("backend/models/gesture_recognizer.task", "backend/models"),
     ("backend/config", "backend/config"),
     ("frontend/styles/theme.qss", "frontend/styles"),
+    ("assets/icons/wield.png", "assets/icons"),
 ]
 binaries = []
 hiddenimports = []
@@ -27,7 +28,7 @@ hiddenimports += mp_hidden
 # Windows-only modules imported by the PowerPoint controller / hotkeys.
 hiddenimports += ["win32com.client", "pyautogui"]
 
-# LensFlow only uses QtCore, QtGui and QtWidgets. Leaving the rest of Qt
+# Wield only uses QtCore, QtGui and QtWidgets. Leaving the rest of Qt
 # out (web engine, QML, 3D, multimedia...) cuts the download by hundreds of MB.
 UNUSED_QT = [
     "QtWebEngineCore", "QtWebEngineWidgets", "QtWebEngineQuick", "QtWebChannel",
@@ -63,9 +64,9 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="LensFlow",
+    name="Wield",
     console=False,  # no terminal window behind the app
-    icon=None,
+    icon="assets/icons/wield.ico",
 )
 
 coll = COLLECT(
@@ -74,5 +75,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name="LensFlow",
+    name="Wield",
 )

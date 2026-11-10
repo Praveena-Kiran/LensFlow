@@ -51,7 +51,7 @@ from backend.app_info import APP_NAME
 
 
 # Built-in studios and what they actually do. Shown instead of the saved
-# description, which older versions wrote with features LensFlow doesn't have.
+# description, which older versions wrote with features Wield doesn't have.
 BUILT_IN_DESCRIPTIONS = {
     "Presentation Studio": "Control PowerPoint slides with gestures and swipes.",
     "Coding Studio": "Open your development workspace in one go.",

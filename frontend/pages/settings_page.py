@@ -1,6 +1,6 @@
 """
 Settings page: accessibility options for gesture recognition, and where
-LensFlow keeps its data. Changes save immediately and apply the next time a
+Wield keeps its data. Changes save immediately and apply the next time a
 studio starts listening.
 """
 
@@ -260,7 +260,7 @@ class SettingsPage(StudioPage):
             "**What happened?**\n\n\n"
             "**What did you expect?**\n\n\n"
             f"---\n{APP_NAME} {VERSION} on {platform.system()} {platform.release()}\n"
-            "(Settings → About → Open log, and attach lensflow.log if you can.)"
+            "(Settings → About → Open log, and attach wield.log if you can.)"
         )
         QDesktopServices.openUrl(QUrl(ISSUES_URL + "?" + urlencode({"body": body})))
 

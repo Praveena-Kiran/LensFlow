@@ -1,4 +1,4 @@
-"""LensFlow frontend components."""
+"""Wield frontend components."""
 
 from .title_bar import TitleBar
 from .sidebar import AppSidebar

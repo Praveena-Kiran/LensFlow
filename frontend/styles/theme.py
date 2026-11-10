@@ -1,5 +1,5 @@
 """
-LensFlow design tokens and themes.
+Wield design tokens and themes.
 
 Every screen imports its colours from here (BG_DARK, SURFACE, PRIMARY, ...).
 The values come from the theme the user picked in Settings, read once when
@@ -133,7 +133,7 @@ SETTING_KEY = "ui_theme"
 def _selected_theme():
     """Theme name from settings.json, read directly (no Qt, no circular imports)."""
 
-    override = os.environ.get("LENSFLOW_THEME")
+    override = os.environ.get("WIELD_THEME") or os.environ.get("LENSFLOW_THEME")
     if override in THEMES:
         return override
 

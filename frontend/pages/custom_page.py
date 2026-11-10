@@ -1,5 +1,5 @@
 """
-LensFlow - Custom Studio Page
+Wield - Custom Studio Page
 
 Handles:
 - Creating custom studios

@@ -8,7 +8,7 @@ Everything here stays on the user's computer (in their data folder):
     routines.json    routines they accepted, plus suggestions they declined
 
 How a suggestion is found (suggest_routines):
-    - Look at the last LOOKBACK_DAYS *active* days (days LensFlow was used,
+    - Look at the last LOOKBACK_DAYS *active* days (days Wield was used,
       so a weekend away doesn't count against a habit).
     - For each thing they did (open a studio / run an event), take the
       first time they did it each day and its typical time (median).
@@ -33,7 +33,7 @@ MIN_DAYS = 4
 TIME_WINDOW = 20           # minutes either side of the typical time
 DECLINE_SNOOZE_DAYS = 30
 KEEP_DAYS = 90             # activity older than this is deleted
-RUN_GRACE_MINUTES = 30     # a routine still runs if LensFlow starts this late
+RUN_GRACE_MINUTES = 30     # a routine still runs if Wield starts this late
 
 WEEKDAYS = [0, 1, 2, 3, 4]
 EVERY_DAY = [0, 1, 2, 3, 4, 5, 6]

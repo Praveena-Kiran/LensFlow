@@ -1,7 +1,7 @@
 """
 Logging for the packaged app, which has no console window.
 
-install() copies everything printed (stdout and stderr) into lensflow.log in
+install() copies everything printed (stdout and stderr) into wield.log in
 the user's data folder, alongside the console when there is one, and records
 uncaught exceptions with their traceback. The log is trimmed when it grows
 past MAX_BYTES so it never fills the disk.
@@ -16,7 +16,7 @@ import traceback
 from backend.paths import user_data_dir
 
 
-LOG_NAME = "lensflow.log"
+LOG_NAME = "wield.log"
 MAX_BYTES = 1_000_000     # trim to the newest half beyond this
 
 _installed = False

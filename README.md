@@ -1,7 +1,7 @@
-# LensFlow
+# Wield
 ### AI-Powered Gesture-Based Accessibility Platform
 
-LensFlow is an AI-powered desktop accessibility platform that enables hands-free computer interaction using customizable hand gestures and computer vision.
+Wield is an AI-powered desktop accessibility platform that enables hands-free computer interaction using customizable hand gestures and computer vision.
 
 The project uses real-time hand gesture recognition to trigger configurable actions, including application launching and PowerPoint presentation control.
 
@@ -18,7 +18,7 @@ The project uses real-time hand gesture recognition to trigger configurable acti
 
 ## 🏗️ Architecture
 
-LensFlow is organized into separate components for gesture recognition, action handling, and the desktop interface.
+Wield is organized into separate components for gesture recognition, action handling, and the desktop interface.
 
 - **Backend** — gesture recognition and action-handling logic
 - **Frontend / UI** — desktop interface and studio navigation
@@ -34,9 +34,9 @@ LensFlow is organized into separate components for gesture recognition, action h
 
 ## ⬇️ Download
 
-Get the latest **LensFlow-windows.zip** from the
+Get the latest **Wield-windows.zip** from the
 [Releases page](https://github.com/Praveena-Kiran/LensFlow/releases), extract it
-and run `LensFlow\LensFlow.exe`. No Python needed. Requires Windows 10/11 and a webcam.
+and run `Wield\Wield.exe`. No Python needed. Requires Windows 10/11 and a webcam.
 
 ## 🚀 Installation (from source)
 
@@ -52,7 +52,7 @@ Clone the repository:
 
 ```bash
 git clone https://github.com/Praveena-Kiran/LensFlow.git
-cd LensFlow
+cd Wield
 ```
 
 Install the dependencies (a virtual environment is recommended):
@@ -79,7 +79,7 @@ python -m tools.camera_preview_check
 ### Custom gestures
 
 Open **Gesture Studio → + Record Custom Gesture**, name the gesture and hold any
-comfortable hand pose for three short takes. LensFlow rejects poses that look
+comfortable hand pose for three short takes. Wield rejects poses that look
 like a built-in gesture or another of your gestures, so actions don't trigger by
 accident. Then use **+ Add Gesture** to assign it to an action.
 
@@ -100,15 +100,15 @@ the writing is saved, never a camera image. Filters: Fog, Clear, Mono.
 
 ### Routines
 
-LensFlow notices when you do the same thing around the same time on most days
+Wield notices when you do the same thing around the same time on most days
 (for example, launching a studio at 10:00) and asks, when you open it, whether
 to do it for you. Nothing is automated until you click **Automate**. **Not now**
 keeps the suggestion in **Notifications**, which also lists your automations
 (pause or delete them). **History** shows recent activity, which you can clear.
 Activity stays on this computer only, for at most 90 days.
 
-Automations need LensFlow to be running: in Notifications, turn on *Keep
-LensFlow running in the system tray* and/or *Start LensFlow when I sign in to
+Automations need Wield to be running: in Notifications, turn on *Keep
+Wield running in the system tray* and/or *Start Wield when I sign in to
 Windows*.
 
 ### Themes
@@ -124,11 +124,11 @@ passes WCAG AA contrast (checked by `tests/test_themes.py`).
 - **Sensitivity**: from strict to forgiving. Forgiving accepts less exact poses
   and movements, which helps with tremor or limited range of motion.
 - **Hold to trigger**: a pose must be held (up to 1.5 s) before it does anything.
-- **Activation gesture**: LensFlow ignores gestures until you make a chosen
+- **Activation gesture**: Wield ignores gestures until you make a chosen
   gesture, then switches off again after a few idle seconds, so everyday hand
   movement doesn't trigger anything.
 
-**Test Gestures** opens a live view showing what LensFlow recognises and what
+**Test Gestures** opens a live view showing what Wield recognises and what
 it would trigger, without running anything.
 
 To use gestures in your own studios, open the studio, pick a gesture for each
@@ -136,12 +136,12 @@ event (built-in or your own), then press **Start Gesture Control**. Making the
 gesture runs that event.
 
 Your studios, settings and custom gestures are stored per user in
-`%APPDATA%\LensFlow` (Windows), so they survive app updates.
+`%APPDATA%\Wield` (Windows), so they survive app updates.
 
 ### Building the Windows app
 
 GitHub Actions builds it automatically (`.github/workflows/build.yml`): every
-pull request builds and self-tests `LensFlow.exe`, and pushing a version tag
+pull request builds and self-tests `Wield.exe`, and pushing a version tag
 publishes a release:
 
 ```bash
@@ -153,8 +153,8 @@ To build locally instead:
 
 ```bash
 pip install -r requirements.txt pyinstaller
-pyinstaller LensFlow.spec --noconfirm
-dist\LensFlow\LensFlow.exe --self-test
+pyinstaller Wield.spec --noconfirm
+dist\Wield\Wield.exe --self-test
 ```
 
 ### Tests

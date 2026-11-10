@@ -1,5 +1,5 @@
 """
-The routine suggestion shown when LensFlow opens. "Automate" accepts it;
+The routine suggestion shown when Wield opens. "Automate" accepts it;
 "Not now" just closes it, and the suggestion waits in Notifications.
 """
 

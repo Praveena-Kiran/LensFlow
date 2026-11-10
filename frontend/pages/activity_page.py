@@ -1,5 +1,5 @@
 """
-History page: what LensFlow has done recently (opened studios, events run by
+History page: what Wield has done recently (opened studios, events run by
 click, gesture or routine), with a button to clear it. Stored only on this
 computer. Automations themselves live on the Notifications page.
 """

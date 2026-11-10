@@ -1,7 +1,7 @@
 """
 Live gesture tester.
 
-Shows what LensFlow sees in real time, using the same rules as a running
+Shows what Wield sees in real time, using the same rules as a running
 studio: custom gestures are checked first, then the built-in ones, and the
 GestureStabilizer decides when a gesture actually *triggers*. Nothing is
 executed — it's safe to try gestures here.

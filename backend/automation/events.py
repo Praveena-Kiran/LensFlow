@@ -65,9 +65,9 @@ PROFILE_ACTIONS = {
     "presentation_previous": ("Previous slide", "PowerPoint", "previous"),
     "presentation_start": ("Start presentation", "PowerPoint", "start"),
     "presentation_end": ("End presentation", "PowerPoint", "end"),
-    # Arming LensFlow with a gesture; see the accessibility settings.
-    "ACTIVATE": (f"Activate {APP_NAME}", "LensFlow", "activate"),
-    "DEACTIVATE": (f"Deactivate {APP_NAME}", "LensFlow", "deactivate"),
+    # Arming Wield with a gesture; see the accessibility settings.
+    "ACTIVATE": (f"Activate {APP_NAME}", "App", "activate"),
+    "DEACTIVATE": (f"Deactivate {APP_NAME}", "App", "deactivate"),
 }
 
 

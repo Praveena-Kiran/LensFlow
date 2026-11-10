@@ -68,7 +68,7 @@ class GestureWorker(QObject):
         )
 
         # Activation ("arm") gesture: when required, nothing runs until it
-        # is made, and LensFlow switches off after arm_timeout idle seconds.
+        # is made, and Wield switches off after arm_timeout idle seconds.
         self.require_arm = self.settings["require_arm"]
         self.arm_gesture = self.settings["arm_gesture"]
         self.arm_timeout = self.settings["arm_timeout"]
@@ -282,16 +282,16 @@ class GestureWorker(QObject):
             if not self.armed:
                 return
 
-            # Still in use: keep LensFlow active.
+            # Still in use: keep Wield active.
             self._set_armed(True)
 
         # Every studio is a list of events; run the ones this
         # gesture triggers (see backend/automation/events.py).
         for event in events_for_gesture(self.events, gesture):
 
-            # LensFlow's own actions (activate/deactivate) arm or disarm
+            # Wield's own actions (activate/deactivate) arm or disarm
             # when the activation setting is on; the status line reports it.
-            if event.get("action") == "LensFlow":
+            if event.get("action") in ("App", "LensFlow"):
                 if self.require_arm:
                     self._set_armed(event.get("value") != "deactivate")
                 continue

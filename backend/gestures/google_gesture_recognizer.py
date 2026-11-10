@@ -6,7 +6,7 @@ import mediapipe as mp
 from backend.paths import model_path as bundled_model_path
 
 
-# MediaPipe category name -> name shown in LensFlow.
+# MediaPipe category name -> name shown in Wield.
 BUILTIN_GESTURES = {
     "Thumb_Up": "👍 Thumbs Up",
     "Thumb_Down": "👎 Thumbs Down",

@@ -1,1 +1,1 @@
-"""LensFlow Frontend Package"""
+"""Wield Frontend Package"""

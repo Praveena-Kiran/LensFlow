@@ -24,8 +24,8 @@ ACTION_NAMES = {
     "presentation_end": "End Presentation",
     "presentation_next": "Next Slide",
     "presentation_previous": "Previous Slide",
-    "ACTIVATE": "Activate LensFlow",
-    "DEACTIVATE": "Deactivate LensFlow",
+    "ACTIVATE": "Activate Wield",
+    "DEACTIVATE": "Deactivate Wield",
 }
 
 
@@ -48,10 +48,10 @@ def start_hand_detection(profile_name="presentation"):
     print(f"[OK] Loaded profile: {profile_name}")
 
     # -----------------------------------------------------
-    # LensFlow state
+    # Wield state
     # -----------------------------------------------------
 
-    lensflow_active = False
+    armed = False
 
     # -----------------------------------------------------
     # Camera
@@ -117,12 +117,12 @@ def start_hand_detection(profile_name="presentation"):
 
             if confirmed_gesture == "Open_Palm":
 
-                if not lensflow_active:
+                if not armed:
 
-                    lensflow_active = True
+                    armed = True
                     current_action = "ACTIVATE"
 
-                    print("🟢 LensFlow ACTIVATED")
+                    print("🟢 Wield ACTIVATED")
 
                 # Do NOT execute the presentation action
                 # associated with Open_Palm.
@@ -132,7 +132,7 @@ def start_hand_detection(profile_name="presentation"):
             # Normal gesture processing
             # -------------------------------------------------
 
-            if lensflow_active:
+            if armed:
 
                 action = gesture_map.get(
                     confirmed_gesture
@@ -165,7 +165,7 @@ def start_hand_detection(profile_name="presentation"):
 
         cv2.putText(
             frame,
-            "LensFlow",
+            "Wield",
             (20, 40),
             cv2.FONT_HERSHEY_SIMPLEX,
             1.0,
@@ -188,10 +188,10 @@ def start_hand_detection(profile_name="presentation"):
         )
 
         # -------------------------------------------------
-        # LensFlow status
+        # Wield status
         # -------------------------------------------------
 
-        if lensflow_active:
+        if armed:
 
             status = "ACTIVE"
             status_color = (0, 255, 0)
@@ -249,7 +249,7 @@ def start_hand_detection(profile_name="presentation"):
         # -------------------------------------------------
 
         cv2.imshow(
-            "LensFlow - Hand Detection",
+            "Wield - Hand Detection",
             frame
         )
 
