@@ -1,7 +1,7 @@
 # Default Gestures
 
 ✋ Open Palm
-- Activate LensFlow
+- Activate Wield
 
 👍 Thumbs Up
 - Open Spotify

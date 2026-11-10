@@ -1,4 +1,4 @@
-# LensFlow UI Guidelines
+# Wield UI Guidelines
 
 Version: 1.0
 
@@ -8,7 +8,7 @@ Status: In Progress
 
 # Design Philosophy
 
-LensFlow should feel like a premium desktop application.
+Wield should feel like a premium desktop application.
 
 Users should immediately understand what to do.
 
