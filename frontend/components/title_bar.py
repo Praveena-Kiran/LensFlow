@@ -1,12 +1,13 @@
-"""LensFlow - Custom Window Title Bar Controls
+"""Wield - Custom Window Title Bar Controls
 
-Frameless custom title bar providing LensFlow brand identity, window dragging,
+Frameless custom title bar providing Wield brand identity, window dragging,
 and Windows 11 style Minimize, Maximize/Restore, and Close buttons.
 """
 
+import os
 from typing import Optional
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QPainter, QColor, QFont, QRadialGradient, QBrush
+from PySide6.QtGui import QPainter, QColor, QFont, QRadialGradient, QBrush, QImage
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLabel, QPushButton
 )
@@ -27,6 +28,7 @@ from frontend.styles.theme import (
     ERROR,
 )
 from backend.app_info import APP_NAME
+from backend.paths import APP_DIR
 
 
 class WindowControlButton(QPushButton):
@@ -68,7 +70,7 @@ class WindowControlButton(QPushButton):
 
 
 class TitleBar(QWidget):
-    """Custom title bar featuring LensFlow logo badge, title, and Minimize/Maximize/Close buttons."""
+    """Custom title bar featuring Wield logo badge, title, and Minimize/Maximize/Close buttons."""
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -152,26 +154,29 @@ class TitleBar(QWidget):
 
 
 class _LFBadge(QWidget):
-    """Small 26x26 rounded badge with 'LF' monogram."""
+    """The app icon, small, in the title bar."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedSize(26, 26)
+        path = os.path.join(APP_DIR, "assets", "icons", "wield.png")
+        self._image = QImage(path) if os.path.isfile(path) else None
 
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        if self._image is not None:
+            p.drawImage(self.rect(), self._image)
+            return
+
         w, h = float(self.width()), float(self.height())
-
-        grad = QRadialGradient(w * 0.4, h * 0.35, w * 0.6)
-        grad.setColorAt(0.0, QColor(SECONDARY_ACCENT))
-        grad.setColorAt(1.0, QColor(PRIMARY))
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(grad))
+        p.setBrush(QColor(PRIMARY))
         p.drawRoundedRect(0, 0, int(w), int(h), 6, 6)
-
         p.setPen(QColor(ON_PRIMARY))
         font = QFont("Inter", 8)
         font.setWeight(QFont.Weight.Bold)
         p.setFont(font)
-        p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "LF")
+        p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, APP_NAME[:1])

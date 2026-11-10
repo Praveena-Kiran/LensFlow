@@ -1,5 +1,5 @@
 """
-Startup check used by the build pipeline: `LensFlow --self-test`.
+Startup check used by the build pipeline: `Wield --self-test`.
 
 Loads the bundled gesture model, runs one detection, checks the user data
 folder is writable and the UI modules import. Exit code 0 means OK. Results

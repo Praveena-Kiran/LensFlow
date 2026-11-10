@@ -11,7 +11,7 @@ class GestureSettingsTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        patcher = mock.patch.dict(os.environ, {"LENSFLOW_DATA_DIR": self.tmp.name})
+        patcher = mock.patch.dict(os.environ, {"WIELD_DATA_DIR": self.tmp.name})
         patcher.start()
         self.addCleanup(patcher.stop)
         from backend.settings import gesture_settings

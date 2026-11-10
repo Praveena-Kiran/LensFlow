@@ -171,7 +171,7 @@ class FlowManager:
                 raise ValueError(f'"{value}" is not a number of seconds.')
             time.sleep(seconds)
 
-        elif action == "LensFlow":
+        elif action in ("App", "LensFlow"):
             # Arm/disarm is handled by the gesture worker itself.
             pass
 

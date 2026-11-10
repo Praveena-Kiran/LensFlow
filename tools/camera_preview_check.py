@@ -12,7 +12,7 @@ try:
         frame = engine.read()
 
         if frame is not None:
-            cv2.imshow("LensFlow Presentation Camera", frame)
+            cv2.imshow("Wield Presentation Camera", frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break

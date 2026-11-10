@@ -1,10 +1,10 @@
 """
-Custom gestures: let each user teach LensFlow their own hand poses.
+Custom gestures: let each user teach Wield their own hand poses.
 
 Why this exists
 ---------------
 MediaPipe only knows six fixed gestures. Some people can't comfortably make
-those shapes, so LensFlow lets a user record *any* pose they can hold and
+those shapes, so Wield lets a user record *any* pose they can hold and
 map it to an action. Recognition is template matching on hand landmarks:
 
 1. MediaPipe gives 21 3D landmarks per hand (we use the "world" landmarks,

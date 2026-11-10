@@ -9,7 +9,7 @@ Stored in the user's settings.json (via SettingsManager):
     hold_time     seconds a pose must be held before it triggers (0 = instant)
     require_arm   bool    gestures only work after an activation gesture
     arm_gesture   name    the activation gesture
-    arm_timeout   seconds of no gestures before LensFlow deactivates again
+    arm_timeout   seconds of no gestures before Wield deactivates again
 
 thresholds() turns these into the numbers the matchers use.
 """

@@ -1,5 +1,5 @@
 """
-LensFlow — Premium Desktop Workspace Operating System
+Wield — Premium Desktop Workspace Operating System
 
 Main application window.
 """
@@ -1291,6 +1291,12 @@ class MainWindow(QMainWindow):
         self.activity_log = ActivityLog()
         self.routine_store = RoutineStore()
 
+        # Re-register start-at-sign-in if it was set up under the old name.
+        try:
+            startup.migrate_legacy()
+        except Exception as e:
+            print(f"⚠ Could not update the sign-in entry: {e}")
+
         # How the next recorded action was started ("click", "gesture",
         # "routine"). Routine runs are logged but never learned from.
         self._trigger_source = "click"
@@ -1308,7 +1314,7 @@ class MainWindow(QMainWindow):
 
         self._refresh_suggestion()
 
-        # Ask about a new routine shortly after LensFlow opens.
+        # Ask about a new routine shortly after Wield opens.
         QTimer.singleShot(1200, self._show_suggestion_popup)
 
     def _record(
@@ -1349,7 +1355,7 @@ class MainWindow(QMainWindow):
         )
 
     def _show_suggestion_popup(self):
-        """When LensFlow opens: offer the top new suggestion, once a day."""
+        """When Wield opens: offer the top new suggestion, once a day."""
 
         if not self.isVisible():
             return  # started in the tray; the badge waits for them
@@ -1502,7 +1508,7 @@ class MainWindow(QMainWindow):
         self.activateWindow()
 
     def restart_app(self):
-        """Start a fresh LensFlow (themes apply at startup), then quit."""
+        """Start a fresh Wield (themes apply at startup), then quit."""
 
         args = [a for a in sys.argv if a != "--background"]
 
@@ -1571,23 +1577,16 @@ class _CrashNotifier(QObject):
 # =============================================================
 
 def _app_icon():
-    """A simple lens mark, drawn in code (no image files needed)."""
+    """The Wield icon (assets/icons/wield.png, made by tools/make_icon.py)."""
 
+    path = os.path.join(APP_DIR, "assets", "icons", "wield.png")
+
+    if os.path.isfile(path):
+        return QIcon(path)
+
+    # Fallback if the file is missing: the brand colour.
     pixmap = QPixmap(64, 64)
-    pixmap.fill(QColor(0, 0, 0, 0))
-
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setBrush(QColor(PRIMARY))
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.drawRoundedRect(4, 4, 56, 56, 16, 16)
-    painter.setBrush(Qt.BrushStyle.NoBrush)
-    painter.setPen(QPen(QColor("#0A0A0D"), 5))
-    painter.drawEllipse(17, 17, 30, 30)
-    painter.setBrush(QColor("#0A0A0D"))
-    painter.drawEllipse(28, 28, 8, 8)
-    painter.end()
-
+    pixmap.fill(QColor(PRIMARY))
     return QIcon(pixmap)
 
 

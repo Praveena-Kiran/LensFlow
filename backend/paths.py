@@ -1,5 +1,5 @@
 """
-Where LensFlow keeps its files.
+Where Wield keeps its files.
 
 Two locations matter:
 
@@ -9,10 +9,11 @@ Two locations matter:
 
 * USER_DATA_DIR — a per-user, always-writable folder for everything the user
   changes: studios, settings, gesture profiles and custom gestures.
-    Windows: %APPDATA%\\LensFlow
-    macOS:   ~/Library/Application Support/LensFlow
-    Linux:   ~/.config/lensflow
-  Set the LENSFLOW_DATA_DIR environment variable to override it (used by tests).
+    Windows: %APPDATA%\\Wield
+    macOS:   ~/Library/Application Support/Wield
+    Linux:   ~/.config/wield
+  Set the WIELD_DATA_DIR environment variable to override it (used by tests;
+  the old LENSFLOW_DATA_DIR still works).
 
 The JSON files in backend/config are the *defaults*. The first time a file
 is needed it is copied into USER_DATA_DIR, and from then on the user's copy
@@ -23,7 +24,7 @@ import os
 import shutil
 import sys
 
-from backend.app_info import DATA_FOLDER
+from backend.app_info import DATA_FOLDER, LEGACY_NAMES
 
 
 APP_DIR = getattr(sys, "_MEIPASS", None) or os.path.dirname(
@@ -37,28 +38,56 @@ MODELS_DIR = os.path.join(APP_DIR, "backend", "models")
 
 def _default_user_data_dir():
 
-    override = os.environ.get("LENSFLOW_DATA_DIR")
+    override = os.environ.get("WIELD_DATA_DIR") or os.environ.get("LENSFLOW_DATA_DIR")
 
     if override:
         return override
 
+    return _data_dir_for(DATA_FOLDER)
+
+
+def _data_dir_for(folder):
+
     if sys.platform == "win32":
         base = os.environ.get("APPDATA") or os.path.expanduser("~")
-        return os.path.join(base, DATA_FOLDER)
+        return os.path.join(base, folder)
 
     if sys.platform == "darwin":
-        return os.path.expanduser(
-            f"~/Library/Application Support/{DATA_FOLDER}"
-        )
+        return os.path.expanduser(f"~/Library/Application Support/{folder}")
 
     base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-    return os.path.join(base, DATA_FOLDER.lower())
+    return os.path.join(base, folder.lower())
+
+
+def _migrate_legacy_data(path):
+    """
+    The app used to be called LensFlow. If this user still has data under
+    the old folder name and none under the new one, move it across once so
+    their studios, gestures and notes come with them.
+    """
+
+    if os.path.exists(path):
+        return
+
+    for name in LEGACY_NAMES:
+        old = _data_dir_for(name)
+        if os.path.isdir(old) and os.path.abspath(old) != os.path.abspath(path):
+            try:
+                shutil.move(old, path)
+                print(f"📦 Moved your data from {old} to {path}")
+            except OSError as e:
+                print(f"⚠ Could not move old data from {old}: {e}")
+            return
 
 
 def user_data_dir():
     """Return the per-user data folder, creating it if needed."""
 
     path = _default_user_data_dir()
+
+    if not (os.environ.get("WIELD_DATA_DIR") or os.environ.get("LENSFLOW_DATA_DIR")):
+        _migrate_legacy_data(path)
+
     os.makedirs(path, exist_ok=True)
     return path
 

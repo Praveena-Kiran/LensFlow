@@ -31,7 +31,7 @@ jobs:
     needs: tests
     runs-on: windows-latest
     env:
-      LENSFLOW_DATA_DIR: ${{ github.workspace }}\ci-data
+      WIELD_DATA_DIR: ${{ github.workspace }}\ci-data
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -42,24 +42,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt pyinstaller
 
-      - name: Build LensFlow.exe
-        run: pyinstaller LensFlow.spec --noconfirm
+      - name: Build Wield.exe
+        run: pyinstaller Wield.spec --noconfirm
 
       - name: Self-test the built app
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath dist\LensFlow\LensFlow.exe -ArgumentList '--self-test' -Wait -PassThru
-          Get-Content "$env:LENSFLOW_DATA_DIR\self_test.log"
+          $p = Start-Process -FilePath dist\Wield\Wield.exe -ArgumentList '--self-test' -Wait -PassThru
+          Get-Content "$env:WIELD_DATA_DIR\self_test.log"
           if ($p.ExitCode -ne 0) { exit 1 }
 
       - name: Zip
         shell: pwsh
-        run: Compress-Archive -Path dist\LensFlow -DestinationPath LensFlow-windows.zip
+        run: Compress-Archive -Path dist\Wield -DestinationPath Wield-windows.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: LensFlow-windows
-          path: LensFlow-windows.zip
+          name: Wield-windows
+          path: Wield-windows.zip
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -67,6 +67,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" LensFlow-windows.zip `
-            --title "LensFlow ${{ github.ref_name }}" `
-            --notes "Download LensFlow-windows.zip, extract it and run LensFlow\LensFlow.exe. Requires Windows 10/11 and a webcam."
+          gh release create "${{ github.ref_name }}" Wield-windows.zip `
+            --title "Wield ${{ github.ref_name }}" `
+            --notes "Download Wield-windows.zip, extract it and run Wield\Wield.exe. Requires Windows 10/11 and a webcam."

@@ -1,7 +1,7 @@
 import time
 
 # PowerPoint control uses Windows COM. Import lazily-tolerant so the rest of
-# LensFlow still runs on other systems (and in tests); connect() reports it.
+# Wield still runs on other systems (and in tests); connect() reports it.
 try:
     import win32com.client
 except ImportError:  # not Windows, or pywin32 missing
