@@ -286,6 +286,12 @@ SWIPE_DIRECTIONS = {
 BUILTIN_MOTION_NAMES = list(SWIPE_DIRECTIONS)
 
 
+def ideal_swipe(name):
+    """A perfectly straight swipe as a normalised trajectory."""
+    angle = math.radians(SWIPE_DIRECTIONS[name])
+    return normalize_trajectory([(0.0, 0.0), (math.cos(angle), math.sin(angle))])
+
+
 def straightness(trajectory):
     """Start-to-end distance / path length (1 = perfectly straight)."""
     # A normalised trajectory starts at 0,0 and has path length 1.
@@ -402,8 +408,16 @@ class MotionMatcher:
         self.templates = []
 
         for m in motions or []:
-            if m.get("samples"):
-                self.templates.append((m["name"], m["samples"]))
+            # Ignore takes that are really straight swipes: one such take
+            # inside a recording made every near-straight movement match
+            # it (recordings saved before review_motion checked each take
+            # can contain one).
+            samples = [
+                sample for sample in m.get("samples") or []
+                if not classify_swipe(sample)[0]
+            ]
+            if samples:
+                self.templates.append((m["name"], samples))
 
     @classmethod
     def from_store(cls, store=None, **kwargs):
@@ -418,37 +432,88 @@ class MotionMatcher:
         ranked.sort(key=lambda item: item[1])
         return ranked
 
+    def match_custom(self, trajectory):
+        """
+        (name, confidence, distance) of the user's closest recorded motion
+        if it is close enough and clearly closer than any other, otherwise
+        (None, 0.0, distance-or-None).
+        """
+
+        if trajectory is None or not self.templates:
+            return None, 0.0, None
+
+        ranked = self.closest(trajectory)
+        name, distance = ranked[0]
+
+        if distance > self.max_distance:
+            return None, 0.0, distance
+
+        if len(ranked) > 1 and ranked[1][1] - distance < self.min_margin:
+            return None, 0.0, distance
+
+        confidence = 1.0 - (1.0 - MIN_MATCH_CONFIDENCE) * (distance / self.max_distance)
+        return name, confidence, distance
+
     def match_trajectory(self, trajectory):
         """(name, confidence) or (None, 0.0) for a normalised trajectory."""
 
         if trajectory is None:
             return None, 0.0
 
-        # Straight strokes are swipes; the user's motions must be curvier
-        # (review_motion enforces that), so check swipes first.
+        custom, custom_confidence, custom_distance = self.match_custom(trajectory)
+
+        swipe, swipe_confidence = (None, 0.0)
         if self.include_builtin:
-            name, confidence = classify_swipe(
+            swipe, swipe_confidence = classify_swipe(
                 trajectory,
                 self.swipe_min_straightness,
                 self.swipe_max_angle,
             )
-            if name:
-                return name, confidence
 
-        if not self.templates:
-            return None, 0.0
+        if custom and swipe:
+            # Could be either: a gently curved recorded motion can come out
+            # straight enough to pass as a swipe, and a real swipe can be
+            # near a recording. Pick whichever it is closer to: the user's
+            # recording, or a perfectly straight swipe in that direction.
+            # (Checking swipes first used to hide the user's motion, and
+            # could even run the opposite action, e.g. "Swipe left".)
+            if custom_distance < dtw_distance(trajectory, ideal_swipe(swipe)):
+                return custom, custom_confidence
+            return swipe, swipe_confidence
 
-        ranked = self.closest(trajectory)
-        name, distance = ranked[0]
+        if custom:
+            return custom, custom_confidence
 
-        if distance > self.max_distance:
-            return None, 0.0
+        if swipe:
+            return swipe, swipe_confidence
 
-        if len(ranked) > 1 and ranked[1][1] - distance < self.min_margin:
-            return None, 0.0
+        return None, 0.0
 
-        confidence = 1.0 - (1.0 - MIN_MATCH_CONFIDENCE) * (distance / self.max_distance)
-        return name, confidence
+    def explain(self, trajectory):
+        """One log line describing how a stroke was judged."""
+
+        if trajectory is None:
+            return "stroke too short"
+
+        name, confidence = self.match_trajectory(trajectory)
+        swipe, _ = classify_swipe(
+            trajectory, self.swipe_min_straightness, self.swipe_max_angle
+        )
+
+        parts = [
+            f"-> {name} ({confidence:.2f})" if name else "-> no match",
+            f"straightness {straightness(trajectory):.2f}",
+            f"looks like {swipe}" if swipe else "not a swipe",
+        ]
+
+        if self.templates:
+            closest_name, closest = self.closest(trajectory)[0]
+            parts.append(
+                f'closest recording "{closest_name}" distance {closest:.3f} '
+                f"(limit {self.max_distance:.3f})"
+            )
+
+        return ", ".join(parts)
 
     def match_stroke(self, stroke):
         """Match MotionSegmenter output."""
@@ -475,11 +540,28 @@ def review_motion(name, samples, existing_motions, taken_names, max_distance=DEF
     if len(samples) < 2:
         return False, "Record at least two takes."
 
+    # A take that came out as a straight swipe is ignored when matching
+    # (see MotionMatcher), so judge the motion by its curved takes.
+    swipe_like = [classify_swipe(s)[0] for s in samples]
+    curved = [s for s, swipe in zip(samples, swipe_like) if not swipe]
+
+    if not curved:
+        return False, (
+            f"This movement looks like a {swipe_like[0].lower()}, "
+            "which is built in. Use that, or try a curvier movement."
+        )
+
+    if len(curved) < 2:
+        return False, (
+            "Most takes came out as straight swipes. Record again, making "
+            "the same curved movement each time."
+        )
+
     # Takes should agree with each other, or recognition will be unreliable.
     worst = max(
         dtw_distance(a, b)
-        for i, a in enumerate(samples)
-        for b in samples[i + 1:]
+        for i, a in enumerate(curved)
+        for b in curved[i + 1:]
     )
 
     if worst > max_distance * 1.5:
@@ -488,11 +570,7 @@ def review_motion(name, samples, existing_motions, taken_names, max_distance=DEF
             "the same movement each time."
         )
 
-    if sum(1 for s in samples if classify_swipe(s)[0]) > len(samples) / 2:
-        return False, (
-            f'This movement looks like a {classify_swipe(samples[0])[0].lower()}, '
-            "which is built in. Use that, or try a curvier movement."
-        )
+    samples = curved
 
     others = MotionMatcher(
         [m for m in existing_motions if m["name"] != name],
@@ -551,6 +629,13 @@ class MotionRecognizer:
             return None
 
         name, confidence = self.matcher.match_stroke(stroke)
+
+        # One line per finished movement, so the log shows why a motion
+        # did or didn't count (look for "[motion]" in wield.log).
+        print(
+            "[motion] "
+            + self.matcher.explain(normalize_trajectory(stroke["points"]))
+        )
 
         if not name:
             return None
