@@ -8,10 +8,10 @@ from backend.gestures.google_gesture_recognizer import GoogleGestureRecognizer
 from backend.gestures.gesture_stabilizer import GestureStabilizer
 from backend.gestures.frame_pacer import FramePacer
 from backend.gestures.custom_gestures import CustomGestureMatcher
-from backend.gestures.motions import MotionMatcher, MotionRecognizer, palm_point
+from backend.gestures.motions import HandMotionRecognizer, hand_points
 from backend.settings import gesture_settings
 from backend.profile_manager import ProfileManager
-from backend.automation.events import events_for_gesture, gesture_of, profile_events
+from backend.automation.events import events_for_gesture, profile_events
 
 
 class GestureWorker(QObject):
@@ -59,12 +59,10 @@ class GestureWorker(QObject):
         )
 
         # Motions: built-in swipes plus the user's recorded movements.
-        self.motions = MotionRecognizer(
-            MotionMatcher.from_store(
-                max_distance=limits["motion_max_distance"],
-                swipe_min_straightness=limits["swipe_min_straightness"],
-                swipe_max_angle=limits["swipe_max_angle"],
-            )
+        self.motions = HandMotionRecognizer(
+            max_distance=limits["motion_max_distance"],
+            swipe_min_straightness=limits["swipe_min_straightness"],
+            swipe_max_angle=limits["swipe_max_angle"],
         )
 
         # Activation ("arm") gesture: when required, nothing runs until it
@@ -193,8 +191,7 @@ class GestureWorker(QObject):
 
             motion = self.motions.update(
                 time.monotonic(),
-                palm_point(self.recognizer.last_image_landmarks, w / h),
-                in_use=self._triggers_in_use(),
+                hand_points(self.recognizer.last_image_landmarks, w / h),
             )
 
             if motion:
@@ -244,14 +241,6 @@ class GestureWorker(QObject):
             )
 
             self._trigger(confirmed_gesture)
-
-    def _triggers_in_use(self):
-        """Gestures/motions this studio's events use (checked live: custom
-        studio events can be edited while the camera runs)."""
-        used = {gesture_of(event) for event in self.events or []}
-        if self.require_arm:
-            used.add(self.arm_gesture)
-        return used
 
     def _handle_motion(self, motion, confidence):
 
@@ -305,7 +294,7 @@ class GestureWorker(QObject):
                     self._set_armed(event.get("value") != "deactivate")
                 continue
 
-            print("🎯 Event matched:", event.get("name"))
+            print(f"🎯 Event matched: {event.get('name')} (triggered by {gesture})")
 
             self.custom_event_detected.emit(event)
 

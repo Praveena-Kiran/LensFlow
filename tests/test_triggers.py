@@ -76,6 +76,19 @@ class TriggerEditorTests(unittest.TestCase):
             custom_motions=lambda: MotionStore().names(),
         )
 
+    def tearDown(self):
+        # Destroy Qt widgets now: leaving them for interpreter shutdown
+        # crashes PySide intermittently.
+        from PySide6.QtCore import QCoreApplication, QEvent
+        for widget in getattr(self, "_widgets", []) + [self.editor]:
+            widget.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        self.app.processEvents()
+
+    def keep(self, widget):
+        self._widgets = getattr(self, "_widgets", []) + [widget]
+        return widget
+
     def triggers(self, action):
         return self.editor.rows[action].triggers
 
@@ -104,9 +117,9 @@ class TriggerEditorTests(unittest.TestCase):
         from frontend.components.trigger_editor import TriggerPickerDialog
 
         self.editor.assign("forward", "presentation_previous")
-        dialog = TriggerPickerDialog(
+        dialog = self.keep(TriggerPickerDialog(
             "presentation_next", self.pm.get_gesture_map(), [], ["forward"]
-        )
+        ))
         names = [dialog.box.itemData(i) for i in range(dialog.box.count())]
         labels = [dialog.box.itemText(i) for i in range(dialog.box.count())]
 

@@ -81,6 +81,56 @@ def palm_point(image_landmarks, aspect=4 / 3):
     return cx, cy, size
 
 
+# Which point of the hand a motion follows.
+PALM = "palm"            # whole-hand movements (swipes, waves)
+FINGERTIP = "fingertip"  # things drawn with the index finger (a circle, a "0")
+
+INDEX_TIP = 8
+
+# A take counts as "drawn with the finger" when the fingertip travelled at
+# least this many times further than the palm.
+FINGERTIP_TRAVEL_RATIO = 1.5
+
+
+def fingertip_point(image_landmarks, aspect=4 / 3):
+    """
+    (x, y, palm_size) of the index fingertip, in the same units as
+    palm_point(). Speeds and sizes are still measured in palm lengths, so
+    the same segmenter settings work for both.
+    """
+
+    palm = palm_point(image_landmarks, aspect)
+
+    if palm is None:
+        return None
+
+    lm = image_landmarks[INDEX_TIP]
+    x, y = (lm.x, lm.y) if hasattr(lm, "x") else (lm[0], lm[1])
+    return x * aspect, y, palm[2]
+
+
+def hand_points(image_landmarks, aspect=4 / 3):
+    """{"palm": sample, "fingertip": sample} for one frame (values may be None)."""
+    return {
+        PALM: palm_point(image_landmarks, aspect),
+        FINGERTIP: fingertip_point(image_landmarks, aspect),
+    }
+
+
+def motion_point(motion):
+    """The point a stored motion follows (older recordings: the palm)."""
+    return motion.get("point") or PALM
+
+
+def choose_point(fingertip_points, palm_points):
+    """FINGERTIP if the finger moved much further than the palm, else PALM."""
+    tip = path_length(fingertip_points or [])
+    palm = path_length(palm_points or [])
+    if tip > 0 and (palm < 1e-9 or tip / palm >= FINGERTIP_TRAVEL_RATIO):
+        return FINGERTIP
+    return PALM
+
+
 class MotionSegmenter:
     """Cuts the stream of palm positions into individual strokes."""
 
@@ -199,7 +249,13 @@ class MotionSegmenter:
             )
             return None
 
-        return {"points": points, "scale": scale, "duration": duration}
+        return {
+            "points": points,
+            "scale": scale,
+            "duration": duration,
+            "t0": stroke[0][0],
+            "t1": stroke[-1][0],
+        }
 
 
 # =========================================================
@@ -381,10 +437,11 @@ class MotionStore:
     def get(self, name):
         return next((m for m in self.motions if m["name"] == name), None)
 
-    def add(self, name, samples):
+    def add(self, name, samples, point=PALM):
         entry = {
             "name": name,
             "samples": [[round(v, 4) for v in s] for s in samples],
+            "point": point,
             "created": time.strftime("%Y-%m-%d"),
         }
         self.motions = [m for m in self.motions if m["name"] != name]
@@ -415,7 +472,10 @@ class MotionMatcher:
         min_margin=DEFAULT_MIN_MARGIN,
         swipe_min_straightness=SWIPE_MIN_STRAIGHTNESS,
         swipe_max_angle=SWIPE_MAX_ANGLE,
+        point=None,
     ):
+        """`point`: only use recordings that follow this point (PALM or
+        FINGERTIP); None uses all of them."""
         self.max_distance = max_distance
         self.min_margin = min_margin
         self.include_builtin = include_builtin
@@ -425,6 +485,8 @@ class MotionMatcher:
         self.templates = []
 
         for m in motions or []:
+            if point is not None and motion_point(m) != point:
+                continue
             # Ignore takes that are really straight swipes: one such take
             # inside a recording made every near-straight movement match
             # it (recordings saved before review_motion checked each take
@@ -471,14 +533,8 @@ class MotionMatcher:
         confidence = 1.0 - (1.0 - MIN_MATCH_CONFIDENCE) * (distance / self.max_distance)
         return name, confidence, distance
 
-    def match_trajectory(self, trajectory, in_use=None):
-        """
-        (name, confidence) or (None, 0.0) for a normalised trajectory.
-
-        `in_use`: optional set of trigger names the current studio actually
-        uses. When a stroke could be either a recording or a swipe and only
-        one of them does something, that one wins.
-        """
+    def match_trajectory(self, trajectory):
+        """(name, confidence) or (None, 0.0) for a normalised trajectory."""
 
         if trajectory is None:
             return None, 0.0
@@ -492,12 +548,6 @@ class MotionMatcher:
                 self.swipe_min_straightness,
                 self.swipe_max_angle,
             )
-
-        if custom and swipe and in_use is not None:
-            if custom in in_use and swipe not in in_use:
-                return custom, custom_confidence
-            if swipe in in_use and custom not in in_use:
-                return swipe, swipe_confidence
 
         if custom and swipe:
             # Could be either: a gently curved recorded motion can come out
@@ -518,13 +568,13 @@ class MotionMatcher:
 
         return None, 0.0
 
-    def explain(self, trajectory, in_use=None):
+    def explain(self, trajectory):
         """One log line describing how a stroke was judged."""
 
         if trajectory is None:
             return "stroke too short"
 
-        name, confidence = self.match_trajectory(trajectory, in_use=in_use)
+        name, confidence = self.match_trajectory(trajectory)
         swipe, _ = classify_swipe(
             trajectory, self.swipe_min_straightness, self.swipe_max_angle
         )
@@ -544,13 +594,11 @@ class MotionMatcher:
 
         return ", ".join(parts)
 
-    def match_stroke(self, stroke, in_use=None):
+    def match_stroke(self, stroke):
         """Match MotionSegmenter output."""
         if not stroke:
             return None, 0.0
-        return self.match_trajectory(
-            normalize_trajectory(stroke["points"]), in_use=in_use
-        )
+        return self.match_trajectory(normalize_trajectory(stroke["points"]))
 
 
 def review_motion(name, samples, existing_motions, taken_names, max_distance=DEFAULT_MAX_DISTANCE):
@@ -641,7 +689,8 @@ class MotionRecognizer:
     seconds is treated as that return movement and ignored.
     """
 
-    def __init__(self, matcher=None, segmenter=None, return_window=0.7):
+    def __init__(self, matcher=None, segmenter=None, return_window=0.7, label=""):
+        self.label = f"{label}: " if label else ""
         self.matcher = matcher or MotionMatcher.from_store()
         self.segmenter = segmenter or MotionSegmenter()
         self.return_window = return_window
@@ -651,30 +700,24 @@ class MotionRecognizer:
     def active(self):
         return self.segmenter.active
 
-    def update(self, t, sample, in_use=None):
-        """
-        Feed one frame. Returns (motion name, confidence) or None.
-        `in_use`: trigger names the current studio uses (see
-        MotionMatcher.match_trajectory).
-        """
+    def update(self, t, sample):
+        """Feed one frame. Returns (motion name, confidence) or None."""
 
         stroke = self.segmenter.update(t, sample)
 
         if not stroke:
             if self.segmenter.dropped:
-                print(f"[motion] movement ignored: {self.segmenter.dropped}")
+                print(f"[motion] {self.label}movement ignored: {self.segmenter.dropped}")
                 self.segmenter.dropped = None
             return None
 
-        name, confidence = self.matcher.match_stroke(stroke, in_use=in_use)
+        name, confidence = self.matcher.match_stroke(stroke)
 
         # One line per finished movement, so the log shows why a motion
         # did or didn't count (look for "[motion]" in wield.log).
         print(
-            f"[motion] {stroke.get('duration', 0):.2f} s "
-            + self.matcher.explain(
-                normalize_trajectory(stroke["points"]), in_use=in_use
-            )
+            f"[motion] {self.label}{stroke.get('duration', 0):.2f} s "
+            + self.matcher.explain(normalize_trajectory(stroke["points"]))
         )
 
         if not name:
@@ -692,3 +735,41 @@ class MotionRecognizer:
         self._last_swipe = (name, t) if name in OPPOSITE_SWIPES else None
 
         return name, confidence
+
+
+class HandMotionRecognizer:
+    """
+    Follows two points of the hand at once:
+    - the palm: built-in swipes and recordings made by moving the whole hand;
+    - the index fingertip: recordings drawn with a finger (a circle, a "0"),
+      which barely move the palm.
+    Feed it hand_points() for each frame.
+    """
+
+    def __init__(self, store=None, **matcher_kwargs):
+        store = store or MotionStore()
+        self.palm = MotionRecognizer(
+            MotionMatcher(store.motions, point=PALM, **matcher_kwargs),
+            label="palm",
+        )
+        # Fingertip strokes are only compared with fingertip recordings
+        # (the swipes are judged by the palm).
+        tip_kwargs = dict(matcher_kwargs, include_builtin=False)
+        self.fingertip = MotionRecognizer(
+            MotionMatcher(store.motions, point=FINGERTIP, **tip_kwargs),
+            label="fingertip",
+        )
+        self.tracks_fingertip = bool(self.fingertip.matcher.templates)
+
+    @property
+    def active(self):
+        return self.palm.active or (self.tracks_fingertip and self.fingertip.active)
+
+    def update(self, t, points):
+        """Feed one frame's hand_points(). Returns (name, confidence) or None."""
+        points = points or {}
+        result = None
+        if self.tracks_fingertip:
+            result = self.fingertip.update(t, points.get(FINGERTIP))
+        palm_result = self.palm.update(t, points.get(PALM))
+        return result or palm_result

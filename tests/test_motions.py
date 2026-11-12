@@ -271,27 +271,7 @@ class RecordedVersusSwipeTests(unittest.TestCase):
         self.assertIn('closest recording "forward"', text)
 
 
-class InUseAndDiagnosticsTests(unittest.TestCase):
-
-    def test_unused_swipe_does_not_steal_recording(self):
-        from backend.gestures.motions import classify_swipe, dtw_distance, ideal_swipe
-
-        takes = [normalize_trajectory(noisy(arc(0.4), 0.003, s)) for s in range(3)]
-        m = MotionMatcher([{"name": "forward", "samples": takes}])
-        # A flatter take: within the recording's limit, but closer to a
-        # straight swipe, so on its own it reads as "Swipe right".
-        live = normalize_trajectory(noisy(arc(0.1), 0.003, 0))
-        self.assertTrue(classify_swipe(live)[0])
-        self.assertEqual(m.match_custom(live)[0], "forward")
-        self.assertLess(
-            dtw_distance(live, ideal_swipe("Swipe right")), m.match_custom(live)[2]
-        )
-
-        self.assertEqual(m.match_trajectory(live)[0], "Swipe right")
-        # This studio only uses "forward": it wins.
-        self.assertEqual(m.match_trajectory(live, in_use={"forward"})[0], "forward")
-        # ...and if only the swipe is used, the swipe wins.
-        self.assertEqual(m.match_trajectory(live, in_use={"Swipe right"})[0], "Swipe right")
+class DiagnosticsTests(unittest.TestCase):
 
     def test_segmenter_reports_why_a_movement_was_dropped(self):
         seg = MotionSegmenter()
@@ -310,3 +290,134 @@ class InUseAndDiagnosticsTests(unittest.TestCase):
         for i, p in enumerate(track):
             seg.update(i / 30, p)
         self.assertIn("kept moving", seg.dropped or "")
+
+
+class FingertipMotionTests(unittest.TestCase):
+    """
+    Motions drawn with a finger (e.g. a "0" for Next slide). Tracking only
+    the palm missed them — the palm barely moves — while ordinary hand
+    movements matched the shapeless palm recording instead.
+    """
+
+    SIZE = 0.1      # palm length in screen units
+    FPS = 30
+
+    def draw_zero(self, seed=0, frames=24, radius=0.05, start=(0.5, 0.5)):
+        """Fingertip draws a circle; the palm wobbles a little."""
+        rng = random.Random(seed)
+        cx, cy = start
+        out = []
+        for i in range(frames):
+            a = 2 * math.pi * i / (frames - 1) + rng.gauss(0, 0.05)
+            tip = (cx + radius * math.sin(a), cy - radius * math.cos(a) + radius, self.SIZE)
+            palm = (cx + 0.004 * math.sin(a) + rng.gauss(0, 0.001),
+                    cy + 0.15 + 0.004 * math.cos(a), self.SIZE)
+            out.append({"palm": palm, "fingertip": tip})
+        return out
+
+    def move_hand(self, dx, dy, frames=12, start=(0.4, 0.5)):
+        """Whole hand moves (e.g. bringing it up for a thumbs up)."""
+        out = []
+        for i in range(frames):
+            x, y = start[0] + dx * i / (frames - 1), start[1] + dy * i / (frames - 1)
+            out.append({"palm": (x, y + 0.15, self.SIZE), "fingertip": (x, y, self.SIZE)})
+        return out
+
+    def still(self, points, n=12):
+        return [points] * n
+
+    def record(self, takes):
+        from backend.gestures.motions import (
+            FINGERTIP, PALM, MotionSegmenter, choose_point,
+        )
+        samples, points = [], []
+        for take in takes:
+            seg = MotionSegmenter()
+            stroke = None
+            frames = self.still(take[0]) + take + self.still(take[-1])
+            palm_track = []
+            for i, p in enumerate(frames):
+                t = i / self.FPS
+                palm_track.append((t, p["palm"][0], p["palm"][1]))
+                stroke = seg.update(t, p["fingertip"]) or stroke
+            self.assertIsNotNone(stroke, "take not detected")
+            palm_pts = [(x, y) for t, x, y in palm_track if stroke["t0"] <= t <= stroke["t1"]]
+            point = choose_point(stroke["points"], palm_pts)
+            points.append(point)
+            samples.append(normalize_trajectory(
+                stroke["points"] if point == FINGERTIP else palm_pts))
+        return samples, points
+
+    def recognizer(self, store):
+        from backend.gestures.motions import HandMotionRecognizer
+        return HandMotionRecognizer(store=store)
+
+    def feed(self, rec, frames):
+        out = []
+        for i, p in enumerate(frames):
+            r = rec.update(i / self.FPS, p)
+            if r:
+                out.append(r[0])
+        return out
+
+    def make_store(self, samples, point):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        store = MotionStore(os.path.join(tmp.name, "m.json"))
+        store.add("forward", samples, point=point)
+        return MotionStore(store.path)
+
+    def test_finger_drawn_zero_is_recorded_as_fingertip_motion(self):
+        from backend.gestures.motions import FINGERTIP
+        samples, points = self.record([self.draw_zero(s) for s in range(3)])
+        self.assertEqual(points, [FINGERTIP] * 3)
+        ok, message = review_motion("forward", samples, [], [])
+        self.assertTrue(ok, message)
+
+    def test_whole_hand_sweep_is_recorded_as_palm_motion(self):
+        from backend.gestures.motions import PALM
+        _, points = self.record([self.move_hand(0.3, 0.0)])
+        self.assertEqual(points, [PALM])
+
+    def test_drawn_zero_triggers_and_hand_movements_do_not(self):
+        from backend.gestures.motions import FINGERTIP
+        samples, _ = self.record([self.draw_zero(s) for s in range(3)])
+        store = self.make_store(samples, FINGERTIP)
+        self.assertEqual(store.motions[0]["point"], FINGERTIP)
+
+        rec = self.recognizer(store)
+        zero = self.draw_zero(seed=42)
+        self.assertEqual(
+            self.feed(rec, self.still(zero[0]) + zero + self.still(zero[-1])),
+            ["forward"],
+        )
+
+        # Bringing the hand up/right into a thumbs up is not "forward".
+        for dx, dy in ((0.3, 0.0), (0.0, -0.3), (0.2, -0.2)):
+            move = self.move_hand(dx, dy)
+            rec = self.recognizer(store)
+            result = self.feed(rec, self.still(move[0]) + move + self.still(move[-1]))
+            self.assertNotIn("forward", result, (dx, dy))
+
+    def test_old_recordings_follow_the_palm(self):
+        from backend.gestures.motions import PALM, MotionMatcher, motion_point
+        self.assertEqual(motion_point({"name": "x", "samples": [[0, 0]]}), PALM)
+        wave_takes = [normalize_trajectory(noisy(wave(), 0.003, s)) for s in range(3)]
+        old = [{"name": "Wave", "samples": wave_takes}]
+        self.assertTrue(MotionMatcher(old, point=PALM).templates)
+        self.assertFalse(MotionMatcher(old, point="fingertip").templates)
+
+
+class HandPointsTests(unittest.TestCase):
+
+    def test_fingertip_uses_index_tip_and_palm_scale(self):
+        from backend.gestures.motions import FINGERTIP, PALM, hand_points
+        landmarks = [(0.5, 0.6)] * 21
+        landmarks[0] = (0.5, 0.7)    # wrist
+        landmarks[9] = (0.5, 0.6)    # middle finger base
+        landmarks[8] = (0.55, 0.4)   # index fingertip
+        pts = hand_points(landmarks, aspect=1.0)
+        self.assertAlmostEqual(pts[FINGERTIP][0], 0.55)
+        self.assertAlmostEqual(pts[FINGERTIP][1], 0.4)
+        self.assertAlmostEqual(pts[FINGERTIP][2], pts[PALM][2])
+        self.assertEqual(hand_points(None), {PALM: None, FINGERTIP: None})
