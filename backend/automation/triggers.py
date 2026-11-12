@@ -1,0 +1,62 @@
+"""
+Triggers: the things that can run an action. A trigger is either a hand
+gesture (a pose) or a motion (a movement), built in or recorded by the user.
+
+Profiles store {trigger: action}, so one action can have several triggers
+(e.g. Next slide on both 👍 Thumbs Up and a recorded "forward" motion), and
+a trigger can only belong to one action at a time.
+"""
+
+from backend.gestures.google_gesture_recognizer import BUILTIN_GESTURE_NAMES
+from backend.gestures.motions import BUILTIN_MOTION_NAMES
+
+GESTURE = "gesture"
+MOTION = "motion"
+CUSTOM_GESTURE = "custom gesture"
+CUSTOM_MOTION = "custom motion"
+MISSING = "missing"
+
+# Labels for the kinds, as shown in the UI.
+KIND_LABELS = {
+    GESTURE: "Gesture",
+    MOTION: "Motion",
+    CUSTOM_GESTURE: "Your gesture",
+    CUSTOM_MOTION: "Your motion",
+    MISSING: "Deleted",
+}
+
+
+def trigger_kind(name, custom_gestures=(), custom_motions=()):
+    if name in BUILTIN_GESTURE_NAMES:
+        return GESTURE
+    if name in BUILTIN_MOTION_NAMES:
+        return MOTION
+    if name in custom_gestures:
+        return CUSTOM_GESTURE
+    if name in custom_motions:
+        return CUSTOM_MOTION
+    return MISSING
+
+
+def is_motion(kind):
+    return kind in (MOTION, CUSTOM_MOTION)
+
+
+def catalogue(custom_gestures=(), custom_motions=()):
+    """Every trigger the user can pick, grouped: [(group title, [names])]."""
+    groups = [
+        ("Hand gestures", list(BUILTIN_GESTURE_NAMES)),
+        ("Motions", list(BUILTIN_MOTION_NAMES)),
+        ("Your gestures", list(custom_gestures)),
+        ("Your motions", list(custom_motions)),
+    ]
+    return [(title, names) for title, names in groups if names]
+
+
+def triggers_by_action(gesture_map, actions):
+    """{action: [triggers]} for `actions`, in the profile's order."""
+    result = {action: [] for action in actions}
+    for trigger, action in (gesture_map or {}).items():
+        if action in result:
+            result[action].append(trigger)
+    return result
