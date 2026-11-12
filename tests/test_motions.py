@@ -204,3 +204,68 @@ class RecognizerTests(unittest.TestCase):
         still = lambda x, n: [(x, 0.5, size)] * n
         track = still(0.3, 10) + right(0.3) + still(0.6, 10) + [None] * 3 + still(0.3, 10) + right(0.3) + still(0.6, 10)
         self.assertEqual(self.run_track(track), ["Swipe right", "Swipe right"])
+
+
+def arc(bend, n=20, length=0.3):
+    """A rightward stroke that bulges upward by `bend` x length."""
+    return [
+        (0.3 + length * i / (n - 1), 0.5 - bend * length * math.sin(math.pi * i / (n - 1)))
+        for i in range(n)
+    ]
+
+
+class RecordedVersusSwipeTests(unittest.TestCase):
+    """
+    Regression: a recorded motion (e.g. "forward" -> next slide) was hidden
+    by the built-in swipes, which were always checked first, and one
+    straight take inside a recording made every straight swipe match it.
+    """
+
+    def matcher(self, takes):
+        return MotionMatcher([{"name": "forward", "samples": takes}])
+
+    def curved_takes(self, bend=0.4):
+        return [normalize_trajectory(noisy(arc(bend), 0.003, s)) for s in range(3)]
+
+    def test_live_take_straight_enough_to_pass_as_swipe_still_matches_recording(self):
+        from backend.gestures.motions import classify_swipe
+
+        m = self.matcher(self.curved_takes(0.4))
+        # Flatter than the recording: also passes the swipe rules.
+        live = normalize_trajectory(noisy(arc(0.3), 0.003, 99))
+        self.assertTrue(classify_swipe(live)[0])
+        self.assertEqual(m.match_trajectory(live)[0], "forward")
+
+    def test_real_straight_swipe_still_wins(self):
+        m = self.matcher(self.curved_takes(0.4))
+        straight = normalize_trajectory(noisy(line(0.3, 0), 0.003, 5))
+        self.assertEqual(m.match_trajectory(straight)[0], "Swipe right")
+
+    def test_straight_take_inside_recording_is_ignored(self):
+        takes = self.curved_takes(0.4)
+        takes.append(normalize_trajectory(noisy(line(0.3, 0), 0.003, 7)))
+        m = self.matcher(takes)
+        straight = normalize_trajectory(noisy(line(0.3, 0), 0.003, 8))
+        self.assertEqual(m.match_trajectory(straight)[0], "Swipe right")
+        self.assertEqual(
+            m.match_trajectory(normalize_trajectory(noisy(arc(0.4), 0.003, 9)))[0],
+            "forward",
+        )
+
+    def test_review_keeps_recording_with_one_straight_take(self):
+        takes = self.curved_takes(0.4)[:2] + [normalize_trajectory(line(0.3, 0))]
+        self.assertTrue(review_motion("forward", takes, [], [])[0])
+
+    def test_review_rejects_mostly_straight_takes(self):
+        takes = self.curved_takes(0.4)[:1] + [
+            normalize_trajectory(noisy(line(0.3, 0), 0.003, s)) for s in range(2)
+        ]
+        ok, message = review_motion("forward", takes, [], [])
+        self.assertFalse(ok)
+        self.assertIn("straight", message)
+
+    def test_explain_mentions_closest_recording(self):
+        m = self.matcher(self.curved_takes(0.4))
+        text = m.explain(normalize_trajectory(arc(0.4)))
+        self.assertIn('-> forward', text)
+        self.assertIn('closest recording "forward"', text)
