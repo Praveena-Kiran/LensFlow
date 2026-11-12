@@ -269,7 +269,11 @@ class GestureTestDialog(QDialog):
     @Slot(float, object)
     def _on_hand_sample(self, t, sample):
 
-        result = self.motions.update(t, sample)
+        # Same rule as the studio: when a movement could be a swipe or a
+        # recording, the one that's actually assigned wins.
+        result = self.motions.update(
+            t, sample, in_use=set(self.gesture_map) or None
+        )
 
         if result:
             motion, confidence = result

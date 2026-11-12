@@ -269,3 +269,44 @@ class RecordedVersusSwipeTests(unittest.TestCase):
         text = m.explain(normalize_trajectory(arc(0.4)))
         self.assertIn('-> forward', text)
         self.assertIn('closest recording "forward"', text)
+
+
+class InUseAndDiagnosticsTests(unittest.TestCase):
+
+    def test_unused_swipe_does_not_steal_recording(self):
+        from backend.gestures.motions import classify_swipe, dtw_distance, ideal_swipe
+
+        takes = [normalize_trajectory(noisy(arc(0.4), 0.003, s)) for s in range(3)]
+        m = MotionMatcher([{"name": "forward", "samples": takes}])
+        # A flatter take: within the recording's limit, but closer to a
+        # straight swipe, so on its own it reads as "Swipe right".
+        live = normalize_trajectory(noisy(arc(0.1), 0.003, 0))
+        self.assertTrue(classify_swipe(live)[0])
+        self.assertEqual(m.match_custom(live)[0], "forward")
+        self.assertLess(
+            dtw_distance(live, ideal_swipe("Swipe right")), m.match_custom(live)[2]
+        )
+
+        self.assertEqual(m.match_trajectory(live)[0], "Swipe right")
+        # This studio only uses "forward": it wins.
+        self.assertEqual(m.match_trajectory(live, in_use={"forward"})[0], "forward")
+        # ...and if only the swipe is used, the swipe wins.
+        self.assertEqual(m.match_trajectory(live, in_use={"Swipe right"})[0], "Swipe right")
+
+    def test_segmenter_reports_why_a_movement_was_dropped(self):
+        seg = MotionSegmenter()
+        size = 0.1
+        # Fast but tiny movement: starts a stroke, then is too small.
+        track = [(0.5, 0.5, size)] * 3 + [(0.5 + 0.01 * i, 0.5, size) for i in range(1, 4)] + [(0.53, 0.5, size)] * 10
+        for i, p in enumerate(track):
+            seg.update(i / 30, p)
+        self.assertIsNotNone(seg.dropped)
+        self.assertTrue("too" in seg.dropped)
+
+    def test_hand_that_never_pauses_is_reported(self):
+        seg = MotionSegmenter()
+        size = 0.1
+        track = [(0.5 + 0.3 * math.sin(i / 3), 0.5, size) for i in range(100)]
+        for i, p in enumerate(track):
+            seg.update(i / 30, p)
+        self.assertIn("kept moving", seg.dropped or "")
