@@ -42,7 +42,7 @@ from frontend.styles.theme import (
 from backend.gestures.custom_gestures import CustomGestureMatcher, CustomGestureStore
 from backend.gestures.gesture_stabilizer import GestureStabilizer
 from backend.automation.events import friendly_action
-from backend.gestures.motions import MotionRecognizer
+from backend.gestures.motions import HandMotionRecognizer
 from backend.app_info import APP_NAME
 
 
@@ -62,7 +62,7 @@ class GestureTestDialog(QDialog):
         self.matcher = CustomGestureMatcher(store.gestures)
         self.stabilizer = GestureStabilizer()
 
-        self.motions = MotionRecognizer()
+        self.motions = HandMotionRecognizer()
         self._motion_shown_until = 0.0
 
         self.log = []
@@ -269,11 +269,7 @@ class GestureTestDialog(QDialog):
     @Slot(float, object)
     def _on_hand_sample(self, t, sample):
 
-        # Same rule as the studio: when a movement could be a swipe or a
-        # recording, the one that's actually assigned wins.
-        result = self.motions.update(
-            t, sample, in_use=set(self.gesture_map) or None
-        )
+        result = self.motions.update(t, sample)
 
         if result:
             motion, confidence = result

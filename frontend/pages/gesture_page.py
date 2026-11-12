@@ -16,7 +16,7 @@ from frontend.components.gesture_recorder_dialog import GestureRecorderDialog
 from frontend.components.gesture_test_dialog import GestureTestDialog
 from frontend.components.trigger_editor import ActionTriggerEditor
 from frontend.components.motion_recorder_dialog import MotionRecorderDialog
-from backend.gestures.motions import BUILTIN_MOTION_NAMES, MotionStore
+from backend.gestures.motions import BUILTIN_MOTION_NAMES, FINGERTIP, MotionStore
 from frontend.styles.theme import (
     ON_PRIMARY,
     OVERLAY_1,
@@ -365,9 +365,15 @@ class GesturePage(StudioPage):
 
         action = self.gesture_map.get(name)
 
-        detail_label = QLabel(
-            f"→  {friendly_action(action)}" if action else "Not assigned yet"
-        )
+        detail = f"→  {friendly_action(action)}" if action else "Not assigned yet"
+
+        if kind == "motion":
+            if entry.get("point") == FINGERTIP:
+                detail += "   ·   follows your fingertip"
+            else:
+                detail += "   ·   follows your whole hand"
+
+        detail_label = QLabel(detail)
 
         detail_label.setStyleSheet(f"""
             color: {SECONDARY_TEXT};

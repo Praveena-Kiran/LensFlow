@@ -50,7 +50,7 @@ from frontend.styles.theme import (
     TEXT_MUTED,
     WARNING,
 )
-from backend.gestures.motions import palm_point
+from backend.gestures.motions import hand_points
 from backend.gestures.frame_pacer import FramePacer
 from backend.gestures.custom_gestures import (
     CustomGestureStore,
@@ -165,7 +165,7 @@ class CameraPreviewWorker(QObject):
 
             self.hand_sample.emit(
                 time.monotonic(),
-                palm_point(recognizer.last_image_landmarks, w / h),
+                hand_points(recognizer.last_image_landmarks, w / h),
             )
 
             vector = normalize_landmarks(

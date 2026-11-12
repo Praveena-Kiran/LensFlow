@@ -44,8 +44,11 @@ from frontend.styles.theme import (
     WARNING,
 )
 from backend.gestures.motions import (
+    FINGERTIP,
+    PALM,
     MotionSegmenter,
     MotionStore,
+    choose_point,
     normalize_trajectory,
     review_motion,
 )
@@ -67,6 +70,10 @@ class MotionRecorderDialog(QDialog):
         self.store = store or MotionStore()
 
         self.samples = []
+        # One entry per take: both trajectories and which point moved more.
+        self.takes = []
+        self.point = PALM
+        self._palm_track = []      # (t, x, y) during the current take
         self.state = "idle"        # idle | countdown | capturing | review
         self.countdown_left = 0
         self.saved_name = None
@@ -198,7 +205,7 @@ class MotionRecorderDialog(QDialog):
     def _update_buttons(self):
 
         busy = self.state in ("countdown", "capturing")
-        takes = len(self.samples)
+        takes = len(self.takes)
 
         self.name_input.setEnabled(not busy and takes == 0)
         self.record_button.setVisible(self.state != "review")
@@ -251,12 +258,20 @@ class MotionRecorderDialog(QDialog):
         )
 
     @Slot(float, object)
-    def _on_hand_sample(self, t, sample):
+    def _on_hand_sample(self, t, points):
 
         if self.state != "capturing":
             return
 
-        stroke = self.segmenter.update(t, sample)
+        points = points or {}
+
+        palm = points.get(PALM)
+        if palm is not None:
+            self._palm_track.append((t, palm[0], palm[1]))
+
+        # The fingertip moves for both kinds of motion (drawing with a
+        # finger, or moving the whole hand), so use it to find the stroke.
+        stroke = self.segmenter.update(t, points.get(FINGERTIP))
 
         if stroke:
             self._finish_take(stroke)
@@ -289,6 +304,7 @@ class MotionRecorderDialog(QDialog):
 
         self.countdown_timer.stop()
         self.segmenter.reset()
+        self._palm_track = []
         self.state = "capturing"
         self._set_status("Go! Make your movement, then hold still.", PRIMARY_HOVER)
         self.window_timer.start(TAKE_WINDOW_MS)
@@ -318,20 +334,35 @@ class MotionRecorderDialog(QDialog):
 
         self.window_timer.stop()
 
-        trajectory = normalize_trajectory(stroke["points"])
+        tip_points = stroke["points"]
+        t0, t1 = stroke.get("t0", 0.0), stroke.get("t1", 0.0)
+        palm_points = [(x, y) for t, x, y in self._palm_track if t0 <= t <= t1]
 
-        if trajectory is None:
+        tip = normalize_trajectory(tip_points)
+
+        if tip is None:
             self._take_timed_out()
             return
 
-        self.samples.append(trajectory)
-        self.progress.setValue(len(self.samples))
+        self.takes.append({
+            FINGERTIP: tip,
+            PALM: normalize_trajectory(palm_points),
+            "point": choose_point(tip_points, palm_points),
+        })
+        self.progress.setValue(len(self.takes))
 
-        if len(self.samples) < TAKES_REQUIRED:
+        if len(self.takes) < TAKES_REQUIRED:
             self.state = "idle"
-            self._set_status(f"Take {len(self.samples)} done. Record the next one.")
+            self._set_status(f"Take {len(self.takes)} done. Record the next one.")
             self._update_buttons()
             return
+
+        # Follow the fingertip if most takes were drawn with the finger.
+        drawn = sum(1 for take in self.takes if take["point"] == FINGERTIP)
+        self.point = FINGERTIP if drawn > len(self.takes) / 2 else PALM
+        self.samples = [
+            take[self.point] or take[FINGERTIP] for take in self.takes
+        ]
 
         ok, message = review_motion(
             self.name_input.text(),
@@ -342,7 +373,11 @@ class MotionRecorderDialog(QDialog):
 
         if ok:
             self.state = "review"
-            self._set_status(f'Ready to save "{self.name_input.text().strip()}".', SUCCESS)
+            follows = "your fingertip" if self.point == FINGERTIP else "your whole hand"
+            self._set_status(
+                f'Ready to save "{self.name_input.text().strip()}" (follows {follows}).',
+                SUCCESS,
+            )
         else:
             self.state = "idle"
             self._set_status(message, ERROR)
@@ -351,6 +386,7 @@ class MotionRecorderDialog(QDialog):
 
     def _reset(self):
         self.samples = []
+        self.takes = []
         self.state = "idle"
         self.progress.setValue(0)
         self._set_status("Type a name, then press Record.")
@@ -358,7 +394,7 @@ class MotionRecorderDialog(QDialog):
 
     def _save(self):
         name = self.name_input.text().strip()
-        self.store.add(name, self.samples)
+        self.store.add(name, self.samples, point=self.point)
         self.saved_name = name
         self.accept()
 
