@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from frontend.pages.studio_page import StudioPage
 from frontend.components.gesture_recorder_dialog import GestureRecorderDialog
 from frontend.components.gesture_test_dialog import GestureTestDialog
+from frontend.components.trigger_editor import ActionTriggerEditor
 from frontend.components.motion_recorder_dialog import MotionRecorderDialog
 from backend.gestures.motions import BUILTIN_MOTION_NAMES, MotionStore
 from frontend.styles.theme import (
@@ -47,7 +48,7 @@ class GesturePage(StudioPage):
 
         super().__init__(
             title="Gesture Studio",
-            subtitle="Configure and manage your gesture controls.",
+            subtitle="Choose the gestures and motions that control your presentations.",
             parent=parent,
         )
 
@@ -90,19 +91,18 @@ class GesturePage(StudioPage):
         # Store UI labels
         # -----------------------------------------
 
-        self.action_labels = {}
 
-        self.gesture_cards = {}
 
         # -----------------------------------------
         # Intro
         # -----------------------------------------
 
         intro = QLabel(
-            "Gestures for Presentation Studio. To use gestures in your own "
-            "studios, choose one for each event inside that studio."
+            "Each action can use a hand gesture, a motion, or several of "
+            "either. To use gestures in your own studios, choose one for "
+            "each event inside that studio."
         )
-
+        intro.setWordWrap(True)
         intro.setStyleSheet(f"""
             color: {SECONDARY_TEXT};
             font-size: 14px;
@@ -111,59 +111,22 @@ class GesturePage(StudioPage):
         self.content_layout.addWidget(intro)
 
         # -----------------------------------------
-        # Gesture list
+        # Actions and their triggers (gestures / motions)
         # -----------------------------------------
 
-        self.gesture_list_layout = QVBoxLayout()
-
-        self.gesture_list_layout.setSpacing(10)
-
-        self.content_layout.addLayout(
-            self.gesture_list_layout
+        self.trigger_editor = ActionTriggerEditor(
+            self.profile_manager,
+            ["presentation_start", "presentation_next",
+             "presentation_previous", "presentation_end", "ACTIVATE"],
+            custom_gestures=lambda: self.custom_store.names(),
+            custom_motions=lambda: self.motion_store.names(),
         )
+        self.trigger_editor.changed.connect(self._on_triggers_changed)
 
-        # Build current gestures
-
-        self.refresh_gesture_list()
-
-        # -----------------------------------------
-        # Add Gesture
-        # -----------------------------------------
-
-        add_button = QPushButton(
-            "+ Add Gesture"
-        )
-
-        add_button.setCursor(
-            Qt.PointingHandCursor
-        )
-
-        add_button.setStyleSheet(f"""
-            QPushButton {{
-                background: {PRIMARY};
-                color: {ON_PRIMARY};
-                border: none;
-                border-radius: 10px;
-                padding: 10px 18px;
-                font-size: 13px;
-                font-weight: 600;
-            }}
-
-            QPushButton:hover {{
-                background: {PRIMARY_HOVER};
-            }}
-
-            QPushButton:pressed {{
-                background: {PRIMARY_PRESSED};
-            }}
-        """)
-
-        add_button.clicked.connect(
-            self.add_gesture
-        )
+        self.content_layout.addWidget(self.trigger_editor)
 
         test_button = QPushButton(
-            "Test Gestures"
+            "Test Gestures && Motions"
         )
 
         test_button.setCursor(
@@ -198,8 +161,6 @@ class GesturePage(StudioPage):
         button_row = QHBoxLayout()
 
         button_row.setSpacing(10)
-
-        button_row.addWidget(add_button)
 
         button_row.addWidget(test_button)
 
@@ -542,502 +503,22 @@ class GesturePage(StudioPage):
         self.refresh_custom_list()
 
     # ==================================================
-    # REFRESH GESTURE LIST
+    # ACTIONS AND TRIGGERS
     # ==================================================
 
     def refresh_gesture_list(self):
 
-        # Remove old widgets
+        self.gesture_map = self.profile_manager.get_gesture_map()
 
-        while self.gesture_list_layout.count():
+        self.trigger_editor.refresh()
 
-            item = (
-                self.gesture_list_layout
-                .takeAt(0)
-            )
-
-            widget = item.widget()
-
-            if widget:
-                widget.deleteLater()
-
-        self.action_labels.clear()
-        self.gesture_cards.clear()
-
-        # Get latest data
-
-        self.gesture_map = (
-            self.profile_manager
-            .get_gesture_map()
-        )
-
-        # Create cards
-
-        for gesture, action in self.gesture_map.items():
-
-            self.create_gesture_card(
-                gesture,
-                action
-            )
-
-        # Custom gesture cards show their assigned action, so keep them in sync.
+        # Custom gesture/motion cards show their assigned action.
         if hasattr(self, "section_lists"):
             self.refresh_custom_list()
 
-    # ==================================================
-    # CREATE GESTURE CARD
-    # ==================================================
+    def _on_triggers_changed(self):
 
-    def create_gesture_card(
-        self,
-        gesture,
-        action
-    ):
+        self.gesture_map = self.profile_manager.get_gesture_map()
 
-        card = QFrame()
-
-        card.setStyleSheet(f"""
-            QFrame {{
-                background: {SURFACE};
-                border: 1px solid {BORDER};
-                border-radius: 12px;
-            }}
-        """)
-
-        layout = QHBoxLayout(card)
-
-        layout.setContentsMargins(
-            18,
-            14,
-            18,
-            14
-        )
-
-        # Gesture
-
-        gesture_label = QLabel(
-            gesture
-        )
-
-        gesture_label.setStyleSheet(f"""
-            color: {PRIMARY_TEXT};
-            font-size: 15px;
-            font-weight: 600;
-            border: none;
-            background: transparent;
-        """)
-
-        # Action
-
-        action_label = QLabel(
-            "→  " + friendly_action(action)
-        )
-
-        action_label.setStyleSheet(f"""
-            color: {SECONDARY_TEXT};
-            font-size: 14px;
-            border: none;
-            background: transparent;
-        """)
-
-        self.action_labels[
-            gesture
-        ] = action_label
-
-        # Edit button
-
-        edit_button = QPushButton(
-            "Edit"
-        )
-
-        edit_button.setCursor(
-            Qt.PointingHandCursor
-        )
-
-        edit_button.setStyleSheet(f"""
-            QPushButton {{
-                background: {OVERLAY_1};
-                color: {PRIMARY_TEXT};
-                border: 1px solid {BORDER};
-                border-radius: 8px;
-                padding: 7px 14px;
-                font-size: 12px;
-                font-weight: 500;
-            }}
-
-            QPushButton:hover {{
-                background: {OVERLAY_2};
-                border: 1px solid {OVERLAY_BORDER};
-                color: {TEXT_STRONG};
-            }}
-        """)
-
-        edit_button.clicked.connect(
-            lambda checked=False,
-            g=gesture,
-            a=action:
-            self.edit_gesture(g, a)
-        )
-
-        # Layout
-
-        layout.addWidget(
-            gesture_label
-        )
-
-        layout.addStretch()
-
-        layout.addWidget(
-            action_label
-        )
-
-        layout.addStretch()
-
-        layout.addWidget(
-            edit_button
-        )
-
-        self.gesture_list_layout.addWidget(
-            card
-        )
-
-        self.gesture_cards[
-            gesture
-        ] = card
-
-    # ==================================================
-    # EDIT GESTURE
-    # ==================================================
-
-    def edit_gesture(
-        self,
-        gesture,
-        current_action
-    ):
-
-        dialog = QDialog(self)
-
-        dialog.setWindowTitle(
-            "Edit Gesture"
-        )
-
-        dialog.setFixedSize(
-            400,
-            220
-        )
-
-        dialog.setStyleSheet(f"""
-            QDialog {{
-                background-color: {SURFACE};
-                border: 1px solid {BORDER};
-                border-radius: 12px;
-            }}
-            QLabel {{
-                color: {PRIMARY_TEXT};
-            }}
-            QComboBox {{
-                background-color: {BG_DARK};
-                color: {PRIMARY_TEXT};
-                border: 1px solid {BORDER};
-                border-radius: 8px;
-                padding: 8px 12px;
-            }}
-            QComboBox:focus {{
-                border: 1px solid {PRIMARY};
-            }}
-            QDialogButtonBox QPushButton {{
-                background-color: {PRIMARY};
-                color: {ON_PRIMARY};
-                border: none;
-                border-radius: 8px;
-                padding: 6px 16px;
-                font-weight: 600;
-            }}
-            QDialogButtonBox QPushButton:hover {{
-                background-color: {PRIMARY_HOVER};
-            }}
-        """)
-
-        layout = QVBoxLayout(
-            dialog
-        )
-
-        # Gesture
-
-        gesture_label = QLabel(
-            f"Gesture: {gesture}"
-        )
-
-        gesture_label.setStyleSheet(f"""
-            color: {PRIMARY_TEXT};
-            font-size: 15px;
-            font-weight: 600;
-        """)
-
-        layout.addWidget(
-            gesture_label
-        )
-
-        # Action
-
-        action_label = QLabel(
-            "Action:"
-        )
-
-        action_label.setStyleSheet(f"""
-            color: {SECONDARY_TEXT};
-            font-size: 13px;
-        """)
-
-        layout.addWidget(
-            action_label
-        )
-
-        # Dropdown
-
-        action_box = QComboBox()
-
-        for code in self.available_actions:
-            action_box.addItem(friendly_action(code), code)
-
-        index = action_box.findData(
-            current_action
-        )
-
-        if index >= 0:
-
-            action_box.setCurrentIndex(
-                index
-            )
-
-        layout.addWidget(
-            action_box
-        )
-
-        # Buttons
-
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.Save |
-            QDialogButtonBox.Cancel
-        )
-
-        buttons.accepted.connect(
-            dialog.accept
-        )
-
-        buttons.rejected.connect(
-            dialog.reject
-        )
-
-        layout.addWidget(
-            buttons
-        )
-
-        # Save
-
-        if dialog.exec():
-
-            new_action = (
-                action_box.currentData()
-            )
-
-            self.profile_manager.update_gesture(
-                gesture,
-                new_action
-            )
-
-            self.gesture_map = (
-                self.profile_manager
-                .get_gesture_map()
-            )
-
-            # Update label immediately
-
-            if gesture in self.action_labels:
-
-                self.action_labels[
-                    gesture
-                ].setText(
-                    "→  " + friendly_action(new_action)
-                )
-
+        if hasattr(self, "section_lists"):
             self.refresh_custom_list()
-
-    # ==================================================
-    # ADD GESTURE
-    # ==================================================
-
-    def add_gesture(self):
-
-        dialog = QDialog(self)
-
-        dialog.setWindowTitle(
-            "Add Gesture"
-        )
-
-        dialog.setFixedSize(
-            400,
-            240
-        )
-
-        dialog.setStyleSheet(f"""
-            QDialog {{
-                background-color: {SURFACE};
-                border: 1px solid {BORDER};
-                border-radius: 12px;
-            }}
-            QLabel {{
-                color: {PRIMARY_TEXT};
-            }}
-            QComboBox {{
-                background-color: {BG_DARK};
-                color: {PRIMARY_TEXT};
-                border: 1px solid {BORDER};
-                border-radius: 8px;
-                padding: 8px 12px;
-            }}
-            QComboBox:focus {{
-                border: 1px solid {PRIMARY};
-            }}
-            QDialogButtonBox QPushButton {{
-                background-color: {PRIMARY};
-                color: {ON_PRIMARY};
-                border: none;
-                border-radius: 8px;
-                padding: 6px 16px;
-                font-weight: 600;
-            }}
-            QDialogButtonBox QPushButton:hover {{
-                background-color: {PRIMARY_HOVER};
-            }}
-        """)
-
-        layout = QVBoxLayout(
-            dialog
-        )
-
-        # Gesture
-
-        gesture_label = QLabel(
-            "Gesture:"
-        )
-
-        gesture_label.setStyleSheet(f"""
-            color: {SECONDARY_TEXT};
-            font-size: 13px;
-        """)
-
-        layout.addWidget(
-            gesture_label
-        )
-
-        gesture_box = QComboBox()
-
-        # Only show gestures
-        # that aren't already used
-
-        unused_gestures = [
-            gesture
-            for gesture in self.available_gestures
-            if gesture not in self.gesture_map
-        ]
-
-        gesture_box.addItems(
-            unused_gestures
-        )
-
-        layout.addWidget(
-            gesture_box
-        )
-
-        # Action
-
-        action_label = QLabel(
-            "Action:"
-        )
-
-        action_label.setStyleSheet(f"""
-            color: {SECONDARY_TEXT};
-            font-size: 13px;
-        """)
-
-        layout.addWidget(
-            action_label
-        )
-
-        action_box = QComboBox()
-
-        for code in self.available_actions:
-            action_box.addItem(friendly_action(code), code)
-
-        layout.addWidget(
-            action_box
-        )
-
-        # Buttons
-
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.Save |
-            QDialogButtonBox.Cancel
-        )
-
-        buttons.accepted.connect(
-            dialog.accept
-        )
-
-        buttons.rejected.connect(
-            dialog.reject
-        )
-
-        layout.addWidget(
-            buttons
-        )
-
-        # No gestures left
-
-        if not unused_gestures:
-
-            QMessageBox.information(
-                self,
-                "All Gestures Assigned",
-                "Every available gesture already has an action.\n\n"
-                "Use \"+ Record Custom Gesture\" below to teach "
-                f"{APP_NAME} a new one."
-            )
-
-            return
-
-        # Save
-
-        if dialog.exec():
-
-            gesture = (
-                gesture_box.currentText()
-            )
-
-            action = (
-                action_box.currentData()
-            )
-
-            # Safety check
-
-            if gesture in self.gesture_map:
-
-                QMessageBox.warning(
-                    self,
-                    "Gesture Already Exists",
-                    f"{gesture} is already configured."
-                )
-
-                return
-
-            # Save
-
-            self.profile_manager.update_gesture(
-                gesture,
-                action
-            )
-
-            # Refresh everything
-
-            self.refresh_gesture_list()
