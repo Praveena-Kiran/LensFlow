@@ -11,7 +11,7 @@ from backend.gestures.custom_gestures import CustomGestureMatcher
 from backend.gestures.motions import MotionMatcher, MotionRecognizer, palm_point
 from backend.settings import gesture_settings
 from backend.profile_manager import ProfileManager
-from backend.automation.events import events_for_gesture, profile_events
+from backend.automation.events import events_for_gesture, gesture_of, profile_events
 
 
 class GestureWorker(QObject):
@@ -193,7 +193,8 @@ class GestureWorker(QObject):
 
             motion = self.motions.update(
                 time.monotonic(),
-                palm_point(self.recognizer.last_image_landmarks, w / h)
+                palm_point(self.recognizer.last_image_landmarks, w / h),
+                in_use=self._triggers_in_use(),
             )
 
             if motion:
@@ -243,6 +244,14 @@ class GestureWorker(QObject):
             )
 
             self._trigger(confirmed_gesture)
+
+    def _triggers_in_use(self):
+        """Gestures/motions this studio's events use (checked live: custom
+        studio events can be edited while the camera runs)."""
+        used = {gesture_of(event) for event in self.events or []}
+        if self.require_arm:
+            used.add(self.arm_gesture)
+        return used
 
     def _handle_motion(self, motion, confidence):
 

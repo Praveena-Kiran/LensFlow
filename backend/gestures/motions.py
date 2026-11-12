@@ -103,6 +103,8 @@ class MotionSegmenter:
         self.reset()
 
     def reset(self):
+        # Why the last started stroke was thrown away (for the log), or None.
+        self.dropped = None
         self.last = None          # (t, x, y)
         self.stroke = []          # [(t, x, y)]
         self.scales = []
@@ -150,6 +152,10 @@ class MotionSegmenter:
         if t - self.stroke[0][0] > self.max_duration:
             # Hand kept moving: not a gesture stroke.
             self.reset()
+            self.dropped = (
+                f"hand kept moving for over {self.max_duration:g} s "
+                "(pause briefly after the movement)"
+            )
             self.last = (t, x, y)
             return None
 
@@ -168,21 +174,32 @@ class MotionSegmenter:
         stroke, scales = self.stroke, self.scales
         self.stroke, self.scales, self.slow_since = [], [], None
 
+        if not stroke:
+            return None
+
         if len(stroke) < 3:
+            self.dropped = f"too few camera frames ({len(stroke)})"
             return None
 
         duration = stroke[-1][0] - stroke[0][0]
 
         if duration < self.min_duration:
+            self.dropped = (
+                f"too quick ({duration:.2f} s, need {self.min_duration:g} s)"
+            )
             return None
 
         scale = sum(scales) / len(scales)
         points = [(x, y) for _, x, y in stroke]
 
-        if path_length(points) / scale < self.min_travel:
+        travel = path_length(points) / scale
+        if travel < self.min_travel:
+            self.dropped = (
+                f"too small ({travel:.1f} hand-lengths, need {self.min_travel:g})"
+            )
             return None
 
-        return {"points": points, "scale": scale}
+        return {"points": points, "scale": scale, "duration": duration}
 
 
 # =========================================================
@@ -454,8 +471,14 @@ class MotionMatcher:
         confidence = 1.0 - (1.0 - MIN_MATCH_CONFIDENCE) * (distance / self.max_distance)
         return name, confidence, distance
 
-    def match_trajectory(self, trajectory):
-        """(name, confidence) or (None, 0.0) for a normalised trajectory."""
+    def match_trajectory(self, trajectory, in_use=None):
+        """
+        (name, confidence) or (None, 0.0) for a normalised trajectory.
+
+        `in_use`: optional set of trigger names the current studio actually
+        uses. When a stroke could be either a recording or a swipe and only
+        one of them does something, that one wins.
+        """
 
         if trajectory is None:
             return None, 0.0
@@ -469,6 +492,12 @@ class MotionMatcher:
                 self.swipe_min_straightness,
                 self.swipe_max_angle,
             )
+
+        if custom and swipe and in_use is not None:
+            if custom in in_use and swipe not in in_use:
+                return custom, custom_confidence
+            if swipe in in_use and custom not in in_use:
+                return swipe, swipe_confidence
 
         if custom and swipe:
             # Could be either: a gently curved recorded motion can come out
@@ -489,13 +518,13 @@ class MotionMatcher:
 
         return None, 0.0
 
-    def explain(self, trajectory):
+    def explain(self, trajectory, in_use=None):
         """One log line describing how a stroke was judged."""
 
         if trajectory is None:
             return "stroke too short"
 
-        name, confidence = self.match_trajectory(trajectory)
+        name, confidence = self.match_trajectory(trajectory, in_use=in_use)
         swipe, _ = classify_swipe(
             trajectory, self.swipe_min_straightness, self.swipe_max_angle
         )
@@ -515,11 +544,13 @@ class MotionMatcher:
 
         return ", ".join(parts)
 
-    def match_stroke(self, stroke):
+    def match_stroke(self, stroke, in_use=None):
         """Match MotionSegmenter output."""
         if not stroke:
             return None, 0.0
-        return self.match_trajectory(normalize_trajectory(stroke["points"]))
+        return self.match_trajectory(
+            normalize_trajectory(stroke["points"]), in_use=in_use
+        )
 
 
 def review_motion(name, samples, existing_motions, taken_names, max_distance=DEFAULT_MAX_DISTANCE):
@@ -620,21 +651,30 @@ class MotionRecognizer:
     def active(self):
         return self.segmenter.active
 
-    def update(self, t, sample):
-        """Feed one frame. Returns (motion name, confidence) or None."""
+    def update(self, t, sample, in_use=None):
+        """
+        Feed one frame. Returns (motion name, confidence) or None.
+        `in_use`: trigger names the current studio uses (see
+        MotionMatcher.match_trajectory).
+        """
 
         stroke = self.segmenter.update(t, sample)
 
         if not stroke:
+            if self.segmenter.dropped:
+                print(f"[motion] movement ignored: {self.segmenter.dropped}")
+                self.segmenter.dropped = None
             return None
 
-        name, confidence = self.matcher.match_stroke(stroke)
+        name, confidence = self.matcher.match_stroke(stroke, in_use=in_use)
 
         # One line per finished movement, so the log shows why a motion
         # did or didn't count (look for "[motion]" in wield.log).
         print(
-            "[motion] "
-            + self.matcher.explain(normalize_trajectory(stroke["points"]))
+            f"[motion] {stroke.get('duration', 0):.2f} s "
+            + self.matcher.explain(
+                normalize_trajectory(stroke["points"]), in_use=in_use
+            )
         )
 
         if not name:
