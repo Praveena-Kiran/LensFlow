@@ -14,6 +14,7 @@ datas = [
     ("backend/models/gesture_recognizer.task", "backend/models"),
     ("backend/config", "backend/config"),
     ("frontend/styles/theme.qss", "frontend/styles"),
+    ("frontend/styles/icons", "frontend/styles/icons"),
     ("assets/icons/wield.png", "assets/icons"),
 ]
 binaries = []
