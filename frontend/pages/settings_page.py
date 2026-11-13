@@ -8,7 +8,7 @@ import os
 import platform
 import subprocess
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QObject, QThread, Qt, Signal, Slot
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -41,6 +41,26 @@ from backend.settings.settings_manager import SettingsManager
 from backend.settings import gesture_settings
 from backend.settings.gesture_settings import ARM_TIMEOUT_CHOICES, HOLD_TIME_CHOICES
 from backend.app_info import APP_NAME
+from backend.voice import model as voice_model
+
+
+
+class _ModelDownloader(QObject):
+    """Downloads the speech model off the UI thread."""
+
+    progress = Signal(int, int)
+    done = Signal(str)        # "" on success, else the error message
+
+    @Slot()
+    def run(self):
+        try:
+            voice_model.download_model(
+                progress=lambda done, total: self.progress.emit(done, total)
+            )
+        except Exception as e:
+            self.done.emit(str(e) or "The download failed.")
+            return
+        self.done.emit("")
 
 
 class SettingsPage(StudioPage):
@@ -203,6 +223,8 @@ class SettingsPage(StudioPage):
             "gets in the way of clicks.",
             self.feedback_overlay,
         )
+
+        self._build_voice()
 
         self._section("Your data")
 
@@ -428,6 +450,113 @@ class SettingsPage(StudioPage):
     # -----------------------------------------------------
     # LAYOUT HELPERS
     # -----------------------------------------------------
+
+    # -----------------------------------------------------
+    # VOICE COMMANDS
+    # -----------------------------------------------------
+
+    def _build_voice(self):
+
+        self._section("Voice commands")
+
+        self.voice_enabled = QCheckBox("Listen for spoken commands")
+        self.voice_enabled.setChecked(self.settings["voice_enabled"])
+        self.voice_enabled.toggled.connect(self._on_voice_enabled)
+        self._row(
+            None,
+            "Say a phrase instead of (or as well as) making a gesture, e.g. "
+            "\u201cHey Wield, next slide\u201d. Choose phrases for each action in "
+            "Gesture Studio. Speech is recognised on this computer: no audio "
+            "is recorded or sent anywhere.",
+            self.voice_enabled,
+        )
+
+        self.voice_wake_word = QCheckBox("Only respond after \u201cHey Wield\u201d")
+        self.voice_wake_word.setChecked(self.settings["voice_wake_word"])
+        self.voice_wake_word.toggled.connect(
+            lambda checked: self._save("voice_wake_word", bool(checked))
+        )
+        self._row(
+            None,
+            "Recommended, so words in your talk (\u201c\u2026as the next slide "
+            "shows\u2026\u201d) don't change anything. You can say it on its own "
+            "and then the command within 5 seconds.",
+            self.voice_wake_word,
+        )
+
+        self.voice_model_status = QLabel()
+        self.voice_model_status.setWordWrap(True)
+        self.voice_model_status.setStyleSheet(
+            f"color: {SECONDARY_TEXT}; font-size: 13px; border: none; background: transparent;"
+        )
+
+        self.voice_download = self._small_button(
+            f"Download speech model ({voice_model.MODEL_SIZE_MB} MB)",
+            self._download_voice_model,
+        )
+
+        model_row = QHBoxLayout()
+        model_row.addWidget(self.voice_download)
+        model_row.addWidget(self.voice_model_status, 1)
+        self._row("Speech model", None, model_row)
+
+        self._download_thread = None
+        self._refresh_voice_status()
+
+    def _on_voice_enabled(self, checked):
+        self._save("voice_enabled", bool(checked))
+        self._refresh_voice_status()
+
+    def _refresh_voice_status(self, message=None):
+        ready = voice_model.model_ready()
+        available = voice_model.vosk_available()
+        downloading = self._download_thread is not None
+
+        self.voice_download.setVisible(available and not ready)
+        self.voice_download.setEnabled(not downloading)
+
+        if message:
+            text = message
+        elif not available:
+            text = ("Voice commands need two extra packages: "
+                    "pip install vosk sounddevice")
+        elif ready:
+            text = "\u2713 Installed. Voice commands work offline."
+        else:
+            text = "Needed once for voice commands. Stored on this computer."
+        self.voice_model_status.setText(text)
+
+    def _download_voice_model(self):
+        if self._download_thread is not None:
+            return
+
+        self._download_thread = QThread(self)
+        self._downloader = _ModelDownloader()
+        self._downloader.moveToThread(self._download_thread)
+        self._download_thread.started.connect(self._downloader.run)
+        self._downloader.progress.connect(self._on_download_progress)
+        self._downloader.done.connect(self._on_download_done)
+        self._download_thread.start()
+        self._refresh_voice_status("Downloading\u2026")
+
+    @Slot(int, int)
+    def _on_download_progress(self, done, total):
+        if total:
+            self.voice_model_status.setText(
+                f"Downloading\u2026 {done * 100 // total}% "
+                f"({done // 1_000_000} of {total // 1_000_000} MB)"
+            )
+
+    @Slot(str)
+    def _on_download_done(self, error):
+        thread = self._download_thread
+        self._download_thread = None
+        if thread is not None:
+            thread.quit()
+            thread.wait(5000)
+        self._refresh_voice_status(
+            f"\u26a0 Download failed: {error}" if error else None
+        )
 
     def _section(self, title):
         label = QLabel(title)

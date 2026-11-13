@@ -7,6 +7,10 @@
         "👍 Thumbs Up": "presentation_next",
         "👎 Thumbs Down": "presentation_previous",
         "Swipe right": "presentation_next",
-        "Swipe left": "presentation_previous"
+        "Swipe left": "presentation_previous",
+        "🎤 next slide": "presentation_next",
+        "🎤 previous slide": "presentation_previous",
+        "🎤 start presentation": "presentation_start",
+        "🎤 end presentation": "presentation_end"
     }
 }

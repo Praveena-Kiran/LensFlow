@@ -132,6 +132,27 @@ class TriggerEditorTests(unittest.TestCase):
         self.assertIn("YOUR MOTIONS", labels)
         self.assertIsNotNone(dialog.selected())
 
+    def test_picker_custom_voice_phrase(self):
+        from frontend.components.trigger_editor import CUSTOM_PHRASE, TriggerPickerDialog
+
+        dialog = self.keep(TriggerPickerDialog(
+            "presentation_next", self.pm.get_gesture_map(), [], []
+        ))
+        index = dialog.box.findData(CUSTOM_PHRASE)
+        self.assertGreaterEqual(index, 0)
+        dialog.box.setCurrentIndex(index)
+
+        dialog.phrase_input.setText("go")                 # too short
+        self.assertIsNone(dialog.selected())
+        self.assertFalse(dialog.ok_button.isEnabled())
+
+        dialog.phrase_input.setText("Next one, please!")
+        self.assertEqual(dialog.selected(), "🎤 next one please")
+        self.assertTrue(dialog.ok_button.isEnabled())
+
+        self.editor.assign(dialog.selected(), "presentation_next")
+        self.assertIn("🎤 next one please", self.triggers("presentation_next"))
+
 
 if __name__ == "__main__":
     unittest.main()

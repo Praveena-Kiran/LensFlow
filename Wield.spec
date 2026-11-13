@@ -25,6 +25,18 @@ datas += mp_datas
 binaries += mp_binaries
 hiddenimports += mp_hidden
 
+# Offline voice commands: Vosk ships a native library, and sounddevice
+# loads PortAudio from its _sounddevice_data package.
+for package in ("vosk", "_sounddevice_data"):
+    try:
+        v_datas, v_binaries, v_hidden = collect_all(package)
+    except Exception:
+        continue
+    datas += v_datas
+    binaries += v_binaries
+    hiddenimports += v_hidden
+hiddenimports += ["sounddevice", "vosk"]
+
 # Windows-only modules imported by the PowerPoint controller / hotkeys.
 hiddenimports += ["win32com.client", "pyautogui"]
 

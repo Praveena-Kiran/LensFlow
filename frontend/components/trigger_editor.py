@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtWidgets import (
     QComboBox,
+    QLineEdit,
     QDialog,
     QDialogButtonBox,
     QFrame,
@@ -25,11 +26,13 @@ from backend.automation.events import friendly_action
 from backend.automation.triggers import (
     KIND_LABELS,
     MISSING,
+    VOICE,
     catalogue,
     is_motion,
     trigger_kind,
     triggers_by_action,
 )
+from backend.voice.commands import check_phrase, is_voice_trigger, phrase_of, voice_trigger
 from frontend.styles.theme import (
     BG_DARK,
     BORDER,
@@ -44,6 +47,9 @@ from frontend.styles.theme import (
     SURFACE,
     TEXT_MUTED,
 )
+
+# Picker entry that lets the user type their own voice phrase.
+CUSTOM_PHRASE = "__custom_voice_phrase__"
 
 ACTION_HINTS = {
     "ACTIVATE": "Only used when “Require activation gesture” is on in Settings.",
@@ -60,7 +66,9 @@ class TriggerChip(QFrame):
         self.setObjectName("TriggerChip")
 
         missing = kind == MISSING
-        accent = ERROR if missing else (PRIMARY if is_motion(kind) else BORDER)
+        accent = ERROR if missing else (
+            PRIMARY if is_motion(kind) or kind == VOICE else BORDER
+        )
 
         self.setStyleSheet(f"""
             QFrame#TriggerChip {{
@@ -131,7 +139,7 @@ class TriggerPickerDialog(QDialog):
         layout.setSpacing(10)
 
         intro = QLabel(
-            f"Choose a hand gesture or a motion for "
+            f"Choose a hand gesture, a motion or a voice command for "
             f"<b>{friendly_action(action)}</b>."
         )
         intro.setWordWrap(True)
@@ -141,7 +149,8 @@ class TriggerPickerDialog(QDialog):
         model = QStandardItemModel(self.box)
         self.box.setModel(model)
 
-        for title, names in catalogue(custom_gestures, custom_motions):
+        in_use_voice = [t for t in gesture_map if is_voice_trigger(t)]
+        for title, names in catalogue(custom_gestures, custom_motions, in_use_voice):
             choices = [n for n in names if gesture_map.get(n) != action]
             if not choices:
                 continue
@@ -155,8 +164,23 @@ class TriggerPickerDialog(QDialog):
                 if current:
                     label += f"   (now: {friendly_action(current)})"
                 self.box.addItem(label, name)
+            if title == "Voice commands":
+                self.box.addItem("   Type your own phrase\u2026", CUSTOM_PHRASE)
 
         layout.addWidget(self.box)
+
+        self.phrase_input = QLineEdit()
+        self.phrase_input.setPlaceholderText("What to say, e.g. \u201cnext one please\u201d")
+        self.phrase_input.setAccessibleName("Voice phrase")
+        self.phrase_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {BG_DARK}; color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER}; border-radius: 8px; padding: 8px 12px;
+            }}
+        """)
+        self.phrase_input.textChanged.connect(self._update_note)
+        self.phrase_input.hide()
+        layout.addWidget(self.phrase_input)
 
         self.note = QLabel()
         self.note.setWordWrap(True)
@@ -183,18 +207,41 @@ class TriggerPickerDialog(QDialog):
                 return
 
     def selected(self):
-        return self.box.currentData()
+        data = self.box.currentData()
+        if data == CUSTOM_PHRASE:
+            ok, _ = self._check_custom_phrase()
+            return voice_trigger(self.phrase_input.text()) if ok else None
+        return data
+
+    def _check_custom_phrase(self):
+        existing = [phrase_of(t) for t in self.gesture_map if is_voice_trigger(t)]
+        return check_phrase(self.phrase_input.text(), existing)
 
     def _update_note(self, *_):
+        custom = self.box.currentData() == CUSTOM_PHRASE
+        self.phrase_input.setVisible(custom)
+
         name = self.selected()
         if hasattr(self, "ok_button"):
             self.ok_button.setEnabled(bool(name))
+
+        if custom:
+            ok, message = self._check_custom_phrase()
+            self.note.setText(
+                "Say \u201cHey Wield\u201d, then your phrase." if ok
+                else (message if self.phrase_input.text() else "")
+            )
+            return
+
         current = self.gesture_map.get(name) if name else None
-        self.note.setText(
+        note = (
             f"{name} is used for {friendly_action(current)} now. "
             "It will move to this action instead."
             if current else ""
         )
+        if name and is_voice_trigger(name) and not note:
+            note = "Say \u201cHey Wield\u201d, then this phrase. Turn on voice commands in Settings."
+        self.note.setText(note)
 
 
 class ActionTriggerEditor(QWidget):
@@ -261,9 +308,9 @@ class ActionTriggerEditor(QWidget):
         header.addWidget(title)
         header.addStretch()
 
-        add = QPushButton("+ Add gesture or motion")
+        add = QPushButton("+ Add gesture, motion or voice")
         add.setCursor(Qt.CursorShape.PointingHandCursor)
-        add.setAccessibleName(f"Add a gesture or motion for {friendly_action(action)}")
+        add.setAccessibleName(f"Add a gesture, motion or voice command for {friendly_action(action)}")
         add.setStyleSheet(f"""
             QPushButton {{
                 background: transparent; color: {PRIMARY}; border: none;
