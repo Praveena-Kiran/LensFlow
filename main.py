@@ -1926,6 +1926,11 @@ def main():
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(VERSION)
 
+    # Scrolling over a dropdown/slider scrolls the page instead of
+    # changing the value (kept on the app object so it lives as long).
+    from frontend.components import wheel_guard
+    app.wheel_guard = wheel_guard.install(app)
+
     # The packaged app has no console: keep a log, and tell the user (once)
     # if something unexpected goes wrong instead of silently misbehaving.
     # Kept on the app object so it lives as long as the app does.
