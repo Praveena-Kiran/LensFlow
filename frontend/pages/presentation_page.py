@@ -9,12 +9,13 @@ per action, recording your own); rows show "+N more" when an action has
 extra triggers set up there.
 """
 
-from PySide6.QtCore import Qt, Signal
+import os
+
+from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -32,6 +33,7 @@ from backend.automation.presentation_bindings import (
     set_voice,
 )
 from backend.automation.triggers import catalogue
+from backend.paths import APP_DIR
 from backend.profile_manager import ProfileManager
 from backend.settings import gesture_settings
 from frontend.pages.studio_page import StudioPage
@@ -44,10 +46,12 @@ from frontend.styles.theme import (
     OVERLAY_2,
     PRIMARY,
     PRIMARY_HOVER,
+    PRIMARY_MUTED,
     PRIMARY_TEXT,
     SECONDARY_TEXT,
     SUCCESS,
     SURFACE,
+    SURFACE_HOVER,
     TEXT_MUTED,
 )
 
@@ -59,6 +63,31 @@ ACTION_DESCRIPTIONS = {
     "presentation_previous": "Goes back one slide",
     "presentation_end": "Closes the slideshow",
 }
+
+
+ACTION_ICONS = {
+    "presentation_start": "\u25B6",
+    "presentation_next": "\u2192",
+    "presentation_previous": "\u2190",
+    "presentation_end": "\u25A0",
+}
+
+CHEVRON = os.path.join(APP_DIR, "frontend", "styles", "icons", "chevron-down.svg").replace("\\", "/")
+
+
+class _FocusGlow(QObject):
+    """Lights up the voice pill while its text box has focus."""
+
+    def __init__(self, pill):
+        super().__init__(pill)
+        self.pill = pill
+
+    def eventFilter(self, obj, event):
+        if event.type() in (QEvent.Type.FocusIn, QEvent.Type.FocusOut):
+            self.pill.setProperty("focused", event.type() == QEvent.Type.FocusIn)
+            self.pill.style().unpolish(self.pill)
+            self.pill.style().polish(self.pill)
+        return False
 
 
 def _recorded_names():
@@ -77,16 +106,41 @@ def _recorded_names():
 
 
 class _ActionRow:
-    """Widgets for one action row (kept together for refresh)."""
+    """Widgets for one action (kept together for refresh)."""
 
     def __init__(self, action):
         self.action = action
+
         self.gesture = QComboBox()
+        self.gesture.setObjectName("GesturePill")
         self.gesture.setAccessibleName(f"Gesture for {friendly_action(action)}")
-        self.gesture.setMinimumWidth(220)
+        self.gesture.setFixedWidth(230)
+        self.gesture.setFixedHeight(38)
+        self.gesture.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        # "🎤 Hey Wield, [what to say]" as one rounded field.
+        self.pill = QFrame()
+        self.pill.setObjectName("VoicePill")
+        self.pill.setFixedHeight(38)
+        pill_layout = QHBoxLayout(self.pill)
+        pill_layout.setContentsMargins(14, 0, 10, 0)
+        pill_layout.setSpacing(6)
+
+        self.mic = QLabel("\U0001F3A4")
+        self.mic.setObjectName("VoiceMic")
+        self.wake = QLabel("Hey Wield,")
+        self.wake.setObjectName("VoiceWake")
+
         self.phrase = QLineEdit()
+        self.phrase.setObjectName("VoiceInput")
         self.phrase.setAccessibleName(f"Voice command for {friendly_action(action)}")
-        self.phrase.setPlaceholderText("type what to say")
+        self.phrase.setPlaceholderText("what to say")
+        self.phrase.installEventFilter(_FocusGlow(self.pill))
+
+        pill_layout.addWidget(self.mic)
+        pill_layout.addWidget(self.wake)
+        pill_layout.addWidget(self.phrase, 1)
+
         self.hint = QLabel()
         self.hint.setWordWrap(True)
 
@@ -119,20 +173,80 @@ class PresentationPage(StudioPage):
             QFrame#Card {{
                 background-color: {SURFACE};
                 border: 1px solid {BORDER};
-                border-radius: 14px;
+                border-radius: 18px;
             }}
-            QComboBox, QLineEdit {{
+            QFrame#ActionTile {{
+                background-color: {OVERLAY_1};
+                border: 1px solid transparent;
+                border-radius: 16px;
+            }}
+            QFrame#ActionTile:hover {{
+                background-color: {SURFACE_HOVER};
+                border: 1px solid {BORDER};
+            }}
+            QLabel#ActionBadge {{
+                background-color: {PRIMARY_MUTED};
+                color: {PRIMARY};
+                border-radius: 18px;
+                font-size: 14px;
+                font-weight: 700;
+            }}
+
+            QComboBox#GesturePill {{
                 background-color: {BG_DARK};
                 color: {PRIMARY_TEXT};
                 border: 1px solid {BORDER};
-                border-radius: 8px;
-                padding: 7px 10px;
+                border-radius: 19px;
+                padding: 0 14px;
                 font-size: 13px;
             }}
-            QComboBox:focus, QLineEdit:focus {{ border: 1px solid {PRIMARY}; }}
-            QLineEdit[invalid="true"] {{ border: 1px solid {ERROR}; }}
-            QComboBox QAbstractItemView {{
-                background-color: {BG_DARK}; color: {PRIMARY_TEXT};
+            QComboBox#GesturePill:hover {{ border: 1px solid {PRIMARY}; }}
+            QComboBox#GesturePill:focus {{ border: 1px solid {PRIMARY}; }}
+            QComboBox#GesturePill::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
+                width: 26px;
+                border: none;
+                background: transparent;
+            }}
+            QComboBox#GesturePill::down-arrow {{
+                image: url({CHEVRON});
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox#GesturePill QAbstractItemView {{
+                background-color: {SURFACE};
+                color: {PRIMARY_TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 12px;
+                padding: 6px;
+                outline: 0;
+                selection-background-color: {PRIMARY_MUTED};
+                selection-color: {PRIMARY_TEXT};
+            }}
+
+            QFrame#VoicePill {{
+                background-color: {BG_DARK};
+                border: 1px solid {BORDER};
+                border-radius: 19px;
+            }}
+            QFrame#VoicePill:hover {{ border: 1px solid {PRIMARY}; }}
+            QFrame#VoicePill[focused="true"] {{
+                border: 1px solid {PRIMARY};
+                background-color: {SURFACE};
+            }}
+            QFrame#VoicePill[invalid="true"] {{ border: 1px solid {ERROR}; }}
+            QLabel#VoiceMic {{ background: transparent; border: none; font-size: 13px; }}
+            QLabel#VoiceWake {{
+                background: transparent; border: none;
+                color: {TEXT_MUTED}; font-size: 13px; font-weight: 600;
+            }}
+            QLineEdit#VoiceInput {{
+                background: transparent;
+                border: none;
+                color: {PRIMARY_TEXT};
+                font-size: 13px;
+                padding: 0;
             }}
         """)
 
@@ -169,44 +283,26 @@ class PresentationPage(StudioPage):
 
     def _build_controls(self):
         frame, layout = self._card()
+        layout.setContentsMargins(20, 18, 20, 16)
+        layout.setSpacing(10)
 
-        layout.addWidget(self._label("Controls", PRIMARY_TEXT, 16, 600))
+        header = QVBoxLayout()
+        header.setSpacing(2)
+        header.addWidget(self._label("Your controls", PRIMARY_TEXT, 16, 700))
+        header.addWidget(self._label(
+            "Pick a gesture, a phrase, or both for each action.", TEXT_MUTED, 12
+        ))
+        layout.addLayout(header)
 
         self.voice_note = self._label("", TEXT_MUTED, 12)
         self.voice_note.setWordWrap(True)
         layout.addWidget(self.voice_note)
 
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(14)
-        grid.setVerticalSpacing(6)
-        grid.setColumnStretch(3, 1)
-
-        grid.addWidget(self._label("Action", TEXT_MUTED, 12, 600), 0, 0)
-        grid.addWidget(self._label("Gesture or motion", TEXT_MUTED, 12, 600), 0, 1)
-        grid.addWidget(self._label("Voice", TEXT_MUTED, 12, 600), 0, 2, 1, 2)
-
-        row_index = 1
         for action in ACTIONS:
             row = _ActionRow(action)
             self.rows[action] = row
-
-            name = QVBoxLayout()
-            name.setSpacing(0)
-            name.addWidget(self._label(friendly_action(action), PRIMARY_TEXT, 14, 600))
-            name.addWidget(self._label(ACTION_DESCRIPTIONS[action], TEXT_MUTED, 11))
-            grid.addLayout(name, row_index, 0)
-
-            grid.addWidget(row.gesture, row_index, 1)
-
-            wake = self._label("Hey Wield,", SECONDARY_TEXT, 13, 600)
-            self.wake_labels.append(wake)
-            grid.addWidget(wake, row_index, 2)
-            grid.addWidget(row.phrase, row_index, 3)
-
-            grid.addWidget(row.hint, row_index + 1, 1, 1, 3)
-            # Space between actions, whether or not a hint is showing.
-            grid.setRowMinimumHeight(row_index + 1, 10)
-            row_index += 2
+            self.wake_labels.append(row.wake)
+            layout.addWidget(self._build_tile(row))
 
             row.gesture.currentIndexChanged.connect(
                 lambda _i, a=action: self._on_gesture_chosen(a)
@@ -214,21 +310,59 @@ class PresentationPage(StudioPage):
             row.phrase.textChanged.connect(lambda _t, a=action: self._on_phrase_typed(a))
             row.phrase.editingFinished.connect(lambda a=action: self._on_phrase_done(a))
 
-        layout.addLayout(grid)
-
-        more = QPushButton("More options in Gesture Studio  →")
+        more = QPushButton("More options in Gesture Studio  \u2192")
         more.setCursor(Qt.CursorShape.PointingHandCursor)
         more.setToolTip("Several gestures per action, record your own gestures and motions")
         more.setStyleSheet(f"""
             QPushButton {{
                 background: transparent; border: none; color: {PRIMARY};
-                font-size: 12px; font-weight: 600; text-align: left; padding: 4px 0;
+                font-size: 12px; font-weight: 600; text-align: left; padding: 4px 2px;
             }}
             QPushButton:hover {{ color: {PRIMARY_HOVER}; }}
         """)
         more.clicked.connect(self.open_gesture_studio.emit)
         layout.addWidget(more, 0, Qt.AlignmentFlag.AlignLeft)
         return frame
+
+    def _build_tile(self, row):
+        tile = QFrame()
+        tile.setObjectName("ActionTile")
+        tile.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+
+        outer = QVBoxLayout(tile)
+        outer.setContentsMargins(14, 10, 14, 10)
+        outer.setSpacing(4)
+
+        line = QHBoxLayout()
+        line.setSpacing(14)
+
+        badge = QLabel(ACTION_ICONS[row.action])
+        badge.setObjectName("ActionBadge")
+        badge.setFixedSize(36, 36)
+        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        line.addWidget(badge)
+
+        names = QVBoxLayout()
+        names.setSpacing(1)
+        names.addWidget(self._label(friendly_action(row.action), PRIMARY_TEXT, 14, 600))
+        names.addWidget(self._label(ACTION_DESCRIPTIONS[row.action], TEXT_MUTED, 12))
+        name_box = QFrame()
+        name_box.setStyleSheet("background: transparent; border: none;")
+        name_box.setLayout(names)
+        # Same width on every row so the controls line up.
+        name_box.setFixedWidth(250)
+        line.addWidget(name_box)
+
+        line.addWidget(row.gesture)
+        line.addWidget(row.pill, 1)
+        outer.addLayout(line)
+
+        # Hints line up under the controls, not under the badge.
+        hint_line = QHBoxLayout()
+        hint_line.setContentsMargins(36 + 14 + 250 + 14, 0, 0, 0)
+        hint_line.addWidget(row.hint)
+        outer.addLayout(hint_line)
+        return tile
 
     def _button(self, text, primary=False, danger=False):
         button = QPushButton(text)
@@ -243,7 +377,7 @@ class PresentationPage(StudioPage):
             style = f"background: {OVERLAY_1}; color: {PRIMARY_TEXT}; border: 1px solid {BORDER};"
             hover = f"background: {OVERLAY_2};"
         button.setStyleSheet(f"""
-            QPushButton {{ {style} border-radius: 10px; padding: 9px 20px;
+            QPushButton {{ {style} border-radius: 17px; padding: 9px 22px;
                            font-size: 14px; font-weight: 600; }}
             QPushButton:hover {{ {hover} }}
         """)
@@ -323,7 +457,7 @@ class PresentationPage(StudioPage):
         self.camera_pill.setStyleSheet(f"""
             color: {color}; font-size: 13px; font-weight: 700;
             background: {OVERLAY_1}; border: 1px solid {BORDER};
-            border-radius: 12px; padding: 4px 12px;
+            border-radius: 15px; padding: 5px 14px;
         """)
         self.camera_button.setText("Turn off camera" if self.listening else "Turn on camera")
         self._set_status(hint, SECONDARY_TEXT, dot=False)
@@ -350,7 +484,8 @@ class PresentationPage(StudioPage):
                 self._fill_gestures(row, gesture_map, groups, b["gesture"])
                 row.phrase.setText(b["phrase"])
                 row.phrase.setProperty("invalid", False)
-                self._restyle(row.phrase)
+                row.pill.setProperty("invalid", False)
+                self._restyle(row.pill)
                 self._show_extras(row, b)
 
             settings = gesture_settings.load()
@@ -446,7 +581,8 @@ class PresentationPage(StudioPage):
         row = self.rows[action]
         ok, message = check_voice(self.profile.get_gesture_map(), action, row.phrase.text())
         row.phrase.setProperty("invalid", not ok)
-        self._restyle(row.phrase)
+        row.pill.setProperty("invalid", not ok)
+        self._restyle(row.pill)
         if ok:
             self._show_extras(row, binding(self.profile.get_gesture_map(), action))
         else:
