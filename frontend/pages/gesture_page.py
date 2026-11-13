@@ -514,6 +514,11 @@ class GesturePage(StudioPage):
 
     def refresh_gesture_list(self):
 
+        # Re-read from disk: Presentation Studio (and first-time voice
+        # defaults) edit the same profile, and saving a stale copy from
+        # here would undo those changes.
+        self.profile_manager.load("presentation")
+
         self.gesture_map = self.profile_manager.get_gesture_map()
 
         self.trigger_editor.refresh()
