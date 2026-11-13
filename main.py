@@ -52,6 +52,7 @@ from PySide6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPen, QPixmap
 
 from frontend.components.title_bar import TitleBar
 from frontend.components.sidebar import AppSidebar
+from frontend.components.feedback_overlay import Feedback
 
 from frontend.pages.home import HomePage
 from frontend.pages.presentation_page import PresentationPage
@@ -317,6 +318,9 @@ class MainWindow(QMainWindow):
 
         # Stopped camera threads that are still shutting down.
         self._retiring_threads = []
+
+        # Sounds + always-on-top note for what gestures/voice just did.
+        self.feedback = Feedback(self)
 
         self.action_manager = (
             ActionManager()
@@ -963,6 +967,8 @@ class MainWindow(QMainWindow):
 
         self._last_event_run = {}
 
+        self.feedback.reload()
+
         try:
 
             worker = GestureWorker(
@@ -1086,11 +1092,15 @@ class MainWindow(QMainWindow):
                 ERROR
             )
 
+            self.feedback.failed(name, str(e))
+
             return
 
         self._gesture_feedback(
             f"{gesture}  →  {name}"
         )
+
+        self.feedback.action(gesture, name)
 
     @Slot(str, float)
     def _on_gesture_seen(
@@ -1128,9 +1138,11 @@ class MainWindow(QMainWindow):
 
         elif status == "ARMED":
             self._gesture_feedback("Gestures active")
+            self.feedback.armed(worker.arm_gesture if worker else "")
 
         elif status == "DISARMED" and arm_hint:
             self._gesture_feedback(f"Paused. {arm_hint}")
+            self.feedback.disarmed()
 
     @Slot(str)
     def _on_gesture_error(
@@ -1207,6 +1219,8 @@ class MainWindow(QMainWindow):
         self.gesture_thread = None
 
         self.gesture_context = None
+
+        self.feedback.stopped()
 
         if self.custom_page.gesture_control_running:
 

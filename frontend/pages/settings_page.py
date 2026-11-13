@@ -177,6 +177,33 @@ class SettingsPage(StudioPage):
 
         self._on_require_arm(self.settings["require_arm"], save=False)
 
+        self._section("Feedback")
+
+        self.sound_feedback = QCheckBox("Play soft sounds")
+        self.sound_feedback.setChecked(self.settings["sound_feedback"])
+        self.sound_feedback.toggled.connect(
+            lambda checked: self._save("sound_feedback", bool(checked))
+        )
+        self._row(
+            None,
+            "A short chime when Wield starts listening and when it runs an "
+            "action, so you know it worked without looking.",
+            self.sound_feedback,
+        )
+
+        self.feedback_overlay = QCheckBox("Show what Wield did on top of other windows")
+        self.feedback_overlay.setChecked(self.settings["feedback_overlay"])
+        self.feedback_overlay.toggled.connect(
+            lambda checked: self._save("feedback_overlay", bool(checked))
+        )
+        self._row(
+            None,
+            "A small note at the bottom of the screen, e.g. \u201c\U0001F44D \u2192 "
+            "Next slide\u201d. It shows over full-screen slideshows and never "
+            "gets in the way of clicks.",
+            self.feedback_overlay,
+        )
+
         self._section("Your data")
 
         data_button = QPushButton("Open data folder")

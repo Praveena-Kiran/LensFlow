@@ -10,6 +10,10 @@ Stored in the user's settings.json (via SettingsManager):
     require_arm   bool    gestures only work after an activation gesture
     arm_gesture   name    the activation gesture
     arm_timeout   seconds of no gestures before Wield deactivates again
+    sound_feedback    bool  soft sounds when Wield activates / runs an action
+    feedback_overlay  bool  small always-on-top note, visible over slideshows
+    voice_enabled     bool  listen for spoken commands (offline)
+    voice_wake_word   bool  commands must start with "Hey Wield"
 
 thresholds() turns these into the numbers the matchers use.
 """
@@ -23,6 +27,10 @@ DEFAULTS = {
     "require_arm": False,
     "arm_gesture": "✋ Open Palm",
     "arm_timeout": 10,
+    "sound_feedback": True,
+    "feedback_overlay": True,
+    "voice_enabled": False,
+    "voice_wake_word": True,
 }
 
 HOLD_TIME_CHOICES = [0.0, 0.3, 0.6, 1.0, 1.5]
@@ -46,7 +54,9 @@ def load():
     values["sensitivity"] = max(0, min(100, int(values["sensitivity"])))
     values["hold_time"] = max(0.0, float(values["hold_time"]))
     values["arm_timeout"] = max(1, int(values["arm_timeout"]))
-    values["require_arm"] = bool(values["require_arm"])
+    for key in ("require_arm", "sound_feedback", "feedback_overlay",
+                "voice_enabled", "voice_wake_word"):
+        values[key] = bool(values[key])
 
     return values
 
