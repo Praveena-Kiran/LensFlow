@@ -400,6 +400,22 @@ class MainWindow(QMainWindow):
             self.go_home
         )
 
+        # Gestures / phrases edited on the Presentation Studio page: keep
+        # Gesture Studio in sync and reload the running camera and voice
+        # (debounced, so several quick edits restart them once).
+        self._bindings_restart = QTimer(self)
+        self._bindings_restart.setSingleShot(True)
+        self._bindings_restart.setInterval(700)
+        self._bindings_restart.timeout.connect(self._apply_presentation_bindings)
+
+        self.presentation_page.bindings_changed.connect(
+            self._on_presentation_bindings_changed
+        )
+
+        self.presentation_page.open_gesture_studio.connect(
+            lambda: self.open_live_workspace("Gesture Studio")
+        )
+
         # =====================================================
         # CODING → HOME
         # =====================================================
@@ -763,6 +779,9 @@ class MainWindow(QMainWindow):
 
         if studio_name == "Presentation Studio":
 
+            # Gestures may have changed in Gesture Studio meanwhile.
+            self.presentation_page.refresh_bindings()
+
             self.stack.setCurrentWidget(
                 self.presentation_page
             )
@@ -786,6 +805,9 @@ class MainWindow(QMainWindow):
         # =====================================================
 
         elif studio_name == "Gesture Studio":
+
+            # Show the latest saved gestures (Presentation Studio edits them too).
+            self.gesture_page.refresh_gesture_list()
 
             self.stack.setCurrentWidget(
                 self.gesture_page
@@ -1329,6 +1351,23 @@ class MainWindow(QMainWindow):
 
         print(f"🎤 Listening for: {', '.join(phrases)}")
 
+    def _on_presentation_bindings_changed(
+        self
+    ):
+
+        self.gesture_page.refresh_gesture_list()
+
+        if self.gesture_context == "presentation":
+            self._bindings_restart.start()
+
+    def _apply_presentation_bindings(
+        self
+    ):
+
+        if self.gesture_context == "presentation":
+            print("🔄 Presentation controls changed: reloading gestures and voice")
+            self.start_gesture_worker("presentation")
+
     def _with_default_voice_phrases(
         self,
         events
@@ -1349,8 +1388,9 @@ class MainWindow(QMainWindow):
             return events
 
         print(f"🎤 Added voice commands to Presentation Studio: {', '.join(added)}")
-        # Show them in Gesture Studio straight away.
+        # Show them in Gesture Studio and Presentation Studio straight away.
         self.gesture_page.refresh_gesture_list()
+        self.presentation_page.refresh_bindings()
 
         return profile_events(profile.current_profile)
 
