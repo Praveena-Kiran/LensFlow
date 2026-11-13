@@ -4,6 +4,12 @@ import tempfile
 import unittest
 from unittest import mock
 
+try:
+    import PySide6  # noqa: F401
+    HAVE_QT = True
+except ImportError:  # CI's unit-test job installs only the standard library
+    HAVE_QT = False
+
 from backend.automation.triggers import (
     CUSTOM_MOTION,
     GESTURE,
@@ -41,6 +47,7 @@ class TriggerLogicTests(unittest.TestCase):
         self.assertEqual(grouped["presentation_end"], [])
 
 
+@unittest.skipUnless(HAVE_QT, "PySide6 not installed")
 class TriggerEditorTests(unittest.TestCase):
     """The Gesture Studio editor, headless (Qt offscreen)."""
 

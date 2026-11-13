@@ -7,7 +7,7 @@ Profiles store {trigger: action}, so one action can have several triggers
 a trigger can only belong to one action at a time.
 """
 
-from backend.gestures.google_gesture_recognizer import BUILTIN_GESTURE_NAMES
+from backend.gestures.gesture_names import BUILTIN_GESTURE_NAMES
 from backend.gestures.motions import BUILTIN_MOTION_NAMES
 
 GESTURE = "gesture"
