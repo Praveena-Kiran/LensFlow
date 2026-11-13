@@ -330,6 +330,7 @@ class MainWindow(QMainWindow):
         self.voice_worker = None
         self.voice_thread = None
         self._voice_events = []
+        self._voice_note = ""
 
         self.action_manager = (
             ActionManager()
@@ -1145,7 +1146,10 @@ class MainWindow(QMainWindow):
         )
 
         if status == "READY":
-            self._gesture_feedback(arm_hint or "Listening for gestures…")
+            message = arm_hint or "Listening for gestures…"
+            if self._voice_note:
+                message += f"   ·   {self._voice_note}"
+            self._gesture_feedback(message)
 
         elif status == "ARMED":
             self._gesture_feedback("Gestures active")
@@ -1249,9 +1253,25 @@ class MainWindow(QMainWindow):
         self,
         events
     ):
-        """Listen for this studio's voice triggers, if voice is turned on."""
+        """
+        Listen for this studio's voice triggers, if voice is turned on.
+        Always leaves a reason in the log (and in self._voice_note, shown
+        with the "listening" status) when voice doesn't start.
+        """
 
         self._stop_voice()
+        self._voice_note = ""
+
+        settings = gesture_settings.load()
+
+        if not settings["voice_enabled"]:
+            print("🎤 Voice commands are off (Settings > Voice commands).")
+            return
+
+        # First time voice is used with Presentation Studio: give it the
+        # standard phrases so "Hey Wield, next slide" just works.
+        if self.gesture_context == "presentation":
+            events = self._with_default_voice_phrases(events)
 
         phrases = [
             phrase_of(gesture_of(event))
@@ -1259,24 +1279,33 @@ class MainWindow(QMainWindow):
             if is_voice_trigger(gesture_of(event))
         ]
 
-        settings = gesture_settings.load()
-
-        if not settings["voice_enabled"] or not phrases:
+        if not phrases:
+            self._voice_note = (
+                "🎤 No voice commands here yet: add them in Gesture Studio"
+            )
+            print("🎤 Voice is on, but this studio has no voice commands.")
             return
 
         if not vosk_available():
-            self._gesture_feedback(
-                "Voice commands need the 'vosk' and 'sounddevice' packages.",
-                ERROR,
+            self._voice_note = (
+                "⚠ Voice needs two packages: pip install vosk sounddevice"
             )
+            print("🎤 Voice not started: vosk / sounddevice not installed.")
             return
 
         if not model_ready():
-            self._gesture_feedback(
-                "Voice commands: download the speech model in Settings.",
-                ERROR,
+            self._voice_note = (
+                "⚠ Voice: download the speech model in Settings"
             )
+            print("🎤 Voice not started: speech model not downloaded.")
             return
+
+        wake = settings["voice_wake_word"]
+        example = phrases[0]
+        self._voice_note = (
+            f"🎤 Say \u201cHey Wield, {example}\u201d" if wake
+            else f"🎤 Say \u201c{example}\u201d"
+        )
 
         from backend.voice.voice_worker import VoiceWorker
 
@@ -1299,6 +1328,31 @@ class MainWindow(QMainWindow):
         thread.start()
 
         print(f"🎤 Listening for: {', '.join(phrases)}")
+
+    def _with_default_voice_phrases(
+        self,
+        events
+    ):
+        from backend.automation.events import profile_events
+        from backend.profile_manager import ProfileManager
+        from backend.voice.defaults import add_default_voice_phrases
+
+        try:
+            profile = ProfileManager()
+            profile.load("presentation")
+            added = add_default_voice_phrases(profile)
+        except Exception as e:
+            print(f"⚠ Could not add default voice phrases: {e}")
+            return events
+
+        if not added:
+            return events
+
+        print(f"🎤 Added voice commands to Presentation Studio: {', '.join(added)}")
+        # Show them in Gesture Studio straight away.
+        self.gesture_page.refresh_gesture_list()
+
+        return profile_events(profile.current_profile)
 
     def _stop_voice(
         self

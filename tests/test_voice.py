@@ -289,3 +289,46 @@ class VoiceTriggerCatalogueTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DefaultVoicePhrasesTests(unittest.TestCase):
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        env = mock.patch.dict(os.environ, {"WIELD_DATA_DIR": self.tmp.name})
+        env.start()
+        self.addCleanup(env.stop)
+        self.addCleanup(self.tmp.cleanup)
+
+    def profile_without_voice(self):
+        from backend.profile_manager import ProfileManager
+        pm = ProfileManager()
+        pm.load("presentation")
+        for trigger in [t for t in pm.get_gesture_map() if is_voice_trigger(t)]:
+            pm.remove_gesture(trigger)
+        return pm
+
+    def test_adds_standard_phrases_once(self):
+        from backend.profile_manager import ProfileManager
+        from backend.voice.defaults import add_default_voice_phrases
+
+        pm = self.profile_without_voice()
+        added = add_default_voice_phrases(pm)
+        self.assertIn("next slide", added)
+
+        fresh = ProfileManager()
+        fresh.load("presentation")
+        self.assertEqual(fresh.get_gesture_map()["🎤 next slide"], "presentation_next")
+
+        # Removed by the user later: not added back.
+        fresh.remove_gesture("🎤 next slide")
+        self.assertEqual(add_default_voice_phrases(fresh), [])
+        self.assertNotIn("🎤 next slide", fresh.get_gesture_map())
+
+    def test_leaves_existing_voice_setup_alone(self):
+        from backend.voice.defaults import add_default_voice_phrases
+
+        pm = self.profile_without_voice()
+        pm.update_gesture("🎤 onwards", "presentation_next")
+        self.assertEqual(add_default_voice_phrases(pm), [])
+        self.assertNotIn("🎤 next slide", pm.get_gesture_map())
