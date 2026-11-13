@@ -99,6 +99,10 @@ class PresentationPage(StudioPage):
     # "More options" link.
     open_gesture_studio = Signal()
 
+    # Turn the camera + microphone on (True) or off (False). MainWindow
+    # does it and reports back with set_listening().
+    listening_requested = Signal(bool)
+
     def __init__(self):
         super().__init__(
             "Presentation Studio",
@@ -132,10 +136,11 @@ class PresentationPage(StudioPage):
             }}
         """)
 
-        self.content_layout.addWidget(self._build_status())
+        self.listening = False
+
         self.content_layout.addWidget(self._build_controls())
         self.content_layout.addStretch(1)
-        self.content_layout.addLayout(self._build_buttons())
+        self.content_layout.addWidget(self._build_session())
 
         # The base page's "Status: Ready" footer duplicates the status card.
         self.status_label.hide()
@@ -150,8 +155,8 @@ class PresentationPage(StudioPage):
         frame = QFrame()
         frame.setObjectName("Card")
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(20, 16, 20, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(20, 14, 20, 14)
+        layout.setSpacing(6)
         return frame, layout
 
     def _label(self, text, color=PRIMARY_TEXT, size=13, weight=400):
@@ -161,13 +166,6 @@ class PresentationPage(StudioPage):
             "border: none; background: transparent;"
         )
         return label
-
-    def _build_status(self):
-        frame, layout = self._card()
-        self.status = self._label("●  Ready", SUCCESS, 13, 500)
-        self.status.setWordWrap(True)
-        layout.addWidget(self.status)
-        return frame
 
     def _build_controls(self):
         frame, layout = self._card()
@@ -207,7 +205,7 @@ class PresentationPage(StudioPage):
 
             grid.addWidget(row.hint, row_index + 1, 1, 1, 3)
             # Space between actions, whether or not a hint is showing.
-            grid.setRowMinimumHeight(row_index + 1, 18)
+            grid.setRowMinimumHeight(row_index + 1, 10)
             row_index += 2
 
             row.gesture.currentIndexChanged.connect(
@@ -245,32 +243,90 @@ class PresentationPage(StudioPage):
             style = f"background: {OVERLAY_1}; color: {PRIMARY_TEXT}; border: 1px solid {BORDER};"
             hover = f"background: {OVERLAY_2};"
         button.setStyleSheet(f"""
-            QPushButton {{ {style} border-radius: 10px; padding: 11px 22px;
+            QPushButton {{ {style} border-radius: 10px; padding: 9px 20px;
                            font-size: 14px; font-weight: 600; }}
             QPushButton:hover {{ {hover} }}
         """)
         return button
 
-    def _build_buttons(self):
-        row = QHBoxLayout()
-        row.setSpacing(10)
+    def _build_session(self):
+        """Bottom bar: camera state, status, and the presentation buttons."""
+        frame, layout = self._card()
+        layout.setSpacing(12)
 
-        self.start_button = self._button("▶  Start presentation", primary=True)
-        self.end_button = self._button("■  End presentation", danger=True)
-        self.previous_button = self._button("←  Previous")
-        self.next_button = self._button("Next  →")
+        top = QHBoxLayout()
+        top.setSpacing(12)
+
+        self.camera_pill = QLabel()
+        top.addWidget(self.camera_pill)
+
+        self.status = self._label("", SECONDARY_TEXT, 13)
+        self.status.setWordWrap(True)
+        top.addWidget(self.status, 1)
+
+        self.camera_button = self._button("Turn on camera")
+        self.camera_button.setToolTip(
+            "Use gestures and voice without starting the slideshow, e.g. "
+            "when it's already running or to try your gestures."
+        )
+        self.camera_button.clicked.connect(
+            lambda: self.listening_requested.emit(not self.listening)
+        )
+        top.addWidget(self.camera_button)
+        layout.addLayout(top)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(10)
+
+        self.start_button = self._button("\u25B6  Start presentation", primary=True)
+        self.end_button = self._button("\u25A0  End presentation", danger=True)
+        self.previous_button = self._button("\u2190  Previous")
+        self.next_button = self._button("Next  \u2192")
 
         self.start_button.clicked.connect(self._start_presentation)
         self.end_button.clicked.connect(self._end_presentation)
         self.previous_button.clicked.connect(self._previous_slide)
         self.next_button.clicked.connect(self._next_slide)
 
-        row.addWidget(self.start_button)
-        row.addWidget(self.end_button)
-        row.addStretch()
-        row.addWidget(self.previous_button)
-        row.addWidget(self.next_button)
-        return row
+        buttons.addWidget(self.start_button)
+        buttons.addWidget(self.end_button)
+        buttons.addStretch()
+        buttons.addWidget(self.previous_button)
+        buttons.addWidget(self.next_button)
+        layout.addLayout(buttons)
+
+        self.set_listening(False)
+        return frame
+
+    def set_listening(self, state):
+        """
+        Show whether the camera (and microphone) are on.
+        state: False (off), "starting", or True (on).
+        """
+        self.listening = state is not False
+        voice = gesture_settings.load()["voice_enabled"]
+        devices = "Camera & mic" if voice else "Camera"
+
+        if state is True:
+            text, color = f"\u25CF  {devices} on", ERROR
+            hint = "Listening for your gestures" + (" and voice." if voice else ".")
+        elif state == "starting":
+            text, color = "\u25CF  Starting camera\u2026", SECONDARY_TEXT
+            hint = ""
+        else:
+            text, color = f"\u25CB  {devices} off", TEXT_MUTED
+            hint = (f"Your {devices.lower()} only turn on when you start the "
+                    "presentation." if voice else
+                    "Your camera only turns on when you start the presentation.")
+
+        self.camera_pill.setText(text)
+        self.camera_pill.setStyleSheet(f"""
+            color: {color}; font-size: 13px; font-weight: 700;
+            background: {OVERLAY_1}; border: 1px solid {BORDER};
+            border-radius: 12px; padding: 4px 12px;
+        """)
+        self.camera_button.setText("Turn off camera" if self.listening else "Turn on camera")
+        self._set_status(hint, SECONDARY_TEXT, dot=False)
 
     # ---------------------------------------------------------
     # Data
@@ -429,8 +485,8 @@ class PresentationPage(StudioPage):
     # Status + PowerPoint buttons
     # ---------------------------------------------------------
 
-    def _set_status(self, text, color=SUCCESS):
-        self.status.setText(f"●  {text}")
+    def _set_status(self, text, color=SUCCESS, dot=True):
+        self.status.setText(f"●  {text}" if dot and text else text)
         self.status.setStyleSheet(
             f"color: {color}; font-size: 13px; font-weight: 500; "
             "border: none; background: transparent;"
@@ -439,6 +495,9 @@ class PresentationPage(StudioPage):
     def _start_presentation(self):
         self.powerpoint.start_presentation()
         self._set_status("Presentation running", SUCCESS)
+        # Gestures and voice come on with the slideshow, not before.
+        if not self.listening:
+            self.listening_requested.emit(True)
 
     def _next_slide(self):
         self.powerpoint.next_slide()
@@ -450,4 +509,6 @@ class PresentationPage(StudioPage):
 
     def _end_presentation(self):
         self.powerpoint.end_presentation()
+        if self.listening:
+            self.listening_requested.emit(False)
         self._set_status("Presentation ended", SECONDARY_TEXT)
