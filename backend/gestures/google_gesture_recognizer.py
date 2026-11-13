@@ -6,17 +6,8 @@ import mediapipe as mp
 from backend.paths import model_path as bundled_model_path
 
 
-# MediaPipe category name -> name shown in Wield.
-BUILTIN_GESTURES = {
-    "Thumb_Up": "👍 Thumbs Up",
-    "Thumb_Down": "👎 Thumbs Down",
-    "Open_Palm": "✋ Open Palm",
-    "Closed_Fist": "✊ Fist",
-    "Victory": "✌️ Peace",
-    "Pointing_Up": "☝️ Pointing Up",
-}
-
-BUILTIN_GESTURE_NAMES = list(BUILTIN_GESTURES.values())
+# Re-exported for existing imports.
+from backend.gestures.gesture_names import BUILTIN_GESTURES, BUILTIN_GESTURE_NAMES  # noqa: E402,F401
 
 
 class GoogleGestureRecognizer:

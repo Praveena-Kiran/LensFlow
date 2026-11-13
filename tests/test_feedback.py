@@ -4,6 +4,12 @@ import unittest
 import wave
 from unittest import mock
 
+try:
+    import PySide6  # noqa: F401
+    HAVE_QT = True
+except ImportError:  # CI's unit-test job installs only the standard library
+    HAVE_QT = False
+
 from backend.feedback.sounds import CUES, SoundCues
 
 
@@ -55,6 +61,7 @@ class SoundCueTests(unittest.TestCase):
         self.assertFalse(sounds.play("error"))
 
 
+@unittest.skipUnless(HAVE_QT, "PySide6 not installed")
 class FeedbackTests(unittest.TestCase):
 
     @classmethod

@@ -6,6 +6,12 @@ import unittest
 import zipfile
 from unittest import mock
 
+try:
+    import PySide6  # noqa: F401
+    HAVE_QT = True
+except ImportError:  # CI's unit-test job installs only the standard library
+    HAVE_QT = False
+
 from backend.voice.commands import (
     UNKNOWN,
     VoiceCommandMatcher,
@@ -185,6 +191,7 @@ class FakeStream:
         self.closed = True
 
 
+@unittest.skipUnless(HAVE_QT, "PySide6 not installed")
 class VoiceWorkerTests(unittest.TestCase):
 
     def run_worker(self, results, wake_word=True):
