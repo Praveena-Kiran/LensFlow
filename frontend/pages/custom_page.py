@@ -1774,11 +1774,14 @@ class EventDialog(QDialog):
                 MotionStore,
             )
 
+            from backend.voice.commands import DEFAULT_PHRASES, voice_trigger
+
             suggestions = (
                 list(BUILTIN_GESTURE_NAMES)
                 + CustomGestureStore().names()
                 + list(BUILTIN_MOTION_NAMES)
                 + MotionStore().names()
+                + [voice_trigger(p) for p in DEFAULT_PHRASES]
             )
 
         except Exception as e:

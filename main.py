@@ -84,6 +84,10 @@ from frontend.styles.theme import (
 )
 
 from backend.gestures.gesture_worker import GestureWorker
+from backend.automation.events import events_for_gesture, gesture_of
+from backend.settings import gesture_settings
+from backend.voice.commands import is_voice_trigger, phrase_of
+from backend.voice.model import model_ready, vosk_available
 from backend.automation.action_manager import ActionManager
 from frontend.styles.theme import BG_DARK, ERROR, PRIMARY, global_stylesheet
 from frontend.components.backdrop import BackdropWidget
@@ -321,6 +325,11 @@ class MainWindow(QMainWindow):
 
         # Sounds + always-on-top note for what gestures/voice just did.
         self.feedback = Feedback(self)
+
+        # Spoken commands, running alongside the camera (see _start_voice).
+        self.voice_worker = None
+        self.voice_thread = None
+        self._voice_events = []
 
         self.action_manager = (
             ActionManager()
@@ -1031,6 +1040,8 @@ class MainWindow(QMainWindow):
 
         self.gesture_thread.start()
 
+        self._start_voice(worker.events)
+
     def _gesture_feedback(
         self,
         message,
@@ -1214,6 +1225,8 @@ class MainWindow(QMainWindow):
             if not thread.isRunning():
                 self._forget_thread(entry)
 
+        self._stop_voice()
+
         self.gesture_worker = None
 
         self.gesture_thread = None
@@ -1227,6 +1240,127 @@ class MainWindow(QMainWindow):
             self.custom_page.set_gesture_control_running(
                 False
             )
+
+    # =============================================================
+    # VOICE COMMANDS
+    # =============================================================
+
+    def _start_voice(
+        self,
+        events
+    ):
+        """Listen for this studio's voice triggers, if voice is turned on."""
+
+        self._stop_voice()
+
+        phrases = [
+            phrase_of(gesture_of(event))
+            for event in events or []
+            if is_voice_trigger(gesture_of(event))
+        ]
+
+        settings = gesture_settings.load()
+
+        if not settings["voice_enabled"] or not phrases:
+            return
+
+        if not vosk_available():
+            self._gesture_feedback(
+                "Voice commands need the 'vosk' and 'sounddevice' packages.",
+                ERROR,
+            )
+            return
+
+        if not model_ready():
+            self._gesture_feedback(
+                "Voice commands: download the speech model in Settings.",
+                ERROR,
+            )
+            return
+
+        from backend.voice.voice_worker import VoiceWorker
+
+        self._voice_events = list(events)
+
+        worker = VoiceWorker(phrases, wake_word=settings["voice_wake_word"])
+        thread = QThread()
+        worker.moveToThread(thread)
+
+        thread.started.connect(worker.run)
+        worker.finished.connect(thread.quit, Qt.ConnectionType.DirectConnection)
+
+        # Bound methods so these run on the UI thread.
+        worker.command.connect(self._on_voice_command)
+        worker.armed.connect(self._on_voice_armed)
+        worker.error.connect(self._on_voice_error)
+
+        self.voice_worker = worker
+        self.voice_thread = thread
+        thread.start()
+
+        print(f"🎤 Listening for: {', '.join(phrases)}")
+
+    def _stop_voice(
+        self
+    ):
+
+        worker, thread = self.voice_worker, self.voice_thread
+
+        self.voice_worker = None
+        self.voice_thread = None
+
+        if worker is None:
+            return
+
+        worker.stop()
+
+        if thread is not None:
+            entry = (thread, worker)
+            self._retiring_threads.append(entry)
+            thread.finished.connect(lambda e=entry: self._forget_thread(e))
+            if not thread.isRunning():
+                self._forget_thread(entry)
+
+    @Slot(str)
+    def _on_voice_command(
+        self,
+        trigger
+    ):
+
+        if self.sender() is not self.voice_worker:
+            return
+
+        events = events_for_gesture(self._voice_events, trigger)
+
+        if not events:
+            print(f"[voice] {trigger} isn't assigned to anything here")
+            return
+
+        for event in events:
+            self._on_gesture_event(event)
+
+    @Slot()
+    def _on_voice_armed(
+        self
+    ):
+
+        if self.sender() is not self.voice_worker:
+            return
+
+        self._gesture_feedback("🎤 Listening… say a command")
+        self.feedback.armed()
+
+    @Slot(str)
+    def _on_voice_error(
+        self,
+        message
+    ):
+
+        print(f"❌ Voice: {message}")
+
+        # Gestures keep working; just tell the user.
+        self._gesture_feedback(f"⚠ {message}", ERROR)
+        self.feedback.failed("Voice commands", message)
 
     def _forget_thread(
         self,

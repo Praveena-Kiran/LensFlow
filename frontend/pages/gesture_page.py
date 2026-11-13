@@ -48,7 +48,7 @@ class GesturePage(StudioPage):
 
         super().__init__(
             title="Gesture Studio",
-            subtitle="Choose the gestures and motions that control your presentations.",
+            subtitle="Choose the gestures, motions and voice commands that control your presentations.",
             parent=parent,
         )
 
@@ -98,9 +98,9 @@ class GesturePage(StudioPage):
         # -----------------------------------------
 
         intro = QLabel(
-            "Each action can use a hand gesture, a motion, or several of "
-            "either. To use gestures in your own studios, choose one for "
-            "each event inside that studio."
+            "Each action can use a hand gesture, a motion, a voice command, "
+            "or several at once. To use them in your own studios, choose one "
+            "for each event inside that studio."
         )
         intro.setWordWrap(True)
         intro.setStyleSheet(f"""

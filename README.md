@@ -36,7 +36,9 @@ strict, slow or deliberate recognition should be.
 ## Features
 
 - **Your own gestures.** Six gestures work out of the box (thumbs up and down, open palm, fist, peace, pointing). Record any other pose in three short takes.
-- **Swipes and moves.** Swipe left, right, up or down, or record your own movements such as a wave or a circle.
+- **Swipes and moves.** Swipe left, right, up or down, or record your own movements such as a wave or a circle. Movements you draw with a finger (like a "0") are tracked from your fingertip.
+- **Voice commands.** Say "Hey Wield, next slide". Speech is recognised offline on your computer (a one-time 40 MB download in Settings); no audio is recorded or sent anywhere. Mix gestures, motions and voice freely: any of an action's triggers works.
+- **Feedback you can hear and see.** A soft chime when Wield starts listening and when it runs an action, and a small note on top of full-screen slideshows ("👍 → Next slide"). Both can be turned off.
 - **Studios.** Group actions for a task. Each event opens an app, file or website, presses a hotkey, controls PowerPoint or runs a flow, triggered by a click or a gesture.
 - **Routine learning.** Wield notices what you do around the same time on most days and offers to automate it. Nothing runs until you say yes.
 - **Accessibility settings.** Strict-to-forgiving sensitivity, hold-to-trigger, and an activation gesture so ordinary hand movement never triggers anything.
