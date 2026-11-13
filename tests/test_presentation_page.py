@@ -121,6 +121,33 @@ class PresentationPageTests(unittest.TestCase):
         finally:
             gesture_page.deleteLater()
 
+    def test_camera_is_off_until_presentation_starts(self):
+        requests = []
+        self.page.listening_requested.connect(requests.append)
+        for name in ("start_presentation", "end_presentation"):
+            setattr(self.page.powerpoint, name, lambda: None)
+
+        self.assertFalse(self.page.listening)
+        self.assertIn("off", self.page.camera_pill.text())
+
+        self.page.start_button.click()
+        self.assertEqual(requests, [True])
+
+        self.page.set_listening(True)
+        self.assertIn("on", self.page.camera_pill.text())
+        self.assertEqual(self.page.camera_button.text(), "Turn off camera")
+
+        self.page.end_button.click()
+        self.assertEqual(requests, [True, False])
+
+    def test_camera_button_toggles(self):
+        requests = []
+        self.page.listening_requested.connect(requests.append)
+        self.page.camera_button.click()
+        self.page.set_listening(True)
+        self.page.camera_button.click()
+        self.assertEqual(requests, [True, False])
+
 
 if __name__ == "__main__":
     unittest.main()

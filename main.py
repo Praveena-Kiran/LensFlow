@@ -416,6 +416,10 @@ class MainWindow(QMainWindow):
             lambda: self.open_live_workspace("Gesture Studio")
         )
 
+        self.presentation_page.listening_requested.connect(
+            self.set_presentation_listening
+        )
+
         # =====================================================
         # CODING → HOME
         # =====================================================
@@ -786,9 +790,11 @@ class MainWindow(QMainWindow):
                 self.presentation_page
             )
 
-            self.start_gesture_worker(
-                "presentation"
-            )
+            # The camera and microphone stay off until the user starts the
+            # presentation (or turns them on): opening a page shouldn't.
+            if self.gesture_context != "presentation":
+                self.stop_gesture_worker()
+                self.presentation_page.set_listening(False)
 
         # =====================================================
         # CODING
@@ -1136,6 +1142,15 @@ class MainWindow(QMainWindow):
 
         self.feedback.action(gesture, name)
 
+        # Ending the slideshow by gesture or voice also turns the camera
+        # and microphone off, like the End button.
+        if (
+            self.gesture_context == "presentation"
+            and event.get("action") == "PowerPoint"
+            and str(event.get("value", "")).strip().lower() in ("end", "end presentation")
+        ):
+            QTimer.singleShot(0, lambda: self.set_presentation_listening(False))
+
     @Slot(str, float)
     def _on_gesture_seen(
         self,
@@ -1166,6 +1181,9 @@ class MainWindow(QMainWindow):
             if worker is not None and worker.require_arm
             else None
         )
+
+        if status == "READY" and self.gesture_context == "presentation":
+            self.presentation_page.set_listening(True)
 
         if status == "READY":
             message = arm_hint or "Listening for gestures…"
@@ -1209,6 +1227,10 @@ class MainWindow(QMainWindow):
     def stop_gesture_worker(
         self
     ):
+
+        if self.gesture_context == "presentation" or self.gesture_worker is None:
+            # Keep the camera indicator honest whatever stopped it.
+            self.presentation_page.set_listening(False)
 
         if self.gesture_worker is None:
 
@@ -1351,22 +1373,45 @@ class MainWindow(QMainWindow):
 
         print(f"🎤 Listening for: {', '.join(phrases)}")
 
+    def set_presentation_listening(
+        self,
+        on
+    ):
+        """Turn Presentation Studio's camera + microphone on or off."""
+
+        if on:
+            if self.gesture_context == "presentation" and self.gesture_worker is not None:
+                return
+            self.presentation_page.set_listening("starting")
+            self.start_gesture_worker("presentation")
+            if self.gesture_worker is None:
+                # Couldn't start (the error is already shown).
+                self.presentation_page.set_listening(False)
+        else:
+            if self.gesture_context == "presentation":
+                print("📷 Camera and microphone off")
+                self.stop_gesture_worker()
+            self.presentation_page.set_listening(False)
+
     def _on_presentation_bindings_changed(
         self
     ):
 
         self.gesture_page.refresh_gesture_list()
 
-        if self.gesture_context == "presentation":
+        if self.gesture_context == "presentation" and self.gesture_worker is not None:
             self._bindings_restart.start()
 
     def _apply_presentation_bindings(
         self
     ):
 
-        if self.gesture_context == "presentation":
+        if self.gesture_context == "presentation" and self.gesture_worker is not None:
             print("🔄 Presentation controls changed: reloading gestures and voice")
             self.start_gesture_worker("presentation")
+            self.presentation_page.set_listening(
+                "starting" if self.gesture_worker is not None else False
+            )
 
     def _with_default_voice_phrases(
         self,
