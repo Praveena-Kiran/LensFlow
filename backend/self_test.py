@@ -2,7 +2,8 @@
 Startup check used by the build pipeline: `Wield --self-test`.
 
 Loads the bundled gesture model, runs one detection, checks the user data
-folder is writable and the UI modules import. Exit code 0 means OK. Results
+folder is writable, the UI modules import, the voice engine's native
+libraries load and the sound cues can be written. Exit code 0 means OK. Results
 are also written to self_test.log in the user data folder, because the
 packaged app has no console window.
 """
@@ -48,9 +49,30 @@ def run():
         if not os.path.isfile(qss):
             raise FileNotFoundError(qss)
 
+    def voice_engine():
+        # Loads Vosk's native library and PortAudio (sounddevice) the way the
+        # app does. Needs no microphone: CI machines don't have one.
+        import vosk
+        import sounddevice
+        vosk.SetLogLevel(-1)
+        if not hasattr(vosk, "KaldiRecognizer"):
+            raise RuntimeError("vosk.KaldiRecognizer missing")
+        return f"vosk ok, PortAudio {sounddevice.get_portaudio_version()[1]}"
+
+    def sound_cues():
+        from backend.feedback.sounds import CUES, SoundCues
+        cues = SoundCues(player=None)
+        cues.ensure_files()
+        missing = [c for c in CUES if not os.path.isfile(cues.path(c))]
+        if missing:
+            raise FileNotFoundError(", ".join(missing))
+        return f"{len(CUES)} sounds"
+
     check("gesture model", model)
     check("user data folder", data_dir)
     check("ui modules", ui)
+    check("voice engine", voice_engine)
+    check("sound cues", sound_cues)
 
     report = "\n".join(lines)
     print(report)
