@@ -289,7 +289,7 @@ One Secondary Action
 
 # Component Rules
 
-Every screen in LensFlow must be built ONLY using the components defined in this document.
+Every screen in Wield must be built ONLY using the components defined in this document.
 
 Never create one-off UI elements if an existing component can be reused.
 

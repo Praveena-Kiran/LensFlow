@@ -1,4 +1,4 @@
-"""LensFlow Frontend Pages Export"""
+"""Wield Frontend Pages Export"""
 
 from .home import HomePage
 

@@ -1,6 +1,6 @@
-# 📖 LensFlow Development Log
+# 📖 Wield Development Log
 
-This file documents the development progress of LensFlow.
+This file documents the development progress of Wield.
 
 ---
 
@@ -18,7 +18,7 @@ This file documents the development progress of LensFlow.
 - Set up the Python backend.
 
 ### Notes
-The goal is to build LensFlow as an AI-powered accessibility platform that enables hands-free computer interaction through computer vision and customizable hand gestures.
+The goal is to build Wield as an AI-powered accessibility platform that enables hands-free computer interaction through computer vision and customizable hand gestures.
 
 ## July 8
 

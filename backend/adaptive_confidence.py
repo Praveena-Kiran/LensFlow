@@ -1,6 +1,7 @@
-from mediapipe.python.solutions import selfie_segmentation
 import json
 import os
+
+from backend.paths import user_config_dir
 
 DEFAULT_THRESHOLD = 0.70
 THRESHOLD_MARGIN = 0.05
@@ -14,11 +15,7 @@ class AdaptiveConfidence:
 
         self.profile_name = None
 
-        self.profile_dir = os.path.join(
-            os.path.dirname(__file__),
-            "config",
-            "confidence_profiles"
-        )
+        self.profile_dir = user_config_dir("confidence_profiles")
 
     def load(self, profile_name):
         self.profile_name = profile_name

@@ -1,20 +1,12 @@
 import json
-import os
+
+from backend.paths import user_config_path
 
 
 class GestureProfileManager:
 
     def __init__(self):
-        config_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "config"
-        )
-
-        self.file_path = os.path.join(
-            config_dir,
-            "gesture_profiles.json"
-        )
+        self.file_path = user_config_path("gesture_profiles.json")
 
         self.load()
 

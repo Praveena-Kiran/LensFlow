@@ -1,27 +1,25 @@
 import os
-print("Current working directory:", os.getcwd())
+
 import cv2
 import mediapipe as mp
 
+from backend.paths import model_path as bundled_model_path
 
+
+# Re-exported for existing imports.
+from backend.gestures.gesture_names import BUILTIN_GESTURES, BUILTIN_GESTURE_NAMES  # noqa: E402,F401
 
 
 class GoogleGestureRecognizer:
 
     def __init__(self):
 
-        print("GoogleGestureRecognizer created!")
+        model_path = bundled_model_path("gesture_recognizer.task")
 
-        import traceback
-        traceback.print_stack(limit=5)
-
-        model_path = r"C:\\Users\\Praveena\\OneDrive\\Desktop\\LensFlow\\LensFlow\\backend\\models\\gesture_recognizer.task"
-
-        print("MODEL =", model_path)
-        print("repr  =", repr(model_path))
-
-        print("MODEL PATH =", model_path)
-        print("EXISTS =", os.path.exists(model_path))
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(
+                f"Gesture model not found at {model_path}"
+            )
 
         BaseOptions = mp.tasks.BaseOptions 
         GestureRecognizer = mp.tasks.vision.GestureRecognizer 
@@ -37,10 +35,12 @@ class GoogleGestureRecognizer:
             ),
             running_mode=VisionRunningMode.IMAGE
         )
-        
-        print("MODEL PATH =", model_path)
-        print("ABSOLUTE =", os.path.isabs(model_path))
+
         self.recognizer = GestureRecognizer.create_from_options(options)
+
+        self.last_landmarks = None
+        self.last_image_landmarks = None
+        self.last_handedness = None
 
     def detect(self, frame):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -52,26 +52,26 @@ class GoogleGestureRecognizer:
 
         result = self.recognizer.recognize(mp_image)
 
-        mapping = {
-            "Thumb_Up": "👍 Thumbs Up",
-            "Thumb_Down": "👎 Thumbs Down",
-            "Open_Palm": "✋ Open Palm",
-            "Closed_Fist": "✊ Fist",
-            "Victory": "✌️ Peace",
-            "Pointing_Up": "☝️ Pointing Up"
-        }
+        # Keep the landmarks from this frame so custom gestures can be
+        # matched without running MediaPipe a second time.
+        self.last_landmarks = None
+        self.last_image_landmarks = None
+        self.last_handedness = None
+
+        if result.hand_world_landmarks:
+            self.last_landmarks = result.hand_world_landmarks[0]
+
+        if result.hand_landmarks:
+            self.last_image_landmarks = result.hand_landmarks[0]
+
+        if result.handedness:
+            self.last_handedness = result.handedness[0][0].category_name
 
         if result.gestures:
 
             gesture = result.gestures[0][0].category_name
             confidence = result.gestures[0][0].score
 
-            print(f"Detected: {gesture} | Confidence: {confidence:.2f}")
-
-            return mapping.get(gesture), confidence
+            return BUILTIN_GESTURES.get(gesture), confidence
 
         return None, 0.0
-
-            
-
-      

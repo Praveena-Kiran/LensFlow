@@ -1,16 +1,14 @@
 import json
 import os
 
+from backend.paths import user_config_dir
+
 
 class ProfileManager:
 
     def __init__(self):
 
-        self.profile_dir = os.path.join(
-            os.path.dirname(__file__),
-            "config",
-            "profiles"
-        )
+        self.profile_dir = user_config_dir("profiles")
 
         self.current_profile = None
         self.current_profile_name = None

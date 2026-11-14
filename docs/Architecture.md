@@ -1,8 +1,8 @@
-# LensFlow Architecture
+# Wield Architecture
 
 ## Goal
 
-LensFlow is an AI-powered accessibility platform that allows users to interact with their computer using hand gestures captured through a webcam.
+Wield is an AI-powered accessibility platform that allows users to interact with their computer using hand gestures captured through a webcam.
 
 ## System Flow
 
