@@ -1,31 +1,31 @@
 from backend.automation.controllers.powerpoint_controller import PowerPointController
 
 
+COMMANDS = (
+    "next_slide",
+    "previous_slide",
+    "start_presentation",
+    "end_presentation",
+)
+
+
 class PowerPointAction:
 
     def __init__(self):
         self.controller = PowerPointController()
 
-    def execute(self, step, apps):
+    def execute(self, step, apps=None):
+        """Run a PowerPoint command; raises with a readable message on failure."""
 
         command = step.get("command")
 
-        try:
+        if command not in COMMANDS:
+            raise ValueError(f"Unknown PowerPoint command: {command}")
 
-            if command == "next_slide":
-                self.controller.next_slide()
+        if not self.controller.connect():
+            raise RuntimeError(
+                "Couldn't reach PowerPoint. Open your presentation in "
+                "PowerPoint first."
+            )
 
-            elif command == "previous_slide":
-                self.controller.previous_slide()
-
-            elif command == "start_presentation":
-                self.controller.start_presentation()
-
-            elif command == "end_presentation":
-                self.controller.end_presentation()
-
-            else:
-                print(f"❌ Unknown PowerPoint command: {command}")
-
-        except Exception as e:
-            print(f"❌ PowerPoint Action Error: {e}")
+        getattr(self.controller, command)()

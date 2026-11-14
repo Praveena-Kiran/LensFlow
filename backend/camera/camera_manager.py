@@ -21,7 +21,7 @@ def start_camera():
             break
 
         # Display the frame
-        cv2.imshow("LensFlow Camera", frame)
+        cv2.imshow("Wield Camera", frame)
 
         # Exit when Q is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):

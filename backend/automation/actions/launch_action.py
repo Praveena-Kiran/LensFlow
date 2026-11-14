@@ -1,31 +1,15 @@
-import subprocess
-import platform
+from backend.automation.app_launcher import launch_app
 
 
 class LaunchAction:
+    """Flow step {"type": "launch", "target": "<app name or path>"}."""
 
     def execute(self, step, apps):
 
-        app_name = step.get("target")
-        app_path = apps.get(app_name)
+        target = step.get("target")
 
-        if not app_path:
-            print(f"❌ App '{app_name}' not found.")
-            return
+        # Same resolution as studio events (apps.json, install folders,
+        # Windows App Paths); raises AppLaunchError if it can't be found.
+        launched = launch_app(target, apps)
 
-        system = platform.system()
-
-        try:
-            if system == "Windows":
-                subprocess.Popen(app_path, shell=True)
-
-            elif system == "Darwin":
-                subprocess.Popen(["open", "-a", app_path])
-
-            elif system == "Linux":
-                subprocess.Popen([app_path])
-
-            print(f"✅ Launched {app_name}")
-
-        except Exception as e:
-            print(f"❌ Could not launch {app_name}: {e}")
+        print(f"✅ Launched {target} ({launched})")

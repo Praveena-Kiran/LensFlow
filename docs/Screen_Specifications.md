@@ -1,4 +1,4 @@
-# LensFlow Screen Specifications
+# Wield Screen Specifications
 
 Version: 1.0
 
@@ -10,15 +10,15 @@ Status: In Progress
 
 Purpose
 
-Introduce LensFlow and guide first-time users.
+Introduce Wield and guide first-time users.
 
 Primary User Goal
 
-Understand what LensFlow does and enter the application.
+Understand what Wield does and enter the application.
 
 Components
 
-- LensFlow Logo
+- Wield Logo
 - Welcome Text
 - Illustration
 - Get Started Button
@@ -202,7 +202,7 @@ Clear History
 
 Purpose
 
-Manage global LensFlow preferences.
+Manage global Wield preferences.
 
 Primary User Goal
 
@@ -215,7 +215,7 @@ Components
 - Notifications
 - Camera Settings
 - Gesture Sensitivity
-- About LensFlow
+- About Wield
 
 Primary Action
 

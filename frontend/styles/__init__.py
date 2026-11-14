@@ -1,1 +1,1 @@
-"""LensFlow Frontend Styles"""
+"""Wield Frontend Styles"""

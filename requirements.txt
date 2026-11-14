@@ -1,0 +1,10 @@
+PySide6>=6.7
+# mediapipe brings its own OpenCV (opencv-contrib-python); installing
+# opencv-python as well gives two conflicting copies of cv2.
+mediapipe>=0.10.14
+numpy>=1.26
+pyautogui>=0.9.54
+pywin32>=306; sys_platform == "win32"
+# Offline voice commands (optional at runtime: Wield works without them).
+vosk>=0.3.45
+sounddevice>=0.4.6

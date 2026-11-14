@@ -2,6 +2,11 @@ import json
 import os
 import subprocess
 import platform
+import time
+
+from backend.paths import DEFAULT_CONFIG_DIR, user_config_path
+from backend.automation.app_launcher import launch_app
+from backend.automation.events import parse_hotkey, powerpoint_command
 
 from .actions.launch_action import LaunchAction
 from .actions.wait_action import WaitAction
@@ -15,12 +20,6 @@ class FlowManager:
     def __init__(self):
         self.current_studio = None
 
-        config_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "config"
-        )
-
         self.actions = {
             "launch": LaunchAction(),
             "wait": WaitAction(),
@@ -30,128 +29,154 @@ class FlowManager:
         }
 
         with open(
-            os.path.join(config_dir, "apps.json"),
+            user_config_path("apps.json"),
             "r",
             encoding="utf-8"
         ) as f:
             self.apps = json.load(f)
 
         with open(
-            os.path.join(config_dir, "flows.json"),
+            user_config_path("flows.json"),
             "r",
             encoding="utf-8"
         ) as f:
             self.flows = json.load(f)
+
+        self._upgrade_default_flows()
+
+    # Older versions shipped a coding_flow that didn't match the Coding
+    # Studio page (Chrome, a UI-freezing wait, File Explorer). If the user's
+    # copy is still exactly that default, replace it; edited flows are kept.
+    OLD_CODING_FLOW = [
+        {"type": "launch", "target": "chrome"},
+        {"type": "wait", "duration": 2},
+        {"type": "website", "url": "https://github.com"},
+        {"type": "hotkey", "keys": ["win", "e"]},
+    ]
+
+    def _upgrade_default_flows(self):
+
+        current = self.flows.get("coding_flow", {})
+
+        if current.get("actions") != self.OLD_CODING_FLOW:
+            return
+
+        try:
+            with open(os.path.join(DEFAULT_CONFIG_DIR, "flows.json"), encoding="utf-8") as f:
+                new = json.load(f).get("coding_flow")
+        except (OSError, ValueError):
+            return
+
+        if not new:
+            return
+
+        self.flows["coding_flow"] = new
+
+        try:
+            with open(user_config_path("flows.json"), "w", encoding="utf-8") as f:
+                json.dump(self.flows, f, indent=4, ensure_ascii=False)
+            print("🔄 Updated coding_flow to the current default.")
+        except OSError as e:
+            print(f"⚠ Could not save updated flows: {e}")
 
     # =========================================================
     # OLD FLOW SYSTEM
     # =========================================================
 
     def execute_flow(self, flow_name):
+        """
+        Run every step of a flow. A step that fails doesn't stop the rest;
+        afterwards a RuntimeError lists what didn't work.
+        """
 
         flow = self.flows.get(flow_name)
 
         if not flow:
-            print(f"❌ Flow '{flow_name}' not found.")
-            return
+            raise ValueError(f'No flow called "{flow_name}".')
 
         print(f"🚀 Executing Flow: {flow['name']}")
+
+        failures = []
 
         for step in flow["actions"]:
 
             action_type = step.get("type")
             action = self.actions.get(action_type)
+            label = step.get("label") or step.get("target") or step.get("url") or action_type
 
-            if action:
+            try:
+                if action is None:
+                    raise ValueError(f"unknown step type {action_type!r}")
                 action.execute(step, self.apps)
+            except Exception as e:
+                print(f"❌ Flow step failed ({label}): {e}")
+                failures.append(f"{label}: {e}")
 
-            else:
-                print(
-                    f"❌ Unknown action type: {action_type}"
-                )
+        if failures:
+            raise RuntimeError(
+                f"{len(failures)} of {len(flow['actions'])} steps didn't work. "
+                + " ".join(failures)
+            )
 
     # =========================================================
-    # CUSTOM STUDIO EVENTS
+    # EVENTS (custom studios and converted profiles)
     # =========================================================
 
     def execute_custom_event(self, event):
+        """
+        Run one event (see backend/automation/events.py).
+        Raises an exception with a readable message if it fails.
+        """
 
         if not event:
-            print("⚠ No event supplied.")
-            return
+            raise ValueError("No event supplied.")
 
         action = event.get("action", "")
-        value = event.get("value", "")
+        value = str(event.get("value", "") or "").strip()
 
         print(
-            f"🚀 Custom Event: "
-            f"{event.get('name', 'Unnamed Event')}"
+            f"🚀 Event: {event.get('name', 'Unnamed Event')} "
+            f"[{action}: {value}]"
         )
-
-        print(f"   Action: {action}")
-        print(f"   Value: {value}")
-
-        # -----------------------------------------------------
-        # OPEN FILE
-        # -----------------------------------------------------
 
         if action == "Open File":
-
-            if not value:
-                print("❌ No file selected.")
-                return
-
             self.open_file(value)
-            return
 
-        # -----------------------------------------------------
-        # OPEN WEBSITE
-        # -----------------------------------------------------
-
-        if action == "Open Website":
-
-            if not value:
-                print("❌ No website specified.")
-                return
-
+        elif action == "Open Website":
             self.open_website(value)
-            return
 
-        # -----------------------------------------------------
-        # LAUNCH APPLICATION
-        # -----------------------------------------------------
-
-        if action in ("Launch Application", "Open Application"):
-
-            if not value:
-                print("❌ No application specified.")
-                return
-
+        elif action in ("Launch Application", "Open Application"):
             self.launch_app(value)
-            return
 
-        # -----------------------------------------------------
-        # WAIT
-        # -----------------------------------------------------
+        elif action == "Hotkey":
+            self.actions["hotkey"].execute(
+                {"keys": parse_hotkey(value)}
+            )
 
-        if action == "Wait":
+        elif action == "PowerPoint":
+            self.actions["powerpoint"].execute(
+                {"command": powerpoint_command(value)},
+                self.apps
+            )
 
+        elif action == "Run Flow":
+            if value not in self.flows:
+                raise ValueError(f'No flow called "{value}".')
+            self.execute_flow(value)
+
+        elif action == "Wait":
             try:
                 seconds = float(value)
-                print(f"⏳ Waiting {seconds} seconds...")
-                import time
-                time.sleep(seconds)
-
             except ValueError:
-                print(
-                    f"❌ Invalid wait value: {value}"
-                )
+                raise ValueError(f'"{value}" is not a number of seconds.')
+            time.sleep(seconds)
 
-            return
+        elif action in ("App", "LensFlow"):
+            # Arm/disarm is handled by the gesture worker itself.
+            pass
 
-        print(
-            f"⚠ Unknown custom action: {action}"
-        )
+        else:
+            raise ValueError(f'Unknown action "{action}".')
 
     # =========================================================
     # FILE HANDLING
@@ -160,62 +185,23 @@ class FlowManager:
     def open_file(self, file_path):
 
         if not file_path:
-            print("❌ File path is empty.")
-            return
+            raise ValueError("No file selected.")
 
         file_path = os.path.abspath(file_path)
 
         if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
 
-            print(
-                f"❌ File does not exist:\n"
-                f"{file_path}"
-            )
+        system = platform.system()
 
-            return
+        if system == "Windows":
+            os.startfile(file_path)
+        elif system == "Darwin":
+            subprocess.Popen(["open", file_path])
+        else:
+            subprocess.Popen(["xdg-open", file_path])
 
-        try:
-
-            system = platform.system()
-
-            if system == "Windows":
-
-                os.startfile(file_path)
-
-            elif system == "Darwin":
-
-                subprocess.Popen(
-                    ["open", file_path]
-                )
-
-            elif system == "Linux":
-
-                subprocess.Popen(
-                    ["xdg-open", file_path]
-                )
-
-            else:
-
-                print(
-                    f"❌ Unsupported operating system: "
-                    f"{system}"
-                )
-
-                return
-
-            print(
-                f"✅ Opened file:\n"
-                f"{file_path}"
-            )
-
-        except Exception as e:
-
-            print(
-                f"❌ Could not open file:\n"
-                f"{file_path}"
-            )
-
-            print(f"   Error: {e}")
+        print(f"✅ Opened file: {file_path}")
 
     # =========================================================
     # WEBSITE HANDLING
@@ -224,64 +210,30 @@ class FlowManager:
     def open_website(self, url):
 
         if not url:
-            print("❌ Website URL is empty.")
-            return
+            raise ValueError("No website given.")
 
-        try:
+        if "://" not in url:
+            url = "https://" + url
 
-            import webbrowser
+        import webbrowser
 
-            webbrowser.open(url)
+        if not webbrowser.open(url):
+            raise RuntimeError(f"Could not open {url}")
 
-            print(
-                f"✅ Opened website: {url}"
-            )
-
-        except Exception as e:
-
-            print(
-                f"❌ Could not open website: "
-                f"{e}"
-            )
+        print(f"✅ Opened website: {url}")
 
     # =========================================================
     # APP LAUNCHING
     # =========================================================
 
     def launch_app(self, app):
+        """Launch an app; raises AppLaunchError if it can't be found."""
 
-        system = platform.system()
+        target = launch_app(app, self.apps)
 
-        try:
-
-            if system == "Windows":
-
-                subprocess.Popen(
-                    app,
-                    shell=True
-                )
-
-            elif system == "Darwin":
-
-                subprocess.Popen(
-                    ["open", "-a", app]
-                )
-
-            elif system == "Linux":
-
-                subprocess.Popen(
-                    [app]
-                )
-
-            print(
-                f"✅ Launched {app}"
-            )
-
-        except Exception as e:
-
-            print(
-                f"❌ Could not launch {app}: {e}"
-            )
+        print(
+            f"✅ Launched {app} ({target})"
+        )
 
     # =========================================================
     # DASHBOARD HELPERS

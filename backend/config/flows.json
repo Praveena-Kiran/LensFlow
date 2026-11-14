@@ -1,35 +1,25 @@
 {
     "coding_flow": {
         "name": "Coding Flow",
-        "description": "Launch everything needed for development.",
+        "description": "Open VS Code, a terminal and GitHub.",
         "actions": [
             {
                 "type": "launch",
-                "target": "chrome"
+                "target": "code",
+                "label": "VS Code"
             },
-
             {
-                "type": "wait",
-                "duration": 2
+                "type": "launch",
+                "target": "terminal",
+                "label": "Terminal"
             },
-
             {
                 "type": "website",
-                "url": "https://github.com"
-            },
-
-            {
-                "type": "hotkey",
-                "keys": [
-                    "win",
-                    "e"
-                ]
+                "url": "https://github.com",
+                "label": "GitHub"
             }
-
-
         ]
     },
-
     "presentation_start": {
         "name": "Start Presentation",
         "actions": [
@@ -39,7 +29,6 @@
             }
         ]
     },
-
     "presentation_end": {
         "name": "End Presentation",
         "actions": [
@@ -49,7 +38,6 @@
             }
         ]
     },
-
     "presentation_next": {
         "name": "Next Slide",
         "actions": [
@@ -59,7 +47,6 @@
             }
         ]
     },
-
     "presentation_previous": {
         "name": "Previous Slide",
         "actions": [

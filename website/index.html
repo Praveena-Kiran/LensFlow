@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wield: control your computer with your hands</title>
+<meta name="description" content="Wield is a free Windows app that turns your webcam into a remote control. Use gestures, swipes and moves you choose to open apps, change slides and automate your routines. Everything runs on your computer.">
+<meta property="og:title" content="Wield: control your computer with your hands">
+<meta property="og:description" content="Gestures, swipes and moves you choose. Free for Windows. Everything runs on your computer.">
+<meta property="og:image" content="images/home-galaxy.webp">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08090D;
+    --surface: #101118;
+    --surface-2: #171923;
+    --border: #252936;
+    --text: #F5F5F7;
+    --text-2: #A2A9BA;
+    --muted: #7E8599;
+    --violet: #7857FC;
+    --violet-hover: #8466FF;
+    --violet-soft: rgba(120, 87, 252, 0.14);
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: #A994FF; }
+  a:hover { color: #C4B6FF; }
+  img { max-width: 100%; height: auto; display: block; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  .skip { position: absolute; left: -999px; }
+  .skip:focus { left: 16px; top: 16px; background: var(--violet); color: #fff; padding: 8px 14px; border-radius: 8px; z-index: 10; }
+
+  /* Nav */
+  nav { position: sticky; top: 0; z-index: 5; background: rgba(8, 9, 13, 0.82); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  nav .wrap { display: flex; align-items: center; gap: 24px; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 700; font-size: 18px; }
+  .brand img { width: 30px; height: 30px; border-radius: 8px; }
+  nav .links { display: flex; gap: 22px; margin-left: auto; align-items: center; }
+  nav .links a { color: var(--text-2); text-decoration: none; font-size: 15px; }
+  nav .links a:hover { color: var(--text); }
+  nav .links .btn { color: #fff; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 22px; border-radius: 12px; font-weight: 600; font-size: 16px; text-decoration: none; border: 1px solid transparent; transition: background .15s, border-color .15s; }
+  .btn-primary { background: var(--violet); color: #fff; }
+  .btn-primary:hover { background: var(--violet-hover); color: #fff; }
+  .btn-ghost { color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { border-color: var(--violet); color: var(--text); }
+  .btn-small { min-height: 38px; padding: 0 16px; font-size: 14px; }
+  .btn svg { width: 20px; height: 20px; flex: none; }
+
+  /* Hero */
+  .hero { padding: 88px 0 40px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; inset: -200px -20% auto; height: 620px; background: radial-gradient(closest-side, rgba(120, 87, 252, 0.22), transparent); pointer-events: none; }
+  .hero > .wrap { position: relative; }
+  .eyebrow { display: inline-block; color: #C4B6FF; background: var(--violet-soft); border: 1px solid rgba(120, 87, 252, 0.3); padding: 6px 14px; border-radius: 999px; font-size: 14px; font-weight: 500; }
+  h1 { font-size: clamp(40px, 7vw, 72px); line-height: 1.05; letter-spacing: -0.035em; margin: 22px auto 18px; max-width: 14ch; font-weight: 800; }
+  .lede { color: var(--text-2); font-size: clamp(18px, 2.2vw, 21px); max-width: 640px; margin: 0 auto 32px; }
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .fine { color: var(--muted); font-size: 14px; margin-top: 14px; }
+  .shot { margin: 56px auto 0; max-width: 1040px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.02); overflow: hidden; }
+
+  /* Sections */
+  section { padding: 88px 0; }
+  section + section { border-top: 1px solid var(--border); }
+  h2 { font-size: clamp(30px, 4vw, 42px); letter-spacing: -0.025em; line-height: 1.15; margin: 0 0 14px; font-weight: 700; }
+  .section-lede { color: var(--text-2); max-width: 640px; margin: 0 0 48px; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; }
+  .card h3 { margin: 16px 0 6px; font-size: 19px; letter-spacing: -0.01em; }
+  .card p { margin: 0; color: var(--text-2); font-size: 16px; }
+  .icon { width: 44px; height: 44px; border-radius: 12px; background: var(--violet-soft); display: grid; place-items: center; color: #B7A6FF; }
+  .icon svg { width: 22px; height: 22px; }
+
+  .row { display: grid; grid-template-columns: 5fr 7fr; gap: 56px; align-items: center; }
+  .row + .row { margin-top: 88px; }
+  .row.flip { grid-template-columns: 7fr 5fr; }
+  .row.flip .text { order: 2; }
+  .row h3 { font-size: 28px; letter-spacing: -0.02em; margin: 0 0 12px; line-height: 1.2; }
+  .row p { color: var(--text-2); margin: 0 0 12px; }
+  .row ul { color: var(--text-2); padding-left: 20px; margin: 0; }
+  .row li { margin: 6px 0; }
+  .frame { border-radius: 14px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.8); }
+
+  .themes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 8px; }
+  .themes figure { margin: 0; }
+  .themes figcaption { color: var(--text-2); font-size: 14px; margin-top: 8px; text-align: center; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; counter-reset: step; }
+  .step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; }
+  .step::before { counter-increment: step; content: counter(step); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--violet); color: #fff; font-weight: 700; font-size: 15px; }
+  .step h3 { margin: 16px 0 8px; font-size: 19px; }
+  .step p { margin: 0; color: var(--text-2); font-size: 16px; }
+  .step p.tech { color: var(--muted); font-size: 14px; margin-top: 10px; }
+
+  .note { margin-top: 24px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid #F59E0B; border-radius: 12px; padding: 18px 20px; color: var(--text-2); }
+  .note strong { color: var(--text); }
+  code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.92em; background: var(--surface-2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 6px; color: var(--text); }
+
+  details { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 0 22px; }
+  details + details { margin-top: 10px; }
+  summary { cursor: pointer; padding: 18px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--muted); font-size: 22px; line-height: 1; }
+  details[open] summary::after { content: "–"; }
+  details p { margin: 0 0 18px; color: var(--text-2); }
+
+  .final { text-align: center; }
+  .final h2 { max-width: 18ch; margin: 0 auto 16px; }
+  .final p { color: var(--text-2); margin: 0 auto 28px; max-width: 520px; }
+
+  footer { border-top: 1px solid var(--border); padding: 36px 0; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wrap: wrap; }
+  footer a { color: var(--text-2); }
+
+  a:focus-visible, summary:focus-visible { outline: 2px solid #A994FF; outline-offset: 3px; border-radius: 8px; }
+
+  @media (max-width: 900px) {
+    .grid, .steps { grid-template-columns: 1fr 1fr; }
+    .row, .row.flip { grid-template-columns: 1fr; gap: 28px; }
+    .row.flip .text { order: 0; }
+    .themes { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 620px) {
+    body { font-size: 16px; }
+    nav .links a:not(.btn) { display: none; }
+    .hero { padding-top: 56px; }
+    .grid, .steps { grid-template-columns: 1fr; }
+    section { padding: 64px 0; }
+    .btn { width: 100%; justify-content: center; }
+    nav .btn { width: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="images/icon.png" alt="" width="30" height="30">Wield</a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/Praveena-Kiran/Wield">GitHub</a>
+      <a class="btn btn-primary btn-small" href="#download">Download</a>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <span class="eyebrow">Free for Windows · Version 1.0</span>
+    <h1>Control your computer with your hands.</h1>
+    <p class="lede">Wield turns your webcam into a remote control. Make a gesture, swipe the air or teach it a move of your own, and Wield opens your apps, changes your slides and runs your routines.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/Praveena-Kiran/Wield/releases/latest/download/Wield-windows.zip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+        Download for Windows
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/Praveena-Kiran/Wield">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0 1 12 6.84c.85 0 1.71.11 2.51.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"/></svg>
+        View the code
+      </a>
+    </div>
+    <p class="fine">Windows 10 and 11 · needs a webcam · about 170 MB · open source</p>
+    <div class="shot"><img src="images/home-galaxy.webp" width="1600" height="1012" alt="Wield's home screen in the Galaxy theme: a greeting, a foggy camera window with 'hi' written on it, the next routine, recent activity and a list of studios."></div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Made for the way you move</h2>
+    <p class="section-lede">No special hardware and no fixed hand shapes. Wield learns the poses and movements that are comfortable for you.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M11 10.5V4a1.5 1.5 0 0 1 3 0v6.5"/><path d="M14 10.5V5.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-.5a6 6 0 0 1-4.6-2.2L4.6 15a1.5 1.5 0 0 1 2.3-1.9L8 14.5"/></svg></div>
+        <h3>Your own gestures</h3>
+        <p>Thumbs up and open palm work out of the box. Record any other pose you can hold, in three short takes.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c2.5-4 5-4 7.5 0s5 4 7.5 0"/><path d="m18 8 3 4-3 4"/></svg></div>
+        <h3>Swipes and moves</h3>
+        <p>Swipe left or right to change slides. Teach it a wave, a circle or any movement you like.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg></div>
+        <h3>Studios</h3>
+        <p>Group what you need for a task. Each gesture can open an app, a file or a website, press a shortcut or control PowerPoint.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg></div>
+        <h3>Learns your routine</h3>
+        <p>Open the same studio at 10:00 most days, and Wield offers to do it for you. It always asks first.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M6 9h12"/><path d="M12 9v12"/><path d="m8 21 4-6 4 6"/></svg></div>
+        <h3>Accessible by design</h3>
+        <p>Adjust how strict matching is, require a pose to be held, or use an activation gesture so ordinary hand movement never triggers anything.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+        <h3>Private</h3>
+        <p>Your camera is processed on your computer. Nothing is recorded or uploaded, and everything Wield learns stays in your own folder.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-label="Tour">
+  <div class="wrap">
+    <div class="row">
+      <div class="text">
+        <h3>Build a studio for anything</h3>
+        <p>A Study Studio that opens your notes with a two-finger point, your lecture slides with a swipe up, and focus music with a wave.</p>
+        <p>Turn on gesture control, and every event listens for its gesture.</p>
+      </div>
+      <div class="frame"><img src="images/custom-studio.webp" width="1600" height="1012" loading="lazy" alt="A custom studio called Study Studio with three events, each triggered by a gesture: a two-finger point, a swipe up and a wave."></div>
+    </div>
+    <div class="row flip">
+      <div class="text">
+        <h3>Gestures that fit you</h3>
+        <p>See every gesture and what it does, record your own, and test them live before you rely on them.</p>
+        <ul>
+          <li>Recordings that look like a built-in gesture are rejected, so nothing clashes.</li>
+          <li>The tester shows what Wield sees and what it would do.</li>
+        </ul>
+      </div>
+      <div class="frame"><img src="images/gesture-studio.webp" width="1600" height="1012" loading="lazy" alt="Gesture Studio: built-in gestures mapped to Next slide and Previous slide, swipes, and a recorded custom gesture."></div>
+    </div>
+    <div class="row">
+      <div class="text">
+        <h3>A little help with routines</h3>
+        <p>Wield notices what you do around the same time each day and suggests automating it. Say not now and it waits in Notifications.</p>
+        <p>Turn it into an automation, and Wield runs it for you on time.</p>
+      </div>
+      <div class="frame"><img src="images/notifications.webp" width="1600" height="1012" loading="lazy" alt="The Notifications page in the Jungle theme, with a routine suggestion and the user's automations."></div>
+    </div>
+    <div class="row flip">
+      <div class="text">
+        <h3>Make it yours</h3>
+        <p>Pick Dark, Light, Jungle or Galaxy. Write a note on the foggy window with your finger, and it greets you next time.</p>
+        <p>Every theme meets accessibility guidelines for contrast.</p>
+      </div>
+      <div class="themes">
+        <figure><img class="frame" src="images/home-dark.webp" width="1600" height="1012" loading="lazy" alt="Home in the Dark theme"><figcaption>Dark</figcaption></figure>
+        <figure><img class="frame" src="images/home-light.webp" width="1600" height="1012" loading="lazy" alt="Home in the Light theme"><figcaption>Light</figcaption></figure>
+        <figure><img class="frame" src="images/home-jungle.webp" width="1600" height="1012" loading="lazy" alt="Home in the Jungle theme"><figcaption>Jungle</figcaption></figure>
+        <figure><img class="frame" src="images/home-galaxy.webp" width="1600" height="1012" loading="lazy" alt="Home in the Galaxy theme"><figcaption>Galaxy</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <p class="section-lede">A normal webcam, a hand-tracking model and a few careful rules. Everything runs on your computer.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>It sees your hand</h3>
+        <p>Every frame, Wield finds your hand and 21 points on it: the wrist, knuckles and fingertips.</p>
+        <p class="tech">Google MediaPipe hand landmarks, about 10 to 24 times a second.</p>
+      </div>
+      <div class="step">
+        <h3>It recognises your pose</h3>
+        <p>Your hand's shape is compared with the poses you recorded, wherever your hand is and whichever hand you use. It only counts if one pose is clearly the closest.</p>
+        <p class="tech">Normalised landmarks, nearest match with a distance limit and an ambiguity margin.</p>
+      </div>
+      <div class="step">
+        <h3>It follows your moves</h3>
+        <p>When your hand moves, Wield traces the path and compares its shape with the moves it knows, however big or fast you draw it.</p>
+        <p class="tech">Path resampling and dynamic time warping. Swipes are recognised by direction and straightness.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <h2>Install in a minute</h2>
+    <p class="section-lede">No installer and no Python. Just unzip and run.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>Download</h3>
+        <p><a href="https://github.com/Praveena-Kiran/Wield/releases/latest/download/Wield-windows.zip">Wield-windows.zip</a> (about 170 MB) from the latest release.</p>
+      </div>
+      <div class="step">
+        <h3>Unzip</h3>
+        <p>Right-click the zip and choose <strong>Extract All</strong>. Keep the <code>Wield</code> folder anywhere you like.</p>
+      </div>
+      <div class="step">
+        <h3>Run</h3>
+        <p>Open the folder and double-click <code>Wield.exe</code>. A short welcome checks your camera and shows you a first gesture.</p>
+      </div>
+    </div>
+    <div class="note">
+      <strong>Seeing "Windows protected your PC"?</strong> That appears because Wield is new and isn't code-signed yet (signing certificates are costly for a student project). Click <strong>More info</strong>, then <strong>Run anyway</strong>. The source code is <a href="https://github.com/Praveena-Kiran/Wield">open on GitHub</a>, and every release is built and tested automatically there.
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>Questions</h2>
+    <details>
+      <summary>Do I need special hardware?</summary>
+      <p>No. Any webcam works, including the one built into most laptops. Good lighting helps.</p>
+    </details>
+    <details>
+      <summary>Is my camera recorded?</summary>
+      <p>No. Video is processed frame by frame on your computer and thrown away. Wield saves only what you choose to keep: the gestures you record (as hand-point positions, not pictures), your studios, settings, and the writing on your foggy window.</p>
+    </details>
+    <details>
+      <summary>What if I can't make the built-in gestures?</summary>
+      <p>That's what Wield is for. Record any pose or movement you can comfortably make. In Settings you can make matching more forgiving, require a short hold, or add an activation gesture.</p>
+    </details>
+    <details>
+      <summary>Does it work on Mac or Linux?</summary>
+      <p>The download is for Windows 10 and 11. The code runs from source on macOS and Linux too, but PowerPoint control and start-at-sign-in are Windows only.</p>
+    </details>
+    <details>
+      <summary>Is it free?</summary>
+      <p>Yes. Wield is free and open source under the MIT license.</p>
+    </details>
+    <details>
+      <summary>Something isn't working. What do I do?</summary>
+      <p>Open Settings, then About, then Report a problem. It opens a GitHub issue with your version filled in. Attaching the log from the same page helps a lot.</p>
+    </details>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <h2>Give your keyboard a rest.</h2>
+    <p>Download Wield, wave hello, and see what your hands can do.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/Praveena-Kiran/Wield/releases/latest/download/Wield-windows.zip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+        Download for Windows
+      </a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Wield 1.0 · made by <a href="https://github.com/Praveena-Kiran">Praveena Kiran</a></span>
+    <span><a href="https://github.com/Praveena-Kiran/Wield">Source code</a> · <a href="https://github.com/Praveena-Kiran/Wield/releases">All releases</a> · MIT license</span>
+  </div>
+</footer>
+</body>
+</html>

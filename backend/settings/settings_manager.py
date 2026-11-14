@@ -1,21 +1,14 @@
 import json
 import os
 
+from backend.paths import user_config_path
+
 
 class SettingsManager:
 
     def __init__(self):
 
-        self.config_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "config"
-        )
-
-        self.settings_file = os.path.join(
-            self.config_dir,
-            "settings.json"
-        )
+        self.settings_file = user_config_path("settings.json")
 
         with open(
             self.settings_file,

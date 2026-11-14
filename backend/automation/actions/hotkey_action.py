@@ -1,4 +1,7 @@
-import pyautogui
+try:
+    import pyautogui
+except Exception:  # not installed, or no display available
+    pyautogui = None
 
 
 class HotkeyAction:
@@ -8,8 +11,10 @@ class HotkeyAction:
         keys = step.get("keys", [])
 
         if not keys:
-            print("❌ No hotkeys provided.")
-            return
+            raise ValueError("No hotkeys provided.")
+
+        if pyautogui is None:
+            raise RuntimeError("Hotkeys need the pyautogui package.")
 
         print(f"⌨️ Pressing {' + '.join(keys)}")
 

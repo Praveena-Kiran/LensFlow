@@ -1,17 +1,34 @@
-"""LensFlow - Custom Window Title Bar Controls
+"""Wield - Custom Window Title Bar Controls
 
-Frameless custom title bar providing LensFlow brand identity, window dragging,
+Frameless custom title bar providing Wield brand identity, window dragging,
 and Windows 11 style Minimize, Maximize/Restore, and Close buttons.
 """
 
+import os
 from typing import Optional
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QPainter, QColor, QFont, QPen, QRadialGradient, QBrush
+from PySide6.QtGui import QPainter, QColor, QFont, QRadialGradient, QBrush, QImage
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QLabel, QPushButton, QGraphicsDropShadowEffect
+    QWidget, QHBoxLayout, QLabel, QPushButton
 )
 
-
+from frontend.styles.theme import (
+    PAGE_BG,
+    ON_PRIMARY,
+    OVERLAY_2,
+    OVERLAY_BORDER,
+    TEXT_STRONG,
+    BG_DARK,
+    BORDER,
+    PRIMARY_TEXT,
+    SECONDARY_TEXT,
+    TEXT_MUTED,
+    PRIMARY,
+    SECONDARY_ACCENT,
+    ERROR,
+)
+from backend.app_info import APP_NAME
+from backend.paths import APP_DIR
 
 
 class WindowControlButton(QPushButton):
@@ -19,7 +36,7 @@ class WindowControlButton(QPushButton):
 
     def __init__(self, symbol: str, tooltip: str = "", is_close: bool = False, parent=None):
         super().__init__(symbol, parent)
-        self.setFixedSize(50, 40)
+        self.setFixedSize(46, 38)
         self.setToolTip(tooltip)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.is_close = is_close
@@ -29,13 +46,14 @@ class WindowControlButton(QPushButton):
         self.setText(symbol)
 
     def _apply_style(self):
-        hover_bg = "#EF4444" if self.is_close else "rgba(255, 255, 255, 0.12)"
-        hover_fg = "#FFFFFF"
+        hover_bg = ERROR if self.is_close else OVERLAY_2
+        # White on the red close button; the theme's strongest text otherwise.
+        hover_fg = "#FFFFFF" if self.is_close else TEXT_STRONG
 
         self.setStyleSheet(f"""
             QPushButton {{
-                background-color: #222222;
-                color: #9CA3AF;
+                background-color: transparent;
+                color: {SECONDARY_TEXT};
                 border: none;
                 font-size: 13px;
                 font-weight: 500;
@@ -46,27 +64,27 @@ class WindowControlButton(QPushButton):
                 color: {hover_fg};
             }}
             QPushButton:pressed {{
-                background-color: {"#DC2626" if self.is_close else "rgba(255, 255, 255, 0.2)"};
+                background-color: {"#DC2626" if self.is_close else OVERLAY_BORDER};
             }}
         """)
 
 
 class TitleBar(QWidget):
-    """Custom title bar featuring LensFlow logo badge, title, and Minimize/Maximize/Close buttons."""
+    """Custom title bar featuring Wield logo badge, title, and Minimize/Maximize/Close buttons."""
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setFixedHeight(44)
+        self.setFixedHeight(42)
         self.setObjectName("TitleBar")
-        self.setStyleSheet("""
-            QWidget#TitleBar {
-                background-color: #0B0B0F;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            }
+        self.setStyleSheet(f"""
+            QWidget#TitleBar {{
+                background-color: {PAGE_BG};
+                border-bottom: 1px solid {BORDER};
+            }}
         """)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(16, 0, 16, 0)
+        layout.setContentsMargins(14, 0, 8, 0)
         layout.setSpacing(0)
 
         # ── LF Monogram Logo Badge ───────────────────────────────────────
@@ -75,18 +93,21 @@ class TitleBar(QWidget):
         layout.addSpacing(10)
 
         # ── Title Brand Label ───────────────────────────────────────────
-        brand = QLabel("LensFlow")
-        brand.setStyleSheet(
-            "color: #FFFFFF; font-size: 14px; font-weight: 600; letter-spacing: -0.2px;"
-        )
+        brand = QLabel(APP_NAME)
+        brand.setStyleSheet(f"""
+            color: {PRIMARY_TEXT};
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        """)
         layout.addWidget(brand, 0, Qt.AlignmentFlag.AlignVCenter)
 
         layout.addStretch()
 
         # ── Window Control Buttons ──────────────────────────────────────
-        self.btn_minimize = WindowControlButton("\u2014", tooltip="Minimize")
-        self.btn_maximize = WindowControlButton("\u25A1", tooltip="Maximize")
-        self.btn_close = WindowControlButton("\u2715", tooltip="Close", is_close=True)
+        self.btn_minimize = WindowControlButton("—", tooltip="Minimize")
+        self.btn_maximize = WindowControlButton("□", tooltip="Maximize")
+        self.btn_close = WindowControlButton("✕", tooltip="Close", is_close=True)
 
         layout.addWidget(self.btn_minimize)
         layout.addWidget(self.btn_maximize)
@@ -119,11 +140,11 @@ class TitleBar(QWidget):
         if w:
             if w.isMaximized():
                 w.showNormal()
-                self.btn_maximize.set_symbol("\u25A1")
+                self.btn_maximize.set_symbol("□")
                 self.btn_maximize.setToolTip("Maximize")
             else:
                 w.showMaximized()
-                self.btn_maximize.set_symbol("\u2749")  # Restore icon symbol
+                self.btn_maximize.set_symbol("❐")
                 self.btn_maximize.setToolTip("Restore")
 
     def _close(self):
@@ -133,26 +154,29 @@ class TitleBar(QWidget):
 
 
 class _LFBadge(QWidget):
-    """Small 28x28 rounded badge with 'LF' monogram."""
+    """The app icon, small, in the title bar."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(28, 28)
+        self.setFixedSize(26, 26)
+        path = os.path.join(APP_DIR, "assets", "icons", "wield.png")
+        self._image = QImage(path) if os.path.isfile(path) else None
 
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        if self._image is not None:
+            p.drawImage(self.rect(), self._image)
+            return
+
         w, h = float(self.width()), float(self.height())
-
-        grad = QRadialGradient(w * 0.4, h * 0.35, w * 0.6)
-        grad.setColorAt(0.0, QColor(96, 165, 250))
-        grad.setColorAt(1.0, QColor(99, 102, 241))
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(grad))
-        p.drawRoundedRect(0, 0, int(w), int(h), 7, 7)
-
-        p.setPen(QColor("#FFFFFF"))
-        font = QFont("Inter", 9)
+        p.setBrush(QColor(PRIMARY))
+        p.drawRoundedRect(0, 0, int(w), int(h), 6, 6)
+        p.setPen(QColor(ON_PRIMARY))
+        font = QFont("Inter", 8)
         font.setWeight(QFont.Weight.Bold)
         p.setFont(font)
-        p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "LF")
+        p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, APP_NAME[:1])
